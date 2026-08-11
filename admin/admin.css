@@ -1,0 +1,148 @@
+/* ==========================================================================
+   LE CARNET DU CHEF — Espace admin
+   Réutilise les tokens de css/variables.css — aucune nouvelle couleur.
+   ========================================================================== */
+
+.admin-body {
+  background: var(--color-cream);
+  min-height: 100vh;
+  padding: var(--space-4) var(--space-3);
+}
+
+.admin-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.admin-logo {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  color: var(--color-sage-dark);
+  text-align: center;
+  margin-bottom: var(--space-4);
+}
+.admin-logo span { color: var(--color-gold); }
+
+/* --- Écran de connexion --- */
+.admin-login-card {
+  max-width: 380px;
+  margin: var(--space-5) auto;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-card);
+}
+
+/* --- Alertes --- */
+.admin-alert {
+  background: var(--color-white);
+  border: 1.5px solid var(--color-gold);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-sm);
+}
+.admin-alert-error {
+  border-color: #b3453c;
+  color: #8a332c;
+}
+
+/* --- Dashboard --- */
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.admin-section {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.admin-section h2 {
+  margin-bottom: var(--space-3);
+}
+
+/* --- Liste d'éléments (plats / menus) --- */
+.admin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.admin-row:last-child { border-bottom: none; }
+.admin-row-off { opacity: 0.55; }
+.admin-row-main { display: flex; flex-direction: column; gap: 0.2rem; }
+.admin-row-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.admin-row-actions button {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-sage-dark);
+  background: var(--color-white);
+  color: var(--color-sage-dark);
+  cursor: pointer;
+}
+.admin-row-actions button:hover { background: var(--color-sage-dark); color: var(--color-white); }
+.admin-row-actions button.admin-danger {
+  border-color: #b3453c;
+  color: #b3453c;
+}
+.admin-row-actions button.admin-danger:hover { background: #b3453c; color: var(--color-white); }
+
+.admin-tag {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  background: var(--color-cream);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+}
+
+/* --- Formulaires --- */
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.admin-form-grid .admin-field-full { grid-column: 1 / -1; }
+
+@media (max-width: 640px) {
+  .admin-form-grid { grid-template-columns: 1fr; }
+}
+
+.admin-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.admin-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--fs-sm);
+  background: var(--color-cream);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+}
+
+.admin-form-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}

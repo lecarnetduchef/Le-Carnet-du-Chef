@@ -1,0 +1,60 @@
+/* ==========================================================================
+   LE CARNET DU CHEF — Design tokens
+   Palette : vert sauge + crème + touche dorée (validée)
+   ========================================================================== */
+
+:root {
+  /* Couleurs de marque */
+  --color-sage: #6B7A5E;
+  --color-sage-dark: #3D4A34;
+  --color-sage-light: #A9B79A;
+  --color-cream: #F7F3EC;
+  --color-white: #FDFCFA;
+  --color-gold: #C9A66B;
+  --color-text: #2E2A22;
+  --color-text-muted: #6B6558;
+  --color-border: #E3DCCB;
+
+  /* États */
+  --color-focus: #C9A66B;
+
+  /* Typographie */
+  --font-display: "Fraunces", "Georgia", serif;
+  --font-body: "Work Sans", "Segoe UI", sans-serif;
+
+  --fs-xs: 0.8rem;
+  --fs-sm: 0.9rem;
+  --fs-base: 1rem;
+  --fs-md: 1.15rem;
+  --fs-lg: 1.5rem;
+  --fs-xl: 2.2rem;
+  --fs-2xl: 3rem;
+  --fs-3xl: 4rem;
+
+  /* Espacements */
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+  --space-6: 6rem;
+
+  /* Rayons & ombres */
+  --radius-sm: 6px;
+  --radius-md: 14px;
+  --shadow-soft: 0 10px 30px rgba(61, 74, 52, 0.10);
+  --shadow-card: 0 6px 18px rgba(61, 74, 52, 0.08);
+
+  /* Layout */
+  --container-max: 1140px;
+  --header-height: 76px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --fs-3xl: 2.6rem;
+    --fs-2xl: 2.1rem;
+    --fs-xl: 1.7rem;
+    --header-height: 64px;
+  }
+}

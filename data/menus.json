@@ -1,0 +1,65 @@
+{
+  "formules": [
+    {
+      "id": "f1",
+      "nom": "Formule F1",
+      "description": "Plat + Boisson",
+      "prix": "[PRIX]"
+    },
+    {
+      "id": "f2",
+      "nom": "Formule F2",
+      "description": "Plat + Dessert",
+      "prix": "[PRIX]"
+    },
+    {
+      "id": "f3",
+      "nom": "Formule F3",
+      "description": "Plat + Dessert + Boisson",
+      "prix": "[PRIX]"
+    }
+  ],
+  "plats": [
+    {
+      "id": "plat-demo-1",
+      "nom": "[NOM DU PLAT — DÉMO]",
+      "description": "[Description courte du plat : ingrédients, préparation, ce qui le rend spécial.]",
+      "prix": "[PRIX]",
+      "disponible": true,
+      "image": "https://images.pexels.com/photos/34321371/pexels-photo-34321371.jpeg?auto=compress&cs=tinysrgb&w=800"
+    },
+    {
+      "id": "plat-demo-2",
+      "nom": "[NOM DU PLAT — DÉMO]",
+      "description": "[Description courte du plat.]",
+      "prix": "[PRIX]",
+      "disponible": true,
+      "image": "https://images.pexels.com/photos/29596682/pexels-photo-29596682.png?auto=compress&cs=tinysrgb&w=800"
+    }
+  ],
+  "boissons": [
+    {
+      "id": "boisson-demo-1",
+      "nom": "[NOM DE LA BOISSON — DÉMO]",
+      "prix": "[PRIX]",
+      "disponible": true,
+      "image": "https://images.pexels.com/photos/903376/pexels-photo-903376.jpeg?auto=compress&cs=tinysrgb&w=800"
+    },
+    {
+      "id": "boisson-demo-2",
+      "nom": "[NOM DE LA BOISSON — DÉMO]",
+      "prix": "[PRIX]",
+      "disponible": true,
+      "image": "https://images.pexels.com/photos/225228/pexels-photo-225228.jpeg?auto=compress&cs=tinysrgb&w=800"
+    }
+  ],
+  "desserts": [
+    {
+      "id": "dessert-demo-1",
+      "nom": "[NOM DU DESSERT — DÉMO]",
+      "prix": "[PRIX]",
+      "disponible": true,
+      "image": "https://images.pexels.com/photos/30469690/pexels-photo-30469690.jpeg?auto=compress&cs=tinysrgb&w=800"
+    }
+  ]
+}
