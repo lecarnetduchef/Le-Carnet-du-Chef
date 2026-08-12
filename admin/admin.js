@@ -3,27 +3,44 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https:/
 import { collection, doc, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
-const els = {
-  configWarning: document.querySelector("#config-warning"),
-  loginScreen: document.querySelector("#login-screen"),
-  loginForm: document.querySelector("#login-form"),
-  loginError: document.querySelector("#login-error"),
-  dashboard: document.querySelector("#dashboard"),
-  logoutBtn: document.querySelector("#logout-btn"),
-  userEmail: document.querySelector("#user-email"),
-  menusList: document.querySelector("#menus-list"),
-  saveButton: document.querySelector("#save-pdfs-btn"),
-  saveStatus: document.querySelector("#save-status")
-};
-
 const MENU_IDS = [1, 2, 3];
 const pendingFiles = new Map();
+let els = {};
+let initialized = false;
 
-if (!FIREBASE_READY) {
-  els.configWarning.hidden = false;
-  els.loginScreen.hidden = true;
-} else {
+function cacheElements() {
+  els = {
+    configWarning: document.querySelector("#config-warning"),
+    loginScreen: document.querySelector("#login-screen"),
+    loginForm: document.querySelector("#login-form"),
+    loginError: document.querySelector("#login-error"),
+    dashboard: document.querySelector("#dashboard"),
+    logoutBtn: document.querySelector("#logout-btn"),
+    userEmail: document.querySelector("#user-email"),
+    menusList: document.querySelector("#menus-list"),
+    saveButton: document.querySelector("#save-pdfs-btn"),
+    saveStatus: document.querySelector("#save-status")
+  };
+}
+
+function start() {
+  if (initialized) return;
+  initialized = true;
+  cacheElements();
+
+  if (!FIREBASE_READY) {
+    els.configWarning.hidden = false;
+    els.loginScreen.hidden = true;
+    return;
+  }
+
   initAuth();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", start, { once: true });
+} else {
+  start();
 }
 
 function initAuth() {
@@ -52,7 +69,17 @@ function initAuth() {
   });
 
   els.logoutBtn.addEventListener("click", () => signOut(auth));
-  els.saveButton.addEventListener("click", saveAllMenus);
+
+  if (!els.saveButton) {
+    console.error("Le bouton #save-pdfs-btn est introuvable dans le DOM.");
+    return;
+  }
+
+  // Le branchement est effectué après le chargement du DOM et après la récupération du bouton.
+  els.saveButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    saveAllMenus();
+  });
 }
 
 function traduireErreur(code) {
@@ -135,13 +162,14 @@ async function renderMenus() {
 }
 
 async function saveAllMenus() {
+  showSaveStatus("Sauvegarde en cours…", false);
+
   if (!pendingFiles.size) {
-    showSaveStatus("Aucun nouveau PDF à sauvegarder.", true);
+    showSaveStatus("Sélectionnez au moins un PDF.", true);
     return;
   }
 
   els.saveButton.disabled = true;
-  showSaveStatus("Sauvegarde des PDF en cours…", false);
 
   try {
     for (const id of MENU_IDS) {
@@ -165,8 +193,8 @@ async function saveAllMenus() {
     showSaveStatus("PDF sauvegardés avec succès", false);
     await renderMenusKeepingSuccess();
   } catch (error) {
-    console.error(error);
-    showSaveStatus(`Erreur lors de la sauvegarde : ${error?.message || "opération impossible"}. Les fichiers sélectionnés restent en attente pour permettre une nouvelle tentative.`, true);
+    console.error("Erreur Firebase pendant la sauvegarde des PDF :", error);
+    showSaveStatus(`Erreur lors de la sauvegarde : ${error?.message || "opération impossible"}`, true);
   } finally {
     els.saveButton.disabled = false;
   }
@@ -179,6 +207,10 @@ async function renderMenusKeepingSuccess() {
 }
 
 function showSaveStatus(message, isError) {
+  if (!els.saveStatus) {
+    console.error("#save-status est introuvable dans le DOM :", message);
+    return;
+  }
   els.saveStatus.textContent = message;
   els.saveStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
   els.saveStatus.style.display = "block";
@@ -193,3 +225,6 @@ function escapeHtml(value) {
 function escapeAttr(value) {
   return String(value ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+
+// Expose la fonction pour permettre une vérification directe depuis la console du navigateur.
+window.saveAllMenus = saveAllMenus;
