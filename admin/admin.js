@@ -4,6 +4,7 @@ import { collection, doc, getDocs, setDoc, serverTimestamp } from "https://www.g
 import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
 const MENU_IDS = [1, 2, 3];
+const SAVE_TIMEOUT_MS = 20000;
 const pendingFiles = new Map();
 let els = {};
 let initialized = false;
@@ -75,10 +76,9 @@ function initAuth() {
     return;
   }
 
-  // Le branchement est effectué après le chargement du DOM et après la récupération du bouton.
   els.saveButton.addEventListener("click", (event) => {
     event.preventDefault();
-    saveAllMenus();
+    void saveAllMenus();
   });
 }
 
@@ -161,6 +161,16 @@ async function renderMenus() {
   });
 }
 
+function withTimeout(promise, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => {
+      reject(new Error(`Délai dépassé (20 secondes) pendant ${label}. Vérifiez votre connexion et les droits Firebase Storage/Firestore.`));
+    }, SAVE_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
+}
+
 async function saveAllMenus() {
   showSaveStatus("Sauvegarde en cours…", false);
 
@@ -175,18 +185,30 @@ async function saveAllMenus() {
     for (const id of MENU_IDS) {
       const file = pendingFiles.get(id);
       if (!file) continue;
+
       const fileRef = ref(storage, `menus/menu${id}.pdf`);
-      await uploadBytes(fileRef, file, {
-        contentType: "application/pdf",
-        cacheControl: "no-cache, max-age=0"
-      });
-      const url = await getDownloadURL(fileRef);
-      await setDoc(doc(db, "menuPdfs", String(id)), {
-        id,
-        url,
-        fileName: `menu${id}.pdf`,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      await withTimeout(
+        uploadBytes(fileRef, file, {
+          contentType: "application/pdf",
+          cacheControl: "no-cache, max-age=0"
+        }),
+        `l’envoi de MENU ${id}`
+      );
+
+      const url = await withTimeout(
+        getDownloadURL(fileRef),
+        `la récupération de l’URL de MENU ${id}`
+      );
+
+      await withTimeout(
+        setDoc(doc(db, "menuPdfs", String(id)), {
+          id,
+          url,
+          fileName: `menu${id}.pdf`,
+          updatedAt: serverTimestamp()
+        }, { merge: true }),
+        `l’enregistrement Firestore de MENU ${id}`
+      );
     }
 
     pendingFiles.clear();
@@ -226,5 +248,4 @@ function escapeAttr(value) {
   return String(value ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-// Expose la fonction pour permettre une vérification directe depuis la console du navigateur.
 window.saveAllMenus = saveAllMenus;
