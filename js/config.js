@@ -34,11 +34,11 @@ const CDC_CONFIG = {
   },
   images: {
     hero: "https://commons.wikimedia.org/wiki/Special:FilePath/Gourmet_Chef_(Unsplash).jpg",
-    ambition: "https://commons.wikimedia.org/wiki/Special:FilePath/Preparing_chicken.jpg",
+    ambition: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef%27s_Station_(Unsplash).jpg",
     apropos: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef_1.jpg",
-    traiteurEvenement: "https://commons.wikimedia.org/wiki/Special:FilePath/Présentation_d'un_buffet.jpg",
-    traiteurChef: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef_Dev_shot.jpg",
-    traiteurBuffet: "https://commons.wikimedia.org/wiki/Special:FilePath/Ugandan_food_buffet_serving.jpg",
+    traiteurEvenement: "https://commons.wikimedia.org/wiki/Special:FilePath/Pr%C3%A9sentation_d%27un_buffet.jpg",
+    traiteurChef: "https://commons.wikimedia.org/wiki/Special:FilePath/Restaurant_Iszkor_M%C3%A1lyinka_(chef_%C3%81d%C3%A1m_Pohner).jpg",
+    traiteurBuffet: "https://commons.wikimedia.org/wiki/Special:FilePath/JP_Okinawa_Hewitt_Resort_Naha_Okinawa_Hotel_breakfast_buffet_food_restaurant_February_2026_N13P_01.jpg",
   },
   horaires: {
     dejeunerRetrait: "11h30 – 12h00",
