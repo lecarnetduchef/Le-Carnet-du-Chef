@@ -34,9 +34,11 @@ const CDC_CONFIG = {
   },
   images: {
     hero: "/Le-Carnet-du-Chef/images/photos/pexels-anhelina-vasylyk-734724285-34326268.svg",
-    traiteurEvenement: "/Le-Carnet-du-Chef/images/photos/pexels-planka-24863059.svg",
     ambition: "/Le-Carnet-du-Chef/images/photos/pexels-skylar-kang-6375558.svg",
+    apropos: "/Le-Carnet-du-Chef/images/photos/pexels-rdne-5779781.svg",
+    traiteurEvenement: "/Le-Carnet-du-Chef/images/photos/pexels-novkov-visuals-34321369.svg",
     traiteurChef: "/Le-Carnet-du-Chef/images/photos/pexels-skylar-kang-6378164.svg",
+    traiteurBuffet: "/Le-Carnet-du-Chef/images/photos/pexels-planka-24863059.svg",
   },
   horaires: {
     dejeunerRetrait: "11h30 – 12h00",
@@ -104,11 +106,6 @@ const CDC_CONFIG = {
   };
 })();
 
-// ======================================================================
-// Remplissage automatique des images data-cdc-bg.
-// Les chemins sont absolus par rapport au site GitHub Pages afin de
-// fonctionner identiquement depuis index.html et depuis /pages/.
-// ======================================================================
 document.addEventListener("DOMContentLoaded", () => {
   const SOURCE = {
     liens: CDC_CONFIG.liens,
