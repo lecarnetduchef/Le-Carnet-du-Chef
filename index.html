@@ -7,7 +7,6 @@
   <meta name="description" content="Le Carnet du Chef : plats cuisinés à emporter, traiteur pour particuliers, entreprises et événements, chef à domicile. Une cuisine préparée avec soin, près de chez vous.">
   <link rel="canonical" href="https://lecarnetduchef.fr/">
 
-  <!-- Open Graph -->
   <meta property="og:title" content="Le Carnet du Chef — Traiteur & plats à emporter">
   <meta property="og:description" content="Cuisine préparée avec soin : plats à emporter, traiteur et chef à domicile.">
   <meta property="og:type" content="website">
@@ -51,123 +50,154 @@
   <main id="contenu">
 
     <!-- HERO -->
-    <section class="hero" data-cdc-bg="images.hero">
-      <div class="container hero-inner">
-        <p class="eyebrow">Le Carnet du Chef</p>
-        <h1>Une cuisine préparée avec soin, à emporter, en traiteur ou à domicile.</h1>
-        <p class="lead">Plats cuisinés maison, prestations traiteur sur mesure et chef à domicile — pour vos repas du quotidien comme pour vos événements.</p>
-        <div class="hero-actions">
-          <a class="btn btn-gold" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
-          <a class="btn btn-secondary" style="background:rgba(255,255,255,0.08); color:#fff; border-color:#fff;" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
+    <section class="home-hero">
+      <div class="container home-hero-grid">
+        <div class="home-hero-copy reveal">
+          <p class="eyebrow">Le Carnet du Chef</p>
+          <h1>Une cuisine de chef, pensée pour être partagée.</h1>
+          <p class="lead">Plats cuisinés maison, prestations traiteur sur mesure et chef à domicile — pour vos repas du quotidien comme pour vos événements.</p>
+          <div class="hero-actions">
+            <a class="btn btn-gold" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
+            <a class="btn btn-secondary" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
+          </div>
         </div>
+        <div class="home-hero-visual reveal" data-cdc-bg="images.hero" aria-hidden="true"></div>
       </div>
     </section>
 
     <!-- RÉASSURANCE -->
-    <div class="reassurance">
-      <ul>
-        <li>Fait maison</li>
-        <li>Sur mesure</li>
-        <li>Proximité</li>
-        <li>Professionnalisme</li>
-      </ul>
-    </div>
+    <section class="reassurance home-reassurance" aria-label="Les engagements du Carnet du Chef">
+      <div class="container">
+        <ul>
+          <li><span></span>Fait maison</li>
+          <li><span></span>Sur mesure</li>
+          <li><span></span>Proximité</li>
+          <li><span></span>Professionnalisme</li>
+        </ul>
+      </div>
+    </section>
 
     <!-- PRESTATIONS -->
-    <section class="section" id="prestations">
+    <section class="section home-services" id="prestations">
       <div class="container">
         <div class="section-head center">
           <p class="eyebrow">Nos prestations</p>
           <h2>Trois façons de découvrir Le Carnet du Chef</h2>
         </div>
-        <div class="grid grid-3">
-          <div class="notebook-card reveal">
+        <div class="grid grid-3 home-service-grid">
+          <article class="notebook-card home-service-card reveal">
             <div class="card-icon" aria-hidden="true">🍽️</div>
+            <p class="home-card-kicker">01</p>
             <h3>Plats à emporter</h3>
             <p class="muted">Des plats cuisinés maison, prêts à emporter, pensés pour vos repas de tous les jours.</p>
             <a class="btn btn-secondary" href="pages/menus.html">Voir les menus</a>
-          </div>
-          <div class="notebook-card reveal">
+          </article>
+          <article class="notebook-card home-service-card reveal">
             <div class="card-icon" aria-hidden="true">🥂</div>
+            <p class="home-card-kicker">02</p>
             <h3>Traiteur</h3>
             <p class="muted">Pour vos réceptions privées, repas d'entreprise, associations et événements — une prestation adaptée à chaque besoin.</p>
             <a class="btn btn-secondary" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
-          </div>
-          <div class="notebook-card reveal">
+          </article>
+          <article class="notebook-card home-service-card reveal">
             <div class="card-icon" aria-hidden="true">👨‍🍳</div>
+            <p class="home-card-kicker">03</p>
             <h3>Chef à domicile</h3>
             <p class="muted">Un chef qui cuisine directement chez vous, pour un moment convivial et sur mesure.</p>
             <a class="btn btn-secondary" href="pages/traiteur.html">Découvrir</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- POUR QUI : UN SEUL ENSEMBLE -->
+    <section class="section section-alt home-audience">
+      <div class="container">
+        <div class="home-audience-panel reveal">
+          <div class="home-audience-intro">
+            <p class="eyebrow">Pour qui ?</p>
+            <h2>Une offre adaptée à chaque besoin</h2>
+            <p>Du repas entre proches à l'événement professionnel, une cuisine pensée pour chaque occasion.</p>
+          </div>
+          <div class="home-audience-list">
+            <article>
+              <span>01</span>
+              <h3>Particuliers</h3>
+              <p>Repas, anniversaires, repas entre proches, événements privés.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Entreprises</h3>
+              <p>Repas d'équipe, événements professionnels, réunions, buffets.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Associations &amp; clubs</h3>
+              <p>Repas associatifs, événements sportifs et manifestations.</p>
+            </article>
+            <article>
+              <span>04</span>
+              <h3>Événements</h3>
+              <p>Buffets, cocktails, repas et prestations personnalisées.</p>
+            </article>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- POUR QUI -->
-    <section class="section section-alt">
+    <!-- UNIVERS DU CHEF : 3 CARTES ÉDITORIALES -->
+    <section class="section home-editorial">
       <div class="container">
         <div class="section-head center">
-          <p class="eyebrow">Pour qui ?</p>
-          <h2>Une offre adaptée à chaque besoin</h2>
+          <p class="eyebrow">L'univers du Carnet</p>
+          <h2>Une cuisine qui raconte une histoire</h2>
         </div>
-        <div class="grid grid-4">
-          <div class="notebook-card reveal">
-            <h3>Particuliers</h3>
-            <p class="muted">Repas, anniversaires, repas entre proches, événements privés.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>Entreprises</h3>
-            <p class="muted">Repas d'équipe, événements professionnels, réunions, buffets.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>Associations &amp; clubs</h3>
-            <p class="muted">Repas associatifs, événements sportifs et manifestations.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>Événements</h3>
-            <p class="muted">Buffets, cocktails, repas et prestations personnalisées.</p>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- AMBITION DE LA MARQUE -->
-    <section class="section">
-      <div class="container about-grid">
-        <div class="photo-placeholder reveal" data-cdc-bg="images.ambition">[PHOTO CULINAIRE — À REMPLACER]</div>
-        <div class="reveal">
-          <p class="eyebrow">Notre ambition</p>
-          <h2>L'ambition du Carnet du Chef</h2>
-          <p>Faire de chaque repas un véritable moment de plaisir, avec une cuisine généreuse, soignée et pensée pour être partagée.</p>
-          <p>Du repas du quotidien aux événements qui comptent, Le Carnet du Chef imagine une cuisine accessible, gourmande et préparée avec attention.</p>
-        </div>
-      </div>
-    </section>
+        <div class="home-editorial-grid">
+          <a class="home-editorial-card home-editorial-card--large reveal" href="pages/apropos.html">
+            <div class="home-editorial-image" data-cdc-bg="images.ambition" aria-hidden="true"></div>
+            <div class="home-editorial-content">
+              <p class="home-card-kicker">Notre ambition</p>
+              <h3>L'ambition du Carnet du Chef</h3>
+              <p>Faire de chaque repas un véritable moment de plaisir, avec une cuisine généreuse, soignée et pensée pour être partagée.</p>
+              <span class="home-text-link">Découvrir le chef <b aria-hidden="true">→</b></span>
+            </div>
+          </a>
 
-    <!-- APERÇU TRAITEUR / COMMANDE -->
-    <section class="section section-alt">
-      <div class="container about-grid">
-        <div class="reveal">
-          <p class="eyebrow">Une envie, un événement ?</p>
-          <h2>Un plat à emporter ou une prestation sur mesure</h2>
-          <p>Découvrez nos plats du moment ou demandez un devis personnalisé pour votre prochain événement — traiteur, chef à domicile, entre particuliers, entreprises ou associations.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
-            <a class="btn btn-secondary" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
-          </div>
+          <article class="home-editorial-card reveal">
+            <div class="home-editorial-content">
+              <p class="home-card-kicker">Une envie, un événement ?</p>
+              <h3>Un plat à emporter ou une prestation sur mesure</h3>
+              <p>Découvrez nos plats du moment ou demandez un devis personnalisé pour votre prochain événement — traiteur, chef à domicile, entre particuliers, entreprises ou associations.</p>
+              <div class="hero-actions">
+                <a class="btn btn-primary" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
+                <a class="btn btn-secondary" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
+              </div>
+            </div>
+          </article>
+
+          <a class="home-editorial-card home-editorial-card--image reveal" href="pages/traiteur.html">
+            <div class="home-editorial-image" data-cdc-bg="images.traiteurEvenement" aria-hidden="true"></div>
+            <div class="home-editorial-content">
+              <p class="home-card-kicker">Pour vos événements</p>
+              <h3>Une prestation adaptée à votre moment</h3>
+              <p>Traiteur, chef à domicile, repas et prestations personnalisées.</p>
+              <span class="home-text-link">Découvrir <b aria-hidden="true">→</b></span>
+            </div>
+          </a>
         </div>
-        <div class="photo-placeholder reveal" data-cdc-bg="images.traiteurEvenement">[PHOTO ÉVÉNEMENT — À REMPLACER]</div>
       </div>
     </section>
 
     <!-- CTA FINAL -->
-    <section class="cta-band">
+    <section class="cta-band home-cta">
       <div class="container">
+        <p class="eyebrow">Le Carnet du Chef</p>
         <h2>Une envie, un événement, une question ?</h2>
-        <p style="color:rgba(255,255,255,0.85);">Commandez un plat ou demandez un devis en quelques minutes.</p>
+        <p>Commandez un plat ou demandez un devis en quelques minutes.</p>
         <div class="actions">
           <a class="btn btn-gold" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
-          <a class="btn btn-secondary" style="color:#fff; border-color:#fff;" href="pages/contact.html">Nous contacter</a>
+          <a class="btn btn-secondary" href="pages/contact.html">Nous contacter</a>
         </div>
       </div>
     </section>
