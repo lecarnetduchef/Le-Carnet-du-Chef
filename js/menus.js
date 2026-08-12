@@ -1,12 +1,8 @@
 /**
  * LE CARNET DU CHEF — Génération de la page Menus
  * -------------------------------------------------
- * MENUS et PLATS sont désormais gérés depuis l'espace admin (/admin) et
- * lus en direct depuis Firebase (Firestore) : toute modification faite
- * dans l'admin apparaît ici automatiquement, sans republier le site.
- *
- * BOISSONS et DESSERTS restent gérés comme avant, directement dans
- * data/menus.json (catégories pas encore migrées vers l'admin).
+ * Formules et Plats : Firestore.
+ * Boissons et Desserts : data/menus.json, jusqu'à leur migration.
  */
 import { db, FIREBASE_READY } from "./firebase-init.js";
 import {
@@ -14,7 +10,7 @@ import {
   onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+function initMenusPage() {
   const grids = {
     formules: document.querySelector("#formules-grid"),
     plats: document.querySelector("#plats-grid"),
@@ -24,7 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!grids.formules && !grids.plats && !grids.boissons && !grids.desserts) return;
 
-  // --- Boissons / Desserts : inchangé, depuis data/menus.json ---------
   fetch("../data/menus.json")
     .then((res) => {
       if (!res.ok) throw new Error("Impossible de charger les menus.");
@@ -42,10 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-  // --- Menus / Plats : depuis Firestore (espace admin) -----------------
   if (!FIREBASE_READY) {
-    // Configuration Firebase pas encore renseignée : message clair plutôt
-    // qu'une erreur technique, le reste du site continue de fonctionner.
     if (grids.formules) grids.formules.innerHTML = "<p class='muted'>Les formules seront bientôt disponibles.</p>";
     if (grids.plats) grids.plats.innerHTML = "<p class='muted'>Les plats seront bientôt disponibles.</p>";
     return;
@@ -60,9 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
           .filter((p) => p.disponible !== false);
         renderItems(grids.plats, plats, { withDescription: true });
       },
-      () => {
+      (error) => {
+        console.error("Firestore — lecture des plats impossible", error);
         grids.plats.innerHTML =
-          "<p class='muted'>Les plats ne peuvent pas être affichés pour le moment. Contactez-nous directement.</p>";
+          "<p class='muted'>Les plats ne peuvent pas être affichés pour le moment.</p>";
       }
     );
   }
@@ -79,11 +72,22 @@ document.addEventListener("DOMContentLoaded", () => {
           .filter((m) => !m.dateFin || m.dateFin >= aujourdHui);
         renderFormules(menus);
       },
-      () => {
+      (error) => {
+        console.error("Firestore — lecture des menus impossible", error);
         grids.formules.innerHTML =
-          "<p class='muted'>Les menus ne peuvent pas être affichés pour le moment. Contactez-nous directement.</p>";
+          "<p class='muted'>Les formules ne peuvent pas être affichées pour le moment.</p>";
       }
     );
+  }
+
+  function getCommandeState() {
+    return typeof CDC_CONFIG !== "undefined" ? CDC_CONFIG.commandes?.etat : null;
+  }
+
+  function getCommandeUrl() {
+    return typeof CDC_CONFIG !== "undefined"
+      ? CDC_CONFIG.liens?.commandeGenerale || "#"
+      : "#";
   }
 
   function renderFormules(formules) {
@@ -93,14 +97,16 @@ document.addEventListener("DOMContentLoaded", () => {
       grid.innerHTML = "<p class='muted'>Les formules seront bientôt disponibles.</p>";
       return;
     }
-    const commandeUrl = CDC_CONFIG?.liens?.commandeGenerale || "[LIEN GOOGLE FORM — COMMANDE]";
-    const etat = CDC_CONFIG?.commandes?.etat;
+
+    const commandeUrl = getCommandeUrl();
+    const etat = getCommandeState();
     const commandesOuvertes = etat ? etat.commandesOuvertes : true;
+
     formules.forEach((formule) => {
       const card = document.createElement("article");
       card.className = "notebook-card reveal";
       const bouton = commandesOuvertes
-        ? `<a class="btn btn-secondary btn-block" href="${commandeUrl}" target="_blank" rel="noopener">Commander</a>`
+        ? `<a class="btn btn-secondary btn-block" href="${escapeAttr(commandeUrl)}" target="_blank" rel="noopener">Commander</a>`
         : `<p class="muted" style="font-size:var(--fs-xs); margin-bottom:0;">${escapeHtml(etat?.message || "Commandes temporairement fermées")}</p>`;
       card.innerHTML = `
         <div class="dish-header">
@@ -132,7 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const imageStyle = item.image ? ` style="background-image:url('${escapeAttr(item.image)}');"` : "";
     const imageContent = item.image ? "" : "[PHOTO — À REMPLACER]";
 
-    const etat = CDC_CONFIG?.commandes?.etat;
+    const etat = getCommandeState();
     const commandesOuvertes = etat ? etat.commandesOuvertes : true;
 
     let statut = "";
@@ -141,8 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } else if (!commandesOuvertes) {
       statut = `<p class="muted" style="font-size:var(--fs-xs); margin-bottom:0;">${escapeHtml(etat?.message || "Commandes temporairement fermées")}</p>`;
     } else {
-      const commandeUrl = CDC_CONFIG?.liens?.commandeGenerale || "[LIEN GOOGLE FORM — COMMANDE]";
-      statut = `<a class="btn btn-primary btn-block" href="${commandeUrl}" target="_blank" rel="noopener">Commander</a>`;
+      const commandeUrl = getCommandeUrl();
+      statut = `<a class="btn btn-primary btn-block" href="${escapeAttr(commandeUrl)}" target="_blank" rel="noopener">Commander</a>`;
     }
 
     card.innerHTML = `
@@ -166,4 +172,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function escapeAttr(str) {
     return String(str ?? "").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initMenusPage, { once: true });
+} else {
+  initMenusPage();
+}
