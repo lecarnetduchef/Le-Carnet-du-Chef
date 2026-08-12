@@ -33,12 +33,10 @@ const CDC_CONFIG = {
     traiteur: "Déplacements dans la Loire, à Saint-Étienne, Lyon, Clermont-Ferrand et au-delà sur demande",
   },
   images: {
-    hero: "https://commons.wikimedia.org/wiki/Special:FilePath/Gourmet_Chef_(Unsplash).jpg",
-    ambition: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef%27s_Station_(Unsplash).jpg",
-    apropos: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef_1.jpg",
-    traiteurEvenement: "https://commons.wikimedia.org/wiki/Special:FilePath/Pr%C3%A9sentation_d%27un_buffet.jpg",
-    traiteurChef: "https://commons.wikimedia.org/wiki/Special:FilePath/Restaurant_Iszkor_M%C3%A1lyinka_(chef_%C3%81d%C3%A1m_Pohner).jpg",
-    traiteurBuffet: "https://commons.wikimedia.org/wiki/Special:FilePath/JP_Okinawa_Hewitt_Resort_Naha_Okinawa_Hotel_breakfast_buffet_food_restaurant_February_2026_N13P_01.jpg",
+    hero: "https://images.pexels.com/photos/30469688/pexels-photo-30469688.jpeg?auto=compress&cs=tinysrgb&w=1600",
+    traiteurEvenement: "https://images.pexels.com/photos/34321369/pexels-photo-34321369.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    ambition: "https://images.pexels.com/photos/28703287/pexels-photo-28703287.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    traiteurChef: "https://images.pexels.com/photos/29145758/pexels-photo-29145758.jpeg?auto=compress&cs=tinysrgb&w=1200",
   },
   horaires: {
     dejeunerRetrait: "11h30 – 12h00",
