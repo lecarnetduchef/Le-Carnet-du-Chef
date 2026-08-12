@@ -33,12 +33,12 @@ const CDC_CONFIG = {
     traiteur: "Déplacements dans la Loire, à Saint-Étienne, Lyon, Clermont-Ferrand et au-delà sur demande",
   },
   images: {
-    hero: "https://images.pexels.com/photos/2544829/pexels-photo-2544829.jpeg?auto=compress&cs=tinysrgb&w=1600",
-    ambition: "https://images.pexels.com/photos/36430082/pexels-photo-36430082.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    apropos: "https://images.pexels.com/photos/36430082/pexels-photo-36430082.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    traiteurEvenement: "https://images.pexels.com/photos/34321369/pexels-photo-34321369.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    traiteurBuffet: "https://images.pexels.com/photos/34321369/pexels-photo-34321369.jpeg?auto=compress&cs=tinysrgb&w=1400",
-    traiteurChef: "https://images.pexels.com/photos/31199403/pexels-photo-31199403.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    hero: "https://images.pexels.com/photos/30047126/pexels-photo-30047126.jpeg?auto=compress&cs=tinysrgb&w=1600",
+    ambition: "https://images.pexels.com/photos/36430081/pexels-photo-36430081.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    apropos: "https://images.pexels.com/photos/36430081/pexels-photo-36430081.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    traiteurEvenement: "https://images.pexels.com/photos/35688723/pexels-photo-35688723.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    traiteurBuffet: "https://images.pexels.com/photos/35688723/pexels-photo-35688723.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    traiteurChef: "https://images.pexels.com/photos/10432636/pexels-photo-10432636.jpeg?auto=compress&cs=tinysrgb&w=1200",
   },
   horaires: {
     dejeunerRetrait: "11h30 – 12h00",
