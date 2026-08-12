@@ -44,13 +44,10 @@ const els = {
   menuPlatsCheckboxes: document.querySelector("#menu-plats-checkboxes"),
 };
 
-let platsCache = []; // dernière liste connue des plats (pour cocher dans le formulaire menu)
+let platsCache = [];
 let editingPlatId = null;
 let editingMenuId = null;
 
-// ----------------------------------------------------------------------
-// Vérification de la configuration Firebase
-// ----------------------------------------------------------------------
 if (!FIREBASE_READY) {
   els.configWarning.hidden = false;
   els.loginScreen.hidden = true;
@@ -74,8 +71,10 @@ function initAuth() {
   els.loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     els.loginError.hidden = true;
+
     const email = els.loginForm.email.value.trim();
     const password = els.loginForm.password.value;
+
     signInWithEmailAndPassword(auth, email, password).catch((err) => {
       els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code);
       els.loginError.hidden = false;
@@ -93,41 +92,59 @@ function traduireErreur(code) {
     "auth/invalid-credential": "identifiants incorrects.",
     "auth/too-many-requests": "trop de tentatives, réessayez plus tard.",
   };
+
   return messages[code] || "veuillez réessayer.";
 }
 
-// ----------------------------------------------------------------------
-// Écoute en temps réel des collections (une fois connecté)
-// ----------------------------------------------------------------------
 let listenersStarted = false;
+
 function startListeners() {
   if (listenersStarted) return;
   listenersStarted = true;
 
-  onSnapshot(query(collection(db, "plats"), orderBy("nom")), (snap) => {
-    platsCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    renderPlatsList();
-    renderMenuPlatsCheckboxes();
-  });
+  onSnapshot(
+    query(collection(db, "plats"), orderBy("nom")),
+    (snap) => {
+      platsCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderPlatsList();
+      renderMenuPlatsCheckboxes();
+    },
+    (error) => {
+      console.error("Firestore — lecture des plats impossible", error);
+      els.platsList.innerHTML =
+        "<p class='muted'>Impossible de charger les plats pour le moment.</p>";
+      els.menuPlatsCheckboxes.innerHTML =
+        "<p class='muted' style='margin:0;'>Impossible de charger les plats pour le moment.</p>";
+    }
+  );
 
-  onSnapshot(query(collection(db, "menus"), orderBy("nom")), (snap) => {
-    const menus = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    renderMenusList(menus);
-  });
+  onSnapshot(
+    query(collection(db, "menus"), orderBy("nom")),
+    (snap) => {
+      const menus = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderMenusList(menus);
+    },
+    (error) => {
+      console.error("Firestore — lecture des menus impossible", error);
+      els.menusList.innerHTML =
+        "<p class='muted'>Impossible de charger les menus pour le moment.</p>";
+    }
+  );
 }
 
-// ----------------------------------------------------------------------
-// PLATS — liste + formulaire
-// ----------------------------------------------------------------------
 function renderPlatsList() {
   els.platsList.innerHTML = "";
+
   if (!platsCache.length) {
     els.platsList.innerHTML = "<p class='muted'>Aucun plat pour le moment.</p>";
     return;
   }
+
   platsCache.forEach((plat) => {
     const row = document.createElement("div");
-    row.className = "admin-row" + (plat.disponible === false ? " admin-row-off" : "");
+    row.className =
+      "admin-row" + (plat.disponible === false ? " admin-row-off" : "");
+
     row.innerHTML = `
       <div class="admin-row-main">
         <strong>${escapeHtml(plat.nom)}</strong>
@@ -140,11 +157,14 @@ function renderPlatsList() {
         <button type="button" data-action="delete" data-id="${plat.id}" class="admin-danger">Supprimer</button>
       </div>
     `;
+
     els.platsList.appendChild(row);
   });
 
   els.platsList.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () => handlePlatAction(btn.dataset.action, btn.dataset.id));
+    btn.addEventListener("click", () =>
+      handlePlatAction(btn.dataset.action, btn.dataset.id)
+    );
   });
 }
 
@@ -165,12 +185,18 @@ function handlePlatAction(action, id) {
   }
 
   if (action === "toggle") {
-    updateDoc(doc(db, "plats", id), { disponible: plat.disponible === false });
+    updateDoc(doc(db, "plats", id), {
+      disponible: plat.disponible === false,
+    }).catch((error) => {
+      console.error("Firestore — mise à jour du plat impossible", error);
+    });
   }
 
   if (action === "delete") {
     if (confirm(`Supprimer définitivement « ${plat.nom} » ?`)) {
-      deleteDoc(doc(db, "plats", id));
+      deleteDoc(doc(db, "plats", id)).catch((error) => {
+        console.error("Firestore — suppression du plat impossible", error);
+      });
     }
   }
 }
@@ -187,6 +213,7 @@ function resetPlatForm() {
 
 els.platForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const data = {
     nom: els.platForm.nom.value.trim(),
     description: els.platForm.description.value.trim(),
@@ -194,50 +221,66 @@ els.platForm.addEventListener("submit", async (e) => {
     image: els.platForm.image.value.trim(),
     disponible: els.platForm.disponible.checked,
   };
+
   if (!data.nom) return;
 
-  if (editingPlatId) {
-    await updateDoc(doc(db, "plats", editingPlatId), data);
-  } else {
-    await addDoc(collection(db, "plats"), { ...data, createdAt: serverTimestamp() });
+  try {
+    if (editingPlatId) {
+      await updateDoc(doc(db, "plats", editingPlatId), data);
+    } else {
+      await addDoc(collection(db, "plats"), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    resetPlatForm();
+  } catch (error) {
+    console.error("Firestore — enregistrement du plat impossible", error);
   }
-  resetPlatForm();
 });
 
-// ----------------------------------------------------------------------
-// MENUS — liste + formulaire (avec plats associés + période)
-// ----------------------------------------------------------------------
 function renderMenuPlatsCheckboxes(selectedIds = []) {
   els.menuPlatsCheckboxes.innerHTML = "";
+
   if (!platsCache.length) {
-    els.menuPlatsCheckboxes.innerHTML = "<p class='muted' style='margin:0;'>Ajoutez d'abord des plats ci-dessus.</p>";
+    els.menuPlatsCheckboxes.innerHTML =
+      "<p class='muted' style='margin:0;'>Ajoutez d'abord des plats ci-dessus.</p>";
     return;
   }
+
   platsCache.forEach((plat) => {
     const label = document.createElement("label");
     label.className = "admin-checkbox";
+
     label.innerHTML = `
       <input type="checkbox" value="${plat.id}" ${selectedIds.includes(plat.id) ? "checked" : ""}>
       ${escapeHtml(plat.nom)}
     `;
+
     els.menuPlatsCheckboxes.appendChild(label);
   });
 }
 
 function renderMenusList(menus) {
   els.menusList.innerHTML = "";
+
   if (!menus.length) {
     els.menusList.innerHTML = "<p class='muted'>Aucun menu pour le moment.</p>";
     return;
   }
+
   menus.forEach((menu) => {
     const nbPlats = (menu.platsIds || []).length;
     const periode =
       menu.dateDebut || menu.dateFin
         ? `Du ${menu.dateDebut || "…"} au ${menu.dateFin || "…"}`
         : "Toujours disponible";
+
     const row = document.createElement("div");
-    row.className = "admin-row" + (menu.disponible === false ? " admin-row-off" : "");
+    row.className =
+      "admin-row" + (menu.disponible === false ? " admin-row-off" : "");
+
     row.innerHTML = `
       <div class="admin-row-main">
         <strong>${escapeHtml(menu.nom)}</strong>
@@ -250,6 +293,7 @@ function renderMenusList(menus) {
         <button type="button" data-action="delete" data-id="${menu.id}" class="admin-danger">Supprimer</button>
       </div>
     `;
+
     row.dataset.menu = JSON.stringify(menu);
     els.menusList.appendChild(row);
   });
@@ -257,7 +301,10 @@ function renderMenusList(menus) {
   els.menusList.querySelectorAll("button").forEach((btn) => {
     const row = btn.closest(".admin-row");
     const menu = JSON.parse(row.dataset.menu);
-    btn.addEventListener("click", () => handleMenuAction(btn.dataset.action, menu));
+
+    btn.addEventListener("click", () =>
+      handleMenuAction(btn.dataset.action, menu)
+    );
   });
 }
 
@@ -277,12 +324,18 @@ function handleMenuAction(action, menu) {
   }
 
   if (action === "toggle") {
-    updateDoc(doc(db, "menus", menu.id), { disponible: menu.disponible === false });
+    updateDoc(doc(db, "menus", menu.id), {
+      disponible: menu.disponible === false,
+    }).catch((error) => {
+      console.error("Firestore — mise à jour du menu impossible", error);
+    });
   }
 
   if (action === "delete") {
     if (confirm(`Supprimer définitivement « ${menu.nom} » ?`)) {
-      deleteDoc(doc(db, "menus", menu.id));
+      deleteDoc(doc(db, "menus", menu.id)).catch((error) => {
+        console.error("Firestore — suppression du menu impossible", error);
+      });
     }
   }
 }
@@ -300,6 +353,7 @@ function resetMenuForm() {
 
 els.menuForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const platsIds = Array.from(
     els.menuPlatsCheckboxes.querySelectorAll("input[type=checkbox]:checked")
   ).map((cb) => cb.value);
@@ -313,17 +367,25 @@ els.menuForm.addEventListener("submit", async (e) => {
     disponible: els.menuForm.disponible.checked,
     platsIds,
   };
+
   if (!data.nom) return;
 
-  if (editingMenuId) {
-    await updateDoc(doc(db, "menus", editingMenuId), data);
-  } else {
-    await addDoc(collection(db, "menus"), { ...data, createdAt: serverTimestamp() });
+  try {
+    if (editingMenuId) {
+      await updateDoc(doc(db, "menus", editingMenuId), data);
+    } else {
+      await addDoc(collection(db, "menus"), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    resetMenuForm();
+  } catch (error) {
+    console.error("Firestore — enregistrement du menu impossible", error);
   }
-  resetMenuForm();
 });
 
-// ----------------------------------------------------------------------
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str ?? "";
