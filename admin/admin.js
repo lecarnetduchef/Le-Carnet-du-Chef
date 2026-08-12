@@ -1,393 +1,105 @@
-/**
- * LE CARNET DU CHEF — Espace admin (catégorie MENUS)
- * ----------------------------------------------------
- * Authentification Firebase + gestion CRUD des collections Firestore
- * "plats" et "menus". Catégories Boissons / Desserts / Photos / Prix :
- * pas encore développées (à venir dans une prochaine étape).
- */
-import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { auth, db, storage, FIREBASE_READY } from "../js/firebase-init.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { collection, doc, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
 const els = {
-  configWarning: document.querySelector("#config-warning"),
-  loginScreen: document.querySelector("#login-screen"),
-  loginForm: document.querySelector("#login-form"),
-  loginError: document.querySelector("#login-error"),
-  dashboard: document.querySelector("#dashboard"),
-  logoutBtn: document.querySelector("#logout-btn"),
-  userEmail: document.querySelector("#user-email"),
-
-  platsList: document.querySelector("#plats-list"),
-  platForm: document.querySelector("#plat-form"),
-  platFormTitle: document.querySelector("#plat-form-title"),
-  platCancelEdit: document.querySelector("#plat-cancel-edit"),
-
-  menusList: document.querySelector("#menus-list"),
-  menuForm: document.querySelector("#menu-form"),
-  menuFormTitle: document.querySelector("#menu-form-title"),
-  menuCancelEdit: document.querySelector("#menu-cancel-edit"),
-  menuPlatsCheckboxes: document.querySelector("#menu-plats-checkboxes"),
+  configWarning: document.querySelector("#config-warning"), loginScreen: document.querySelector("#login-screen"), loginForm: document.querySelector("#login-form"), loginError: document.querySelector("#login-error"), dashboard: document.querySelector("#dashboard"), logoutBtn: document.querySelector("#logout-btn"), userEmail: document.querySelector("#user-email"), menusList: document.querySelector("#menus-list")
 };
 
-let platsCache = [];
-let editingPlatId = null;
-let editingMenuId = null;
+const MENU_IDS = [1, 2, 3];
 
-if (!FIREBASE_READY) {
-  els.configWarning.hidden = false;
-  els.loginScreen.hidden = true;
-} else {
-  initAuth();
-}
+if (!FIREBASE_READY) { els.configWarning.hidden = false; els.loginScreen.hidden = true; } else { initAuth(); }
 
 function initAuth() {
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       els.loginScreen.hidden = true;
       els.dashboard.hidden = false;
-      els.userEmail.textContent = user.email;
-      startListeners();
+      els.userEmail.textContent = user.email || "administrateur";
+      await renderMenus();
     } else {
       els.loginScreen.hidden = false;
       els.dashboard.hidden = true;
     }
   });
 
-  els.loginForm.addEventListener("submit", (e) => {
+  els.loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     els.loginError.hidden = true;
-
-    const email = els.loginForm.email.value.trim();
-    const password = els.loginForm.password.value;
-
-    signInWithEmailAndPassword(auth, email, password).catch((err) => {
-      els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code);
-      els.loginError.hidden = false;
-    });
+    try { await signInWithEmailAndPassword(auth, els.loginForm.email.value.trim(), els.loginForm.password.value); }
+    catch (err) { els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code); els.loginError.hidden = false; }
   });
-
   els.logoutBtn.addEventListener("click", () => signOut(auth));
 }
 
 function traduireErreur(code) {
-  const messages = {
-    "auth/invalid-email": "adresse email invalide.",
-    "auth/user-not-found": "aucun compte avec cet email.",
-    "auth/wrong-password": "mot de passe incorrect.",
-    "auth/invalid-credential": "identifiants incorrects.",
-    "auth/too-many-requests": "trop de tentatives, réessayez plus tard.",
-  };
-
-  return messages[code] || "veuillez réessayer.";
+  return { "auth/invalid-email":"adresse email invalide.", "auth/user-not-found":"aucun compte avec cet email.", "auth/wrong-password":"mot de passe incorrect.", "auth/invalid-credential":"identifiants incorrects.", "auth/too-many-requests":"trop de tentatives, réessayez plus tard." }[code] || "veuillez réessayer.";
 }
 
-let listenersStarted = false;
-
-function startListeners() {
-  if (listenersStarted) return;
-  listenersStarted = true;
-
-  onSnapshot(
-    query(collection(db, "plats"), orderBy("nom")),
-    (snap) => {
-      platsCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderPlatsList();
-      renderMenuPlatsCheckboxes();
-    },
-    (error) => {
-      console.error("Firestore — lecture des plats impossible", error);
-      els.platsList.innerHTML =
-        "<p class='muted'>Impossible de charger les plats pour le moment.</p>";
-      els.menuPlatsCheckboxes.innerHTML =
-        "<p class='muted' style='margin:0;'>Impossible de charger les plats pour le moment.</p>";
-    }
-  );
-
-  onSnapshot(
-    query(collection(db, "menus"), orderBy("nom")),
-    (snap) => {
-      const menus = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderMenusList(menus);
-    },
-    (error) => {
-      console.error("Firestore — lecture des menus impossible", error);
-      els.menusList.innerHTML =
-        "<p class='muted'>Impossible de charger les menus pour le moment.</p>";
-    }
-  );
+async function getCurrentMenus() {
+  const snap = await getDocs(collection(db, "menuPdfs"));
+  const result = {};
+  snap.forEach((d) => { result[d.id] = d.data(); });
+  return result;
 }
 
-function renderPlatsList() {
-  els.platsList.innerHTML = "";
-
-  if (!platsCache.length) {
-    els.platsList.innerHTML = "<p class='muted'>Aucun plat pour le moment.</p>";
-    return;
-  }
-
-  platsCache.forEach((plat) => {
-    const row = document.createElement("div");
-    row.className =
-      "admin-row" + (plat.disponible === false ? " admin-row-off" : "");
-
-    row.innerHTML = `
-      <div class="admin-row-main">
-        <strong>${escapeHtml(plat.nom)}</strong>
-        <span class="muted">${escapeHtml(plat.prix || "")}</span>
-        ${plat.disponible === false ? '<span class="admin-tag">Désactivé</span>' : ""}
-      </div>
-      <div class="admin-row-actions">
-        <button type="button" data-action="toggle" data-id="${plat.id}">${plat.disponible === false ? "Activer" : "Désactiver"}</button>
-        <button type="button" data-action="edit" data-id="${plat.id}">Modifier</button>
-        <button type="button" data-action="delete" data-id="${plat.id}" class="admin-danger">Supprimer</button>
-      </div>
-    `;
-
-    els.platsList.appendChild(row);
-  });
-
-  els.platsList.querySelectorAll("button").forEach((btn) => {
-    btn.addEventListener("click", () =>
-      handlePlatAction(btn.dataset.action, btn.dataset.id)
-    );
-  });
-}
-
-function handlePlatAction(action, id) {
-  const plat = platsCache.find((p) => p.id === id);
-  if (!plat) return;
-
-  if (action === "edit") {
-    editingPlatId = id;
-    els.platForm.nom.value = plat.nom || "";
-    els.platForm.description.value = plat.description || "";
-    els.platForm.prix.value = plat.prix || "";
-    els.platForm.image.value = plat.image || "";
-    els.platForm.disponible.checked = plat.disponible !== false;
-    els.platFormTitle.textContent = "Modifier le plat";
-    els.platCancelEdit.hidden = false;
-    els.platForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  if (action === "toggle") {
-    updateDoc(doc(db, "plats", id), {
-      disponible: plat.disponible === false,
-    }).catch((error) => {
-      console.error("Firestore — mise à jour du plat impossible", error);
-    });
-  }
-
-  if (action === "delete") {
-    if (confirm(`Supprimer définitivement « ${plat.nom} » ?`)) {
-      deleteDoc(doc(db, "plats", id)).catch((error) => {
-        console.error("Firestore — suppression du plat impossible", error);
-      });
-    }
-  }
-}
-
-els.platCancelEdit.addEventListener("click", resetPlatForm);
-
-function resetPlatForm() {
-  editingPlatId = null;
-  els.platForm.reset();
-  els.platForm.disponible.checked = true;
-  els.platFormTitle.textContent = "Ajouter un plat";
-  els.platCancelEdit.hidden = true;
-}
-
-els.platForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const data = {
-    nom: els.platForm.nom.value.trim(),
-    description: els.platForm.description.value.trim(),
-    prix: els.platForm.prix.value.trim(),
-    image: els.platForm.image.value.trim(),
-    disponible: els.platForm.disponible.checked,
-  };
-
-  if (!data.nom) return;
-
-  try {
-    if (editingPlatId) {
-      await updateDoc(doc(db, "plats", editingPlatId), data);
-    } else {
-      await addDoc(collection(db, "plats"), {
-        ...data,
-        createdAt: serverTimestamp(),
-      });
-    }
-
-    resetPlatForm();
-  } catch (error) {
-    console.error("Firestore — enregistrement du plat impossible", error);
-  }
-});
-
-function renderMenuPlatsCheckboxes(selectedIds = []) {
-  els.menuPlatsCheckboxes.innerHTML = "";
-
-  if (!platsCache.length) {
-    els.menuPlatsCheckboxes.innerHTML =
-      "<p class='muted' style='margin:0;'>Ajoutez d'abord des plats ci-dessus.</p>";
-    return;
-  }
-
-  platsCache.forEach((plat) => {
-    const label = document.createElement("label");
-    label.className = "admin-checkbox";
-
-    label.innerHTML = `
-      <input type="checkbox" value="${plat.id}" ${selectedIds.includes(plat.id) ? "checked" : ""}>
-      ${escapeHtml(plat.nom)}
-    `;
-
-    els.menuPlatsCheckboxes.appendChild(label);
-  });
-}
-
-function renderMenusList(menus) {
+async function renderMenus() {
   els.menusList.innerHTML = "";
+  let current = {};
+  try { current = await getCurrentMenus(); } catch (err) { console.error(err); }
 
-  if (!menus.length) {
-    els.menusList.innerHTML = "<p class='muted'>Aucun menu pour le moment.</p>";
-    return;
-  }
-
-  menus.forEach((menu) => {
-    const nbPlats = (menu.platsIds || []).length;
-    const periode =
-      menu.dateDebut || menu.dateFin
-        ? `Du ${menu.dateDebut || "…"} au ${menu.dateFin || "…"}`
-        : "Toujours disponible";
-
-    const row = document.createElement("div");
-    row.className =
-      "admin-row" + (menu.disponible === false ? " admin-row-off" : "");
-
+  MENU_IDS.forEach((id) => {
+    const data = current[String(id)] || {};
+    const row = document.createElement("article");
+    row.className = "admin-row";
     row.innerHTML = `
-      <div class="admin-row-main">
-        <strong>${escapeHtml(menu.nom)}</strong>
-        <span class="muted">${escapeHtml(menu.prix || "")} · ${nbPlats} plat(s) · ${escapeHtml(periode)}</span>
-        ${menu.disponible === false ? '<span class="admin-tag">Désactivé</span>' : ""}
+      <div class="admin-row-main" style="display:block;">
+        <strong>MENU ${id}</strong>
+        <span class="muted" style="display:block;margin-top:.25rem;">${data.url ? "PDF actuellement configuré" : "Aucun PDF configuré — le site utilise le fichier documents/menu${id}.pdf"}</span>
+        ${data.url ? `<a href="${escapeAttr(data.url)}" target="_blank" rel="noopener" class="muted">Ouvrir le PDF actuel</a>` : ""}
       </div>
-      <div class="admin-row-actions">
-        <button type="button" data-action="toggle" data-id="${menu.id}">${menu.disponible === false ? "Activer" : "Désactiver"}</button>
-        <button type="button" data-action="edit" data-id="${menu.id}">Modifier</button>
-        <button type="button" data-action="delete" data-id="${menu.id}" class="admin-danger">Supprimer</button>
+      <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+        <label class="btn btn-secondary" for="menu-file-${id}" style="cursor:pointer;">Choisir un PDF</label>
+        <input id="menu-file-${id}" data-menu-file="${id}" type="file" accept="application/pdf" style="position:absolute;left:-9999px;">
+        <span id="menu-file-name-${id}" class="muted">Aucun nouveau fichier choisi</span>
+        <button type="button" class="btn btn-primary" data-upload="${id}">Remplacer le PDF</button>
       </div>
+      <p id="menu-status-${id}" class="muted" style="margin:.75rem 0 0;" aria-live="polite"></p>
     `;
-
-    row.dataset.menu = JSON.stringify(menu);
     els.menusList.appendChild(row);
   });
 
-  els.menusList.querySelectorAll("button").forEach((btn) => {
-    const row = btn.closest(".admin-row");
-    const menu = JSON.parse(row.dataset.menu);
-
-    btn.addEventListener("click", () =>
-      handleMenuAction(btn.dataset.action, menu)
-    );
-  });
+  els.menusList.querySelectorAll("[data-menu-file]").forEach((input) => input.addEventListener("change", () => {
+    const name = input.files?.[0]?.name || "Aucun nouveau fichier choisi";
+    document.querySelector(`#menu-file-name-${input.dataset.menuFile}`).textContent = name;
+  }));
+  els.menusList.querySelectorAll("[data-upload]").forEach((button) => button.addEventListener("click", () => uploadMenu(button.dataset.upload, button)));
 }
 
-function handleMenuAction(action, menu) {
-  if (action === "edit") {
-    editingMenuId = menu.id;
-    els.menuForm.nom.value = menu.nom || "";
-    els.menuForm.description.value = menu.description || "";
-    els.menuForm.prix.value = menu.prix || "";
-    els.menuForm.dateDebut.value = menu.dateDebut || "";
-    els.menuForm.dateFin.value = menu.dateFin || "";
-    els.menuForm.disponible.checked = menu.disponible !== false;
-    renderMenuPlatsCheckboxes(menu.platsIds || []);
-    els.menuFormTitle.textContent = "Modifier le menu";
-    els.menuCancelEdit.hidden = false;
-    els.menuForm.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+async function uploadMenu(id, button) {
+  const input = document.querySelector(`[data-menu-file="${id}"]`);
+  const status = document.querySelector(`#menu-status-${id}`);
+  const file = input?.files?.[0];
+  if (!file) { status.textContent = "Sélectionnez d'abord un fichier PDF."; return; }
+  if (file.type !== "application/pdf") { status.textContent = "Le fichier doit être un PDF."; return; }
 
-  if (action === "toggle") {
-    updateDoc(doc(db, "menus", menu.id), {
-      disponible: menu.disponible === false,
-    }).catch((error) => {
-      console.error("Firestore — mise à jour du menu impossible", error);
-    });
-  }
-
-  if (action === "delete") {
-    if (confirm(`Supprimer définitivement « ${menu.nom} » ?`)) {
-      deleteDoc(doc(db, "menus", menu.id)).catch((error) => {
-        console.error("Firestore — suppression du menu impossible", error);
-      });
-    }
-  }
-}
-
-els.menuCancelEdit.addEventListener("click", resetMenuForm);
-
-function resetMenuForm() {
-  editingMenuId = null;
-  els.menuForm.reset();
-  els.menuForm.disponible.checked = true;
-  els.menuFormTitle.textContent = "Ajouter un menu";
-  els.menuCancelEdit.hidden = true;
-  renderMenuPlatsCheckboxes();
-}
-
-els.menuForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const platsIds = Array.from(
-    els.menuPlatsCheckboxes.querySelectorAll("input[type=checkbox]:checked")
-  ).map((cb) => cb.value);
-
-  const data = {
-    nom: els.menuForm.nom.value.trim(),
-    description: els.menuForm.description.value.trim(),
-    prix: els.menuForm.prix.value.trim(),
-    dateDebut: els.menuForm.dateDebut.value || "",
-    dateFin: els.menuForm.dateFin.value || "",
-    disponible: els.menuForm.disponible.checked,
-    platsIds,
-  };
-
-  if (!data.nom) return;
-
+  button.disabled = true;
+  status.textContent = "Téléversement en cours…";
   try {
-    if (editingMenuId) {
-      await updateDoc(doc(db, "menus", editingMenuId), data);
-    } else {
-      await addDoc(collection(db, "menus"), {
-        ...data,
-        createdAt: serverTimestamp(),
-      });
-    }
-
-    resetMenuForm();
+    const fileRef = ref(storage, `menus/menu${id}.pdf`);
+    await uploadBytes(fileRef, file, { contentType: "application/pdf", cacheControl: "no-cache, max-age=0" });
+    const url = await getDownloadURL(fileRef);
+    await setDoc(doc(db, "menuPdfs", String(id)), { id: Number(id), url, updatedAt: serverTimestamp() }, { merge: true });
+    status.textContent = "PDF remplacé. La page Menus utilisera ce nouveau document.";
+    input.value = "";
+    document.querySelector(`#menu-file-name-${id}`).textContent = "Aucun nouveau fichier choisi";
   } catch (error) {
-    console.error("Firestore — enregistrement du menu impossible", error);
-  }
-});
+    console.error(error);
+    status.textContent = "Impossible de remplacer le PDF. Vérifiez les droits Firebase Storage et réessayez.";
+  } finally { button.disabled = false; }
+}
 
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str ?? "";
-  return div.innerHTML;
+function escapeAttr(value) {
+  return String(value ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
