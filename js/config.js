@@ -33,12 +33,12 @@ const CDC_CONFIG = {
     traiteur: "Déplacements dans la Loire, à Saint-Étienne, Lyon, Clermont-Ferrand et au-delà sur demande",
   },
   images: {
-    hero: "/Le-Carnet-du-Chef/images/photos/pexels-anhelina-vasylyk-734724285-34326268.svg",
-    ambition: "/Le-Carnet-du-Chef/images/photos/pexels-skylar-kang-6375558.svg",
-    apropos: "/Le-Carnet-du-Chef/images/photos/pexels-rdne-5779781.svg",
-    traiteurEvenement: "/Le-Carnet-du-Chef/images/photos/pexels-novkov-visuals-34321369.svg",
-    traiteurChef: "/Le-Carnet-du-Chef/images/photos/pexels-skylar-kang-6378164.svg",
-    traiteurBuffet: "/Le-Carnet-du-Chef/images/photos/pexels-planka-24863059.svg",
+    hero: "https://commons.wikimedia.org/wiki/Special:FilePath/Gourmet_Chef_(Unsplash).jpg",
+    ambition: "https://commons.wikimedia.org/wiki/Special:FilePath/Preparing_chicken.jpg",
+    apropos: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef_1.jpg",
+    traiteurEvenement: "https://commons.wikimedia.org/wiki/Special:FilePath/Présentation_d'un_buffet.jpg",
+    traiteurChef: "https://commons.wikimedia.org/wiki/Special:FilePath/Chef_Dev_shot.jpg",
+    traiteurBuffet: "https://commons.wikimedia.org/wiki/Special:FilePath/Ugandan_food_buffet_serving.jpg",
   },
   horaires: {
     dejeunerRetrait: "11h30 – 12h00",
