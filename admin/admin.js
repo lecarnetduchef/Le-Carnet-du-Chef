@@ -1,11 +1,14 @@
-import { auth, db, storage, FIREBASE_READY } from "../js/firebase-init.js";
+import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { collection, doc, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 
 const MENU_IDS = [1, 2, 3];
-const SAVE_TIMEOUT_MS = 20000;
-const pendingFiles = new Map();
+const R2_URLS = {
+  1: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu1.pdf",
+  2: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu2.pdf",
+  3: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu3.pdf"
+};
+const pendingUrls = new Map();
 let els = {};
 let initialized = false;
 
@@ -54,7 +57,7 @@ function initAuth() {
     } else {
       els.loginScreen.hidden = false;
       els.dashboard.hidden = true;
-      pendingFiles.clear();
+      pendingUrls.clear();
     }
   });
 
@@ -102,121 +105,70 @@ async function getCurrentMenus() {
 async function renderMenus() {
   els.menusList.innerHTML = "";
   els.saveStatus.style.display = "none";
-  pendingFiles.clear();
+  pendingUrls.clear();
 
   let current = {};
   try {
     current = await getCurrentMenus();
   } catch (error) {
-    showSaveStatus("Impossible de lire les PDF enregistrés dans Firestore. Vérifiez la configuration Firebase.", true);
+    console.error("Erreur de lecture Firestore menuPdfs :", error);
+    showSaveStatus(`Impossible de lire les PDF enregistrés dans Firestore : ${error?.message || "erreur inconnue"}`, true);
   }
 
   MENU_IDS.forEach((id) => {
     const data = current[String(id)] || {};
-    const row = document.createElement("article");
-    row.className = "admin-row";
-    const currentFileName = data.fileName || `menu${id}.pdf`;
+    const expectedFile = `menu${id}.pdf`;
+    const currentUrl = data.url || R2_URLS[id];
     const present = Boolean(data.url);
 
+    const row = document.createElement("article");
+    row.className = "admin-row";
     row.innerHTML = `
       <div class="admin-row-main" style="display:block;">
         <strong>MENU ${id}</strong>
-        <span class="muted" style="display:block;margin-top:.25rem;">Fichier actuel : <strong>${escapeHtml(currentFileName)}</strong></span>
-        <span style="display:inline-block;margin-top:.5rem;" class="${present ? "admin-status-success" : "admin-status-muted"}">${present ? "PDF présent" : "PDF absent"}</span>
-        ${data.url ? `<a href="${escapeAttr(data.url)}" target="_blank" rel="noopener" class="muted" style="display:block;margin-top:.5rem;">Ouvrir le PDF actuel</a>` : ""}
+        <span class="muted" style="display:block;margin-top:.25rem;">Fichier attendu : <strong>${expectedFile}</strong></span>
+        <span style="display:inline-block;margin-top:.5rem;" class="${present ? "admin-status-success" : "admin-status-muted"}">${present ? "URL R2 enregistrée" : "URL R2 non enregistrée"}</span>
+        <span class="muted" style="display:block;margin-top:.5rem;word-break:break-all;">URL actuelle : <strong>${escapeHtml(currentUrl)}</strong></span>
+        <a href="${escapeAttr(currentUrl)}" target="_blank" rel="noopener" class="muted" style="display:block;margin-top:.5rem;">Ouvrir le PDF actuel</a>
       </div>
       <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
-        <label class="btn btn-secondary" for="menu-file-${id}" style="cursor:pointer;">Remplacer le PDF</label>
-        <input id="menu-file-${id}" data-menu-file="${id}" type="file" accept="application/pdf,.pdf" style="position:absolute;left:-9999px;">
-        <span id="menu-file-name-${id}" class="muted">Aucun nouveau fichier sélectionné</span>
+        <button type="button" class="btn btn-secondary" data-r2-replace="${id}">Remplacer le PDF dans Cloudflare R2</button>
       </div>
       <p id="menu-status-${id}" class="muted" style="margin:.75rem 0 0;" aria-live="polite"></p>
     `;
     els.menusList.appendChild(row);
   });
 
-  els.menusList.querySelectorAll("[data-menu-file]").forEach((input) => {
-    input.addEventListener("change", () => {
-      const id = Number(input.dataset.menuFile);
-      const file = input.files?.[0];
-      const nameEl = document.querySelector(`#menu-file-name-${id}`);
+  els.menusList.querySelectorAll("[data-r2-replace]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = Number(button.dataset.r2Replace);
       const statusEl = document.querySelector(`#menu-status-${id}`);
-      if (!file) {
-        pendingFiles.delete(id);
-        nameEl.textContent = "Aucun nouveau fichier sélectionné";
-        statusEl.textContent = "";
-        return;
-      }
-      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-        input.value = "";
-        pendingFiles.delete(id);
-        nameEl.textContent = "Aucun nouveau fichier sélectionné";
-        statusEl.textContent = "Le fichier doit être un PDF.";
-        return;
-      }
-      pendingFiles.set(id, file);
-      nameEl.textContent = `En attente de sauvegarde : ${file.name}`;
-      statusEl.textContent = "PDF sélectionné mais non sauvegardé. Cliquez sur « SAUVEGARDER LES PDF ».";
+      statusEl.textContent = `Le fichier ${`menu${id}.pdf`} doit être remplacé directement dans Cloudflare R2. L’ADMIN ne téléverse plus de fichier. L’URL publique utilisée par le site est : ${R2_URLS[id]}`;
     });
   });
 }
 
-function withTimeout(promise, label) {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = window.setTimeout(() => {
-      reject(new Error(`Délai dépassé (20 secondes) pendant ${label}. Vérifiez votre connexion et les droits Firebase Storage/Firestore.`));
-    }, SAVE_TIMEOUT_MS);
-  });
-  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timer));
-}
-
 async function saveAllMenus() {
   showSaveStatus("Sauvegarde en cours…", false);
-
-  if (!pendingFiles.size) {
-    showSaveStatus("Sélectionnez au moins un PDF.", true);
-    return;
-  }
-
   els.saveButton.disabled = true;
 
   try {
     for (const id of MENU_IDS) {
-      const file = pendingFiles.get(id);
-      if (!file) continue;
-
-      const fileRef = ref(storage, `menus/menu${id}.pdf`);
-      await withTimeout(
-        uploadBytes(fileRef, file, {
-          contentType: "application/pdf",
-          cacheControl: "no-cache, max-age=0"
-        }),
-        `l’envoi de MENU ${id}`
-      );
-
-      const url = await withTimeout(
-        getDownloadURL(fileRef),
-        `la récupération de l’URL de MENU ${id}`
-      );
-
-      await withTimeout(
-        setDoc(doc(db, "menuPdfs", String(id)), {
-          id,
-          url,
-          fileName: `menu${id}.pdf`,
-          updatedAt: serverTimestamp()
-        }, { merge: true }),
-        `l’enregistrement Firestore de MENU ${id}`
-      );
+      const url = pendingUrls.get(id) || R2_URLS[id];
+      await setDoc(doc(db, "menuPdfs", String(id)), {
+        id,
+        url,
+        fileName: `menu${id}.pdf`,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
     }
 
-    pendingFiles.clear();
+    pendingUrls.clear();
     showSaveStatus("PDF sauvegardés avec succès", false);
     await renderMenusKeepingSuccess();
   } catch (error) {
-    console.error("Erreur Firebase pendant la sauvegarde des PDF :", error);
-    showSaveStatus(`Erreur lors de la sauvegarde : ${error?.message || "opération impossible"}`, true);
+    console.error("Erreur Firestore pendant la sauvegarde des URLs R2 :", error);
+    showSaveStatus(`Erreur lors de la sauvegarde des URLs R2 : ${error?.message || "opération impossible"}`, true);
   } finally {
     els.saveButton.disabled = false;
   }
