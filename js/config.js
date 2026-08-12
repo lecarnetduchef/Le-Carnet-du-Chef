@@ -33,10 +33,10 @@ const CDC_CONFIG = {
     traiteur: "Déplacements dans la Loire, à Saint-Étienne, Lyon, Clermont-Ferrand et au-delà sur demande",
   },
   images: {
-    hero: "https://images.pexels.com/photos/30469688/pexels-photo-30469688.jpeg?auto=compress&cs=tinysrgb&w=1600",
-    traiteurEvenement: "https://images.pexels.com/photos/34321369/pexels-photo-34321369.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    ambition: "https://images.pexels.com/photos/28703287/pexels-photo-28703287.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    traiteurChef: "https://images.pexels.com/photos/29145758/pexels-photo-29145758.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    hero: "/Le-Carnet-du-Chef/images/photos/pexels-anhelina-vasylyk-734724285-34326268.svg",
+    traiteurEvenement: "/Le-Carnet-du-Chef/images/photos/pexels-planka-24863059.svg",
+    ambition: "/Le-Carnet-du-Chef/images/photos/pexels-skylar-kang-6375558.svg",
+    traiteurChef: "/Le-Carnet-du-Chef/images/photos/pexels-skylar-kang-6378164.svg",
   },
   horaires: {
     dejeunerRetrait: "11h30 – 12h00",
@@ -103,3 +103,64 @@ const CDC_CONFIG = {
     message,
   };
 })();
+
+// ======================================================================
+// Remplissage automatique des images data-cdc-bg.
+// Les chemins sont absolus par rapport au site GitHub Pages afin de
+// fonctionner identiquement depuis index.html et depuis /pages/.
+// ======================================================================
+document.addEventListener("DOMContentLoaded", () => {
+  const SOURCE = {
+    liens: CDC_CONFIG.liens,
+    contact: CDC_CONFIG.contact,
+    zones: CDC_CONFIG.zones,
+    images: CDC_CONFIG.images,
+    horaires: CDC_CONFIG.horaires,
+    fraisLivraison: CDC_CONFIG.fraisLivraison,
+    commandes: CDC_CONFIG.commandes,
+  };
+
+  const get = (path) =>
+    path.split(".").reduce((obj, key) => (obj ? obj[key] : undefined), SOURCE);
+
+  document.querySelectorAll("[data-cdc-link]").forEach((el) => {
+    const value = get(el.getAttribute("data-cdc-link"));
+    if (value) el.setAttribute("href", value);
+  });
+
+  document.querySelectorAll("[data-cdc-text]").forEach((el) => {
+    const value = get(el.getAttribute("data-cdc-text"));
+    if (value) el.textContent = value;
+  });
+
+  document.querySelectorAll("[data-cdc-bg]").forEach((el) => {
+    const value = get(el.getAttribute("data-cdc-bg"));
+    if (!value) return;
+
+    if (el.classList.contains("hero")) {
+      el.style.setProperty("--hero-image", `url("${value}")`);
+    } else {
+      el.style.backgroundImage = `url("${value}")`;
+      el.style.backgroundSize = "cover";
+      el.style.backgroundPosition = "center";
+      el.style.backgroundRepeat = "no-repeat";
+      el.textContent = "";
+    }
+  });
+
+  document.querySelectorAll("[data-cdc-show]").forEach((el) => {
+    const value = get(el.getAttribute("data-cdc-show"));
+    el.hidden = !value;
+  });
+
+  if (!CDC_CONFIG.commandes.etat.commandesOuvertes) {
+    document.querySelectorAll("[data-cdc-order-button]").forEach((el) => {
+      el.classList.add("btn-disabled");
+      el.setAttribute("aria-disabled", "true");
+      el.removeAttribute("href");
+      el.removeAttribute("target");
+      el.textContent = "Commandes fermées";
+      if (CDC_CONFIG.commandes.etat.message) el.title = CDC_CONFIG.commandes.etat.message;
+    });
+  }
+});
