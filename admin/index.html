@@ -8,7 +8,7 @@
   <link rel="icon" href="../favicon/favicon.ico" sizes="any">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="admin.css">
@@ -33,9 +33,20 @@
 
       <section class="admin-section">
         <h2>📖 Les 3 menus PDF</h2>
-        <p class="muted">Chaque emplacement correspond à une carte de la page Menus. Remplacez simplement le fichier PDF correspondant dans le dépôt GitHub. Aucun plat n'est géré ici et aucun contenu de menu n'est affiché depuis Firestore.</p>
+        <div class="admin-alert" style="margin-bottom:1rem;">
+          <strong>GESTION DES PDF</strong>
+          <p style="margin:.5rem 0 0;">1. Cliquez sur « Remplacer le PDF ».</p>
+          <p style="margin:.25rem 0 0;">2. Sélectionnez votre nouveau fichier PDF.</p>
+          <p style="margin:.25rem 0 0;">3. Vérifiez le fichier sélectionné.</p>
+          <p style="margin:.25rem 0 0;">4. Cliquez sur « SAUVEGARDER LES PDF ».</p>
+          <p style="margin:.25rem 0 0;">5. Attendez le message « PDF sauvegardés avec succès ».<br>Les modifications ne sont réellement publiées sur le site qu’après la sauvegarde.</p>
+        </div>
         <div id="menus-list"></div>
-        <div class="admin-alert" style="margin-top:1rem;">Pour que la mise à jour reste compatible avec GitHub Pages, les fichiers doivent rester dans <code>documents/</code> sous les noms <code>menu1.pdf</code>, <code>menu2.pdf</code> et <code>menu3.pdf</code>.</div>
+        <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+          <button type="button" id="save-pdfs-btn" class="btn btn-primary">SAUVEGARDER LES PDF</button>
+        </div>
+        <div id="save-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
+        <div class="admin-alert" style="margin-top:1rem;">Les PDF sont stockés dans Firebase Storage et leurs URLs publiées sont enregistrées dans Firestore. Aucun autre contenu du site n'est géré ici.</div>
       </section>
     </div>
   </div>
