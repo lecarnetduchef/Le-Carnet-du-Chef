@@ -2,6 +2,8 @@
  * LE CARNET DU CHEF — Script principal
  * Navigation mobile + légères apparitions au scroll.
  */
+const scriptUrl = document.currentScript?.src;
+
 document.addEventListener("DOMContentLoaded", () => {
   // --- Navigation mobile -------------------------------------------------
   const toggle = document.querySelector(".nav-toggle");
@@ -36,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
           left: auto;
           width: min(88vw, 380px);
           min-height: 100dvh;
-          padding: calc(var(--header-height) + 1.5rem) var(--space-3) var(--space-4);
+          padding: 1.5rem var(--space-3) var(--space-4);
           background: var(--color-white);
           box-shadow: -18px 0 45px rgba(31, 47, 40, 0.22);
           transform: translateX(100%);
@@ -49,6 +51,13 @@ document.addEventListener("DOMContentLoaded", () => {
           transform: translateX(0);
           opacity: 1;
           pointer-events: auto;
+        }
+        .mobile-nav-logo {
+          display: block;
+          width: min(72%, 245px);
+          height: auto;
+          margin: 0 auto 1.25rem;
+          flex: 0 0 auto;
         }
         .nav-links a { font-size: var(--fs-md); }
         .nav-cta { flex-direction: column; width: 100%; margin-top: var(--space-2); }
@@ -69,6 +78,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     `;
     document.head.appendChild(mobileNavStyle);
+
+    const navLogo = document.createElement("img");
+    navLogo.className = "mobile-nav-logo";
+    navLogo.src = scriptUrl ? new URL("../images/logo/menu-logo.svg", scriptUrl).href : "";
+    navLogo.alt = "Le Carnet du Chef";
+    navLinks.prepend(navLogo);
 
     const backdrop = document.createElement("div");
     backdrop.className = "nav-backdrop";
