@@ -1,6 +1,6 @@
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { collection, doc, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const MENU_IDS = [1, 2, 3];
 const R2_URLS = {
@@ -8,6 +8,8 @@ const R2_URLS = {
   2: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu2.pdf",
   3: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu3.pdf"
 };
+const CHEF_PRESENTATION_REF = doc(db, "siteContent", "chefPresentation");
+const CHEF_PRESENTATION_FALLBACK = "[Texte à compléter : présentation personnelle du chef — parcours, expériences, ce qui l'anime au quotidien.]";
 const pendingUrls = new Map();
 let els = {};
 let initialized = false;
@@ -23,7 +25,11 @@ function cacheElements() {
     userEmail: document.querySelector("#user-email"),
     menusList: document.querySelector("#menus-list"),
     saveButton: document.querySelector("#save-pdfs-btn"),
-    saveStatus: document.querySelector("#save-status")
+    saveStatus: document.querySelector("#save-status"),
+    chefPresentation: document.querySelector("#chef-presentation"),
+    saveChefPresentationButton: document.querySelector("#save-chef-presentation-btn"),
+    chefPresentationStatus: document.querySelector("#chef-presentation-status"),
+    chefPresentationPreview: document.querySelector("#chef-presentation-preview")
   };
 }
 
@@ -53,6 +59,7 @@ function initAuth() {
       els.loginScreen.hidden = true;
       els.dashboard.hidden = false;
       els.userEmail.textContent = user.email || "administrateur";
+      await loadChefPresentation();
       await renderMenus();
     } else {
       els.loginScreen.hidden = false;
@@ -83,6 +90,17 @@ function initAuth() {
     event.preventDefault();
     void saveAllMenus();
   });
+
+  if (els.saveChefPresentationButton) {
+    els.saveChefPresentationButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      void saveChefPresentation();
+    });
+  }
+
+  if (els.chefPresentation) {
+    els.chefPresentation.addEventListener("input", updateChefPresentationPreview);
+  }
 }
 
 function traduireErreur(code) {
@@ -93,6 +111,58 @@ function traduireErreur(code) {
     "auth/invalid-credential": "identifiants incorrects.",
     "auth/too-many-requests": "trop de tentatives, réessayez plus tard."
   }[code] || "veuillez réessayer.";
+}
+
+async function loadChefPresentation() {
+  if (!els.chefPresentation) return;
+  els.chefPresentation.value = CHEF_PRESENTATION_FALLBACK;
+  updateChefPresentationPreview();
+  setChefPresentationStatus("");
+
+  try {
+    const snap = await getDoc(CHEF_PRESENTATION_REF);
+    const texte = snap.exists() && typeof snap.data().texte === "string" ? snap.data().texte : "";
+    if (texte.trim()) {
+      els.chefPresentation.value = texte;
+      updateChefPresentationPreview();
+    }
+  } catch (error) {
+    console.error("Erreur de lecture Firestore de la présentation du chef :", error);
+    setChefPresentationStatus("Impossible de charger le texte enregistré. Le texte actuel est conservé.", true);
+  }
+}
+
+async function saveChefPresentation() {
+  if (!els.chefPresentation || !els.saveChefPresentationButton) return;
+
+  const texte = els.chefPresentation.value;
+  setChefPresentationStatus("Enregistrement en cours…");
+  els.saveChefPresentationButton.disabled = true;
+
+  try {
+    await setDoc(CHEF_PRESENTATION_REF, {
+      texte,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    setChefPresentationStatus("Présentation du chef enregistrée avec succès.");
+  } catch (error) {
+    console.error("Erreur Firestore lors de l'enregistrement de la présentation du chef :", error);
+    setChefPresentationStatus(`Erreur lors de l'enregistrement : ${error?.message || "opération impossible"}`, true);
+  } finally {
+    els.saveChefPresentationButton.disabled = false;
+  }
+}
+
+function updateChefPresentationPreview() {
+  if (!els.chefPresentationPreview || !els.chefPresentation) return;
+  els.chefPresentationPreview.textContent = els.chefPresentation.value;
+  els.chefPresentationPreview.hidden = !els.chefPresentation.value;
+}
+
+function setChefPresentationStatus(message, isError = false) {
+  if (!els.chefPresentationStatus) return;
+  els.chefPresentationStatus.textContent = message;
+  els.chefPresentationStatus.style.color = isError ? "#a33" : "";
 }
 
 async function getCurrentMenus() {
