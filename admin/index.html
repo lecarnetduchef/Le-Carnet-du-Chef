@@ -40,7 +40,34 @@
         </div>
         <div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div>
       </section>
+      <section class="admin-section">
+        <h2>🔴 GESTION DES COMMANDES</h2>
 
+        <div class="admin-alert" style="margin-bottom:1rem;">
+          <strong>Contrôle des commandes du site</strong>
+          <p style="margin:.5rem 0 0;">
+            Vous pouvez fermer temporairement toutes les commandes du site,
+            puis les rouvrir à tout moment.
+          </p>
+        </div>
+
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+          <button type="button" id="close-orders-btn" class="btn btn-secondary">
+            🔴 Fermer les commandes
+          </button>
+
+          <button type="button" id="open-orders-btn" class="btn btn-primary">
+            🟢 Ouvrir les commandes
+          </button>
+        </div>
+
+        <div
+          id="orders-status"
+          class="admin-alert"
+          style="margin-top:1rem;display:none;"
+          aria-live="polite">
+        </div>
+      </section>
       <section class="admin-section">
         <h2>📖 Les 3 menus PDF</h2>
         <div class="admin-alert" style="margin-bottom:1rem;">
