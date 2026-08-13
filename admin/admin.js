@@ -104,8 +104,44 @@ function initAuth() {
   if (els.chefPresentation) {
     els.chefPresentation.addEventListener("input", updateChefPresentationPreview);
   }
+if (els.closeOrdersButton) {
+  els.closeOrdersButton.addEventListener("click", async () => {
+    await setDoc(
+      doc(db, "siteContent", "commandes"),
+      {
+        fermetureManuelleGlobale: true,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    if (els.ordersStatus) {
+      els.ordersStatus.textContent = "🔴 Commandes fermées.";
+      els.ordersStatus.className = "admin-alert admin-alert-success";
+      els.ordersStatus.style.display = "block";
+    }
+  });
 }
 
+if (els.openOrdersButton) {
+  els.openOrdersButton.addEventListener("click", async () => {
+    await setDoc(
+      doc(db, "siteContent", "commandes"),
+      {
+        fermetureManuelleGlobale: false,
+        updatedAt: serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    if (els.ordersStatus) {
+      els.ordersStatus.textContent = "🟢 Commandes ouvertes.";
+      els.ordersStatus.className = "admin-alert admin-alert-success";
+      els.ordersStatus.style.display = "block";
+    }
+  });
+}
+}
 function traduireErreur(code) {
   return {
     "auth/invalid-email": "adresse email invalide.",
