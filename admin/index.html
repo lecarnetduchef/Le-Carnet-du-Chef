@@ -32,6 +32,16 @@
       <div class="admin-header"><p class="muted">Connecté en tant que <strong id="user-email"></strong></p><button id="logout-btn" class="btn btn-secondary">Se déconnecter</button></div>
 
       <section class="admin-section">
+        <h2>PRÉSENTATION DU CHEF</h2>
+        <textarea id="chef-presentation" rows="14" style="width:100%;resize:vertical;" aria-label="Présentation du chef"></textarea>
+        <div style="display:flex;gap:.75rem;align-items:center;margin-top:1rem;flex-wrap:wrap;">
+          <button type="button" id="save-chef-presentation-btn" class="btn btn-primary">Enregistrer</button>
+          <span id="chef-presentation-status" class="muted" aria-live="polite"></span>
+        </div>
+        <div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div>
+      </section>
+
+      <section class="admin-section">
         <h2>📖 Les 3 menus PDF</h2>
         <div class="admin-alert" style="margin-bottom:1rem;">
           <strong>GESTION DES PDF</strong>
