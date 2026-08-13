@@ -29,8 +29,11 @@ function cacheElements() {
     chefPresentation: document.querySelector("#chef-presentation"),
     saveChefPresentationButton: document.querySelector("#save-chef-presentation-btn"),
     chefPresentationStatus: document.querySelector("#chef-presentation-status"),
-    chefPresentationPreview: document.querySelector("#chef-presentation-preview")
-  };
+   chefPresentationPreview: document.querySelector("#chef-presentation-preview"),
+closeOrdersButton: document.querySelector("#close-orders-btn"),
+openOrdersButton: document.querySelector("#open-orders-btn"),
+ordersStatus: document.querySelector("#orders-status")
+ };
 }
 
 function start() {
