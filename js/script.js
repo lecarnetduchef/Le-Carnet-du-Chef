@@ -54,9 +54,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         .mobile-nav-logo {
           display: block;
-          width: min(48%, 155px);
+          width: min(72%, 245px);
           height: auto;
-          margin: 0 auto 1rem;
+          margin: 0 auto 1.25rem;
           flex: 0 0 auto;
         }
         .nav-links a { font-size: var(--fs-md); }
