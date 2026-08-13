@@ -62,7 +62,34 @@ const CDC_CONFIG = {
     },
   },
 };
+async function synchroniserFermetureGlobale() {
+  try {
+    const response = await fetch(
+      "https://firestore.googleapis.com/v1/projects/carnet-du-chef/databases/(default)/documents/siteContent/commandes"
+    );
 
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const ferme =
+      data.fields?.fermetureManuelleGlobale?.booleanValue === true;
+
+    CDC_CONFIG.commandes.fermetureManuelleGlobale = ferme;
+
+    if (ferme) {
+      CDC_CONFIG.commandes.etat = {
+        dejeunerOuvert: false,
+        dinerOuvert: false,
+        commandesOuvertes: false,
+        afficherBanniere: true,
+        message:
+          "Les commandes sont actuellement fermées. Retrouvez-nous sur nos réseaux sociaux pour connaître les prochaines ouvertures."
+      };
+    }
+  } catch (error) {
+    console.error("Impossible de lire l'état global des commandes :", error);
+  }
+}
 (function calculerEtatCommandes() {
   const c = CDC_CONFIG.commandes;
   function minutesActuellesParis() {
@@ -108,6 +135,84 @@ const CDC_CONFIG = {
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
+  synchroniserFermetureGlobale().then(() => {
+  if (!CDC_CONFIG.commandes.fermetureManuelleGlobale) {
+    (function recalculerEtatCommandes() {
+      const c = CDC_CONFIG.commandes;
+
+      function minutesActuellesParis() {
+        const parts = new Intl.DateTimeFormat("fr-FR", {
+          timeZone: "Europe/Paris",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).formatToParts(new Date());
+
+        const h = Number(parts.find((p) => p.type === "hour").value);
+        const m = Number(parts.find((p) => p.type === "minute").value);
+        return h * 60 + m;
+      }
+
+      function minutesDepuisHeureTexte(str) {
+        const [h, m] = str.split(":").map(Number);
+        return h * 60 + m;
+      }
+
+      const maintenant = minutesActuellesParis();
+      const avantLimiteDejeuner =
+        !c.automatique ||
+        maintenant < minutesDepuisHeureTexte(c.limiteDejeuner);
+
+      const avantLimiteDiner =
+        !c.automatique ||
+        maintenant < minutesDepuisHeureTexte(c.limiteDiner);
+
+      const exceptionnelle = c.fermetureExceptionnelle.active;
+
+      const dejeunerOuvert =
+        !exceptionnelle &&
+        !c.fermetureManuelleDejeuner &&
+        avantLimiteDejeuner;
+
+      const dinerOuvert =
+        !exceptionnelle &&
+        !c.fermetureManuelleDiner &&
+        avantLimiteDiner;
+
+      let message = "";
+
+      if (exceptionnelle) {
+        message = c.fermetureExceptionnelle.message;
+      } else if (!dejeunerOuvert && !dinerOuvert) {
+        message = c.messageDinerFerme;
+      } else if (!dejeunerOuvert) {
+        message = c.messageDejeunerFerme;
+      }
+
+      c.etat = {
+        dejeunerOuvert,
+        dinerOuvert,
+        commandesOuvertes: dejeunerOuvert || dinerOuvert,
+        afficherBanniere: message !== "",
+        message,
+      };
+    })();
+  }
+
+  if (!CDC_CONFIG.commandes.etat.commandesOuvertes) {
+    document.querySelectorAll("[data-cdc-order-button]").forEach((el) => {
+      el.classList.add("btn-disabled");
+      el.setAttribute("aria-disabled", "true");
+      el.removeAttribute("href");
+      el.removeAttribute("target");
+      el.textContent = "Commandes fermées";
+
+      if (CDC_CONFIG.commandes.etat.message) {
+        el.title = CDC_CONFIG.commandes.etat.message;
+      }
+    });
+  }
+});
   const SOURCE = {
     liens: CDC_CONFIG.liens,
     contact: CDC_CONFIG.contact,
