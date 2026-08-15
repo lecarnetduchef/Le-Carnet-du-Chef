@@ -282,7 +282,7 @@ function onAuthStateChangedSafe() {
     currentUser = user;
     productsSection.hidden = !user;
     if (user) {
-      void diagnoseCurrentUser(user);
+      void diagnoseCurrentUser();
       void loadProducts();
     } else {
       currentProducts = [];
@@ -291,11 +291,12 @@ function onAuthStateChangedSafe() {
   });
 }
 
-async function diagnoseCurrentUser(user) {
+async function diagnoseCurrentUser() {
+  console.log("DIAGNOSTIC ADMIN TOKEN EXECUTE");
   try {
-    const tokenResult = await user.getIdTokenResult(true);
-    console.log("EMAIL", user.email);
-    console.log("UID", user.uid);
+    const tokenResult = await currentUser.getIdTokenResult(true);
+    console.log("EMAIL", currentUser.email);
+    console.log("UID", currentUser.uid);
     console.log("CLAIMS DU TOKEN", tokenResult.claims);
   } catch (error) {
     console.error("DIAGNOSTIC TOKEN FIREBASE — impossible de récupérer le token :", error);
