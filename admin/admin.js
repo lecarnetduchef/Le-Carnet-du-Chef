@@ -29,17 +29,27 @@ function cacheElements() {
     chefPresentation: document.querySelector("#chef-presentation"),
     saveChefPresentationButton: document.querySelector("#save-chef-presentation-btn"),
     chefPresentationStatus: document.querySelector("#chef-presentation-status"),
-   chefPresentationPreview: document.querySelector("#chef-presentation-preview"),
-closeOrdersButton: document.querySelector("#close-orders-btn"),
-openOrdersButton: document.querySelector("#open-orders-btn"),
-ordersStatus: document.querySelector("#orders-status")
- };
+    chefPresentationPreview: document.querySelector("#chef-presentation-preview"),
+    closeOrdersButton: document.querySelector("#close-orders-btn"),
+    openOrdersButton: document.querySelector("#open-orders-btn"),
+    ordersStatus: document.querySelector("#orders-status"),
+    statActiveProducts: document.querySelector("#stat-active-products"),
+    statOutProducts: document.querySelector("#stat-out-products"),
+    statStock: document.querySelector("#stat-stock"),
+    dashboardStatus: document.querySelector("#dashboard-status"),
+    stocksTableBody: document.querySelector("#stocks-table-body"),
+    stocksStatus: document.querySelector("#stocks-status"),
+    adminPageTitle: document.querySelector("#admin-page-title"),
+    sidebar: document.querySelector("#admin-sidebar"),
+    mobileMenu: document.querySelector("#admin-menu-toggle")
+  };
 }
 
 function start() {
   if (initialized) return;
   initialized = true;
   cacheElements();
+  initNavigation();
 
   if (!FIREBASE_READY) {
     els.configWarning.hidden = false;
@@ -56,6 +66,37 @@ if (document.readyState === "loading") {
   start();
 }
 
+function initNavigation() {
+  const items = document.querySelectorAll("[data-admin-target]");
+  const views = document.querySelectorAll("[data-admin-view]");
+
+  items.forEach((item) => {
+    item.addEventListener("click", () => {
+      const target = item.dataset.adminTarget;
+      views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); });
+      items.forEach((nav) => nav.classList.toggle("active", nav === item));
+      const title = item.querySelector("span")?.textContent?.trim() || "Administration";
+      if (els.adminPageTitle) els.adminPageTitle.textContent = title;
+      closeMobileNavigation();
+      if (target === "stocks-section") void renderStocks();
+      if (target === "dashboard-section") void loadDashboardStats();
+    });
+  });
+
+  if (els.mobileMenu && els.sidebar) {
+    els.mobileMenu.addEventListener("click", () => {
+      const open = els.sidebar.classList.toggle("is-open");
+      els.mobileMenu.setAttribute("aria-expanded", String(open));
+    });
+  }
+}
+
+function closeMobileNavigation() {
+  if (!els.sidebar || !els.mobileMenu) return;
+  els.sidebar.classList.remove("is-open");
+  els.mobileMenu.setAttribute("aria-expanded", "false");
+}
+
 function initAuth() {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -64,10 +105,13 @@ function initAuth() {
       els.userEmail.textContent = user.email || "administrateur";
       await loadChefPresentation();
       await renderMenus();
+      await loadDashboardStats();
+      await renderStocks();
     } else {
       els.loginScreen.hidden = false;
       els.dashboard.hidden = true;
       pendingUrls.clear();
+      closeMobileNavigation();
     }
   });
 
@@ -101,47 +145,38 @@ function initAuth() {
     });
   }
 
-  if (els.chefPresentation) {
-    els.chefPresentation.addEventListener("input", updateChefPresentationPreview);
+  if (els.chefPresentation) els.chefPresentation.addEventListener("input", updateChefPresentationPreview);
+
+  if (els.closeOrdersButton) {
+    els.closeOrdersButton.addEventListener("click", async () => {
+      try {
+        await setDoc(doc(db, "siteContent", "commandes"), { fermetureManuelleGlobale: true, updatedAt: serverTimestamp() }, { merge: true });
+        showOrderStatus("🔴 Commandes fermées.", false);
+      } catch (error) {
+        showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true);
+      }
+    });
   }
-if (els.closeOrdersButton) {
-  els.closeOrdersButton.addEventListener("click", async () => {
-    await setDoc(
-      doc(db, "siteContent", "commandes"),
-      {
-        fermetureManuelleGlobale: true,
-        updatedAt: serverTimestamp()
-      },
-      { merge: true }
-    );
 
-    if (els.ordersStatus) {
-      els.ordersStatus.textContent = "🔴 Commandes fermées.";
-      els.ordersStatus.className = "admin-alert admin-alert-success";
-      els.ordersStatus.style.display = "block";
-    }
-  });
+  if (els.openOrdersButton) {
+    els.openOrdersButton.addEventListener("click", async () => {
+      try {
+        await setDoc(doc(db, "siteContent", "commandes"), { fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true });
+        showOrderStatus("🟢 Commandes ouvertes.", false);
+      } catch (error) {
+        showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true);
+      }
+    });
+  }
 }
 
-if (els.openOrdersButton) {
-  els.openOrdersButton.addEventListener("click", async () => {
-    await setDoc(
-      doc(db, "siteContent", "commandes"),
-      {
-        fermetureManuelleGlobale: false,
-        updatedAt: serverTimestamp()
-      },
-      { merge: true }
-    );
+function showOrderStatus(message, isError) {
+  if (!els.ordersStatus) return;
+  els.ordersStatus.textContent = message;
+  els.ordersStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
+  els.ordersStatus.style.display = "block";
+}
 
-    if (els.ordersStatus) {
-      els.ordersStatus.textContent = "🟢 Commandes ouvertes.";
-      els.ordersStatus.className = "admin-alert admin-alert-success";
-      els.ordersStatus.style.display = "block";
-    }
-  });
-}
-}
 function traduireErreur(code) {
   return {
     "auth/invalid-email": "adresse email invalide.",
@@ -154,10 +189,10 @@ function traduireErreur(code) {
 
 async function loadChefPresentation() {
   if (!els.chefPresentation) return;
-  els.chefPresentation.value = CHEF_PRESENTATION_FALLBACK;
+  const fallback = "[Texte à compléter : présentation personnelle du chef — parcours, expériences, ce qui l'anime au quotidien.]";
+  els.chefPresentation.value = fallback;
   updateChefPresentationPreview();
   setChefPresentationStatus("");
-
   try {
     const snap = await getDoc(CHEF_PRESENTATION_REF);
     const texte = snap.exists() && typeof snap.data().texte === "string" ? snap.data().texte : "";
@@ -173,16 +208,11 @@ async function loadChefPresentation() {
 
 async function saveChefPresentation() {
   if (!els.chefPresentation || !els.saveChefPresentationButton) return;
-
   const texte = els.chefPresentation.value;
   setChefPresentationStatus("Enregistrement en cours…");
   els.saveChefPresentationButton.disabled = true;
-
   try {
-    await setDoc(CHEF_PRESENTATION_REF, {
-      texte,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    await setDoc(CHEF_PRESENTATION_REF, { texte, updatedAt: serverTimestamp() }, { merge: true });
     setChefPresentationStatus("Présentation du chef enregistrée avec succès.");
   } catch (error) {
     console.error("Erreur Firestore lors de l'enregistrement de la présentation du chef :", error);
@@ -215,7 +245,6 @@ async function renderMenus() {
   els.menusList.innerHTML = "";
   els.saveStatus.style.display = "none";
   pendingUrls.clear();
-
   let current = {};
   try {
     current = await getCurrentMenus();
@@ -229,7 +258,6 @@ async function renderMenus() {
     const expectedFile = `menu${id}.pdf`;
     const currentUrl = data.url || R2_URLS[id];
     const present = Boolean(data.url);
-
     const row = document.createElement("article");
     row.className = "admin-row";
     row.innerHTML = `
@@ -252,7 +280,7 @@ async function renderMenus() {
     button.addEventListener("click", () => {
       const id = Number(button.dataset.r2Replace);
       const statusEl = document.querySelector(`#menu-status-${id}`);
-      statusEl.textContent = `Le fichier ${`menu${id}.pdf`} doit être remplacé directement dans Cloudflare R2. L’ADMIN ne téléverse plus de fichier. L’URL publique utilisée par le site est : ${R2_URLS[id]}`;
+      statusEl.textContent = `Le fichier menu${id}.pdf doit être remplacé directement dans Cloudflare R2. L’ADMIN ne téléverse plus de fichier. L’URL publique utilisée par le site est : ${R2_URLS[id]}`;
     });
   });
 }
@@ -260,18 +288,11 @@ async function renderMenus() {
 async function saveAllMenus() {
   showSaveStatus("Sauvegarde en cours…", false);
   els.saveButton.disabled = true;
-
   try {
     for (const id of MENU_IDS) {
       const url = pendingUrls.get(id) || R2_URLS[id];
-      await setDoc(doc(db, "menuPdfs", String(id)), {
-        id,
-        url,
-        fileName: `menu${id}.pdf`,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      await setDoc(doc(db, "menuPdfs", String(id)), { id, url, fileName: `menu${id}.pdf`, updatedAt: serverTimestamp() }, { merge: true });
     }
-
     pendingUrls.clear();
     showSaveStatus("PDF sauvegardés avec succès", false);
     await renderMenusKeepingSuccess();
@@ -284,19 +305,80 @@ async function saveAllMenus() {
 }
 
 async function renderMenusKeepingSuccess() {
-  const success = "PDF sauvegardés avec succès";
   await renderMenus();
-  showSaveStatus(success, false);
+  showSaveStatus("PDF sauvegardés avec succès", false);
 }
 
 function showSaveStatus(message, isError) {
-  if (!els.saveStatus) {
-    console.error("#save-status est introuvable dans le DOM :", message);
-    return;
-  }
+  if (!els.saveStatus) return;
   els.saveStatus.textContent = message;
   els.saveStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
   els.saveStatus.style.display = "block";
+}
+
+async function loadDashboardStats() {
+  if (!els.statActiveProducts || !auth.currentUser) return;
+  try {
+    const snapshot = await getDocs(collection(db, "produits"));
+    const products = snapshot.docs.map((item) => item.data());
+    const active = products.filter((product) => product.actif !== false);
+    const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0);
+    const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0);
+    els.statActiveProducts.textContent = String(active.length);
+    els.statOutProducts.textContent = String(out.length);
+    els.statStock.textContent = String(available);
+    if (els.dashboardStatus) els.dashboardStatus.hidden = true;
+  } catch (error) {
+    console.error("Impossible de charger les indicateurs produits :", error);
+    els.statActiveProducts.textContent = "—";
+    els.statOutProducts.textContent = "—";
+    els.statStock.textContent = "—";
+    if (els.dashboardStatus) {
+      els.dashboardStatus.textContent = "Les indicateurs produits ne sont pas disponibles actuellement.";
+      els.dashboardStatus.hidden = false;
+    }
+  }
+}
+
+async function renderStocks() {
+  if (!els.stocksTableBody || !auth.currentUser) return;
+  els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>";
+  try {
+    const snapshot = await getDocs(collection(db, "produits"));
+    const products = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+    if (!products.length) {
+      els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>";
+      return;
+    }
+    els.stocksTableBody.innerHTML = "";
+    products.forEach((product) => {
+      const row = document.createElement("tr");
+      const values = [
+        product.nom || "Produit sans nom",
+        Number(product.stockInitial || 0),
+        Number(product.stockDisponible || 0),
+        Number(product.stockReserve || 0),
+        Number(product.stockVendu || 0),
+        product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"
+      ];
+      values.forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = String(value);
+        row.appendChild(cell);
+      });
+      els.stocksTableBody.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Impossible de charger les stocks :", error);
+    els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>";
+    if (els.stocksStatus) {
+      els.stocksStatus.textContent = `Erreur de lecture des stocks : ${error?.message || "erreur inconnue"}`;
+      els.stocksStatus.className = "admin-alert admin-alert-error";
+      els.stocksStatus.hidden = false;
+    }
+  }
 }
 
 function escapeHtml(value) {
@@ -306,7 +388,7 @@ function escapeHtml(value) {
 }
 
 function escapeAttr(value) {
-  return String(value ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  return String(value ?? "").replace(/&/g,"&amp;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
 window.saveAllMenus = saveAllMenus;
