@@ -65,6 +65,7 @@ function resetForm() {
   reservedInput.disabled = true;
   soldInput.disabled = true;
   availableInput.disabled = false;
+  initialInput.disabled = false;
   stockAdjustment.value = "";
   adjustButton.disabled = true;
   cancelButton.hidden = true;
@@ -84,6 +85,7 @@ function fillForm(product) {
   availableInput.value = Number.isFinite(product.stockDisponible) ? product.stockDisponible : 0;
   reservedInput.value = Number.isFinite(product.stockReserve) ? product.stockReserve : 0;
   soldInput.value = Number.isFinite(product.stockVendu) ? product.stockVendu : 0;
+  initialInput.disabled = true;
   reservedInput.disabled = true;
   soldInput.disabled = true;
   availableInput.disabled = false;
@@ -196,15 +198,15 @@ async function saveProduct(event) {
       categorie: categoryInput.value.trim(),
       actif: activeInput.checked,
       ordre,
-      stockInitial,
       stockDisponible,
       updatedAt: serverTimestamp()
     };
 
     if (id) {
       await updateDoc(doc(db, "produits", id), data);
-      setStatus("Produit modifié. Le stock réservé et le stock vendu ont été conservés.");
+      setStatus("Produit modifié. Le stock initial, le stock réservé et le stock vendu ont été conservés.");
     } else {
+      data.stockInitial = stockInitial;
       data.stockReserve = 0;
       data.stockVendu = 0;
       data.stockDisponible = stockInitial;
