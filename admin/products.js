@@ -281,12 +281,25 @@ function onAuthStateChangedSafe() {
   auth.onAuthStateChanged((user) => {
     currentUser = user;
     productsSection.hidden = !user;
-    if (user) void loadProducts();
-    else {
+    if (user) {
+      void diagnoseCurrentUser(user);
+      void loadProducts();
+    } else {
       currentProducts = [];
       list.innerHTML = "";
     }
   });
+}
+
+async function diagnoseCurrentUser(user) {
+  try {
+    const tokenResult = await user.getIdTokenResult(true);
+    console.log("EMAIL", user.email);
+    console.log("UID", user.uid);
+    console.log("CLAIMS DU TOKEN", tokenResult.claims);
+  } catch (error) {
+    console.error("DIAGNOSTIC TOKEN FIREBASE — impossible de récupérer le token :", error);
+  }
 }
 
 if (document.readyState === "loading") {
