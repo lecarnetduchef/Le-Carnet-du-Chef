@@ -9,7 +9,6 @@ const R2_URLS = {
   3: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu3.pdf"
 };
 const CHEF_PRESENTATION_REF = doc(db, "siteContent", "chefPresentation");
-const CHEF_PRESENTATION_FALLBACK = "[Texte à compléter : présentation personnelle du chef — parcours, expériences, ce qui l'anime au quotidien.]";
 const pendingUrls = new Map();
 let els = {};
 let initialized = false;
@@ -33,6 +32,8 @@ function cacheElements() {
     closeOrdersButton: document.querySelector("#close-orders-btn"),
     openOrdersButton: document.querySelector("#open-orders-btn"),
     ordersStatus: document.querySelector("#orders-status"),
+    ordersStateLabel: document.querySelector("#orders-state-label"),
+    ordersStateBadge: document.querySelector("#orders-state-badge"),
     statActiveProducts: document.querySelector("#stat-active-products"),
     statOutProducts: document.querySelector("#stat-out-products"),
     statStock: document.querySelector("#stat-stock"),
@@ -41,7 +42,8 @@ function cacheElements() {
     stocksStatus: document.querySelector("#stocks-status"),
     adminPageTitle: document.querySelector("#admin-page-title"),
     sidebar: document.querySelector("#admin-sidebar"),
-    mobileMenu: document.querySelector("#admin-menu-toggle")
+    mobileMenu: document.querySelector("#admin-menu-toggle"),
+    dashboardSection: document.querySelector("#dashboard-section")
   };
 }
 
@@ -50,10 +52,12 @@ function start() {
   initialized = true;
   cacheElements();
   initNavigation();
+  injectOrderControlIfNeeded();
 
   if (!FIREBASE_READY) {
     els.configWarning.hidden = false;
     els.loginScreen.hidden = true;
+    els.dashboard.hidden = true;
     return;
   }
 
@@ -66,6 +70,31 @@ if (document.readyState === "loading") {
   start();
 }
 
+function injectOrderControlIfNeeded() {
+  if (!els.dashboardSection || document.querySelector("#dashboard-order-control")) return;
+  const heading = els.dashboardSection.querySelector(".admin-section-heading");
+  if (!heading) return;
+
+  const panel = document.createElement("section");
+  panel.id = "dashboard-order-control";
+  panel.className = "admin-command-control";
+  panel.setAttribute("aria-labelledby", "orders-control-title");
+  panel.innerHTML = `
+    <div class="admin-command-control-head">
+      <div><p class="admin-eyebrow">ACTION PRIORITAIRE</p><h3 id="orders-control-title">ÉTAT DES COMMANDES</h3></div>
+      <span id="orders-state-badge" class="admin-order-state admin-order-state-unknown">Vérification…</span>
+    </div>
+    <div class="admin-command-status-row"><strong id="orders-state-label">Vérification de l’état…</strong><span class="muted">Contrôle global des commandes du site.</span></div>
+    <div class="admin-form-actions admin-command-actions">
+      <button type="button" id="close-orders-btn" class="btn btn-danger">🔴 Fermer les commandes</button>
+      <button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button>
+    </div>
+    <div id="orders-status" class="admin-alert" hidden aria-live="polite"></div>
+  `;
+  heading.insertAdjacentElement("afterend", panel);
+  cacheElements();
+}
+
 function initNavigation() {
   const items = document.querySelectorAll("[data-admin-target]");
   const views = document.querySelectorAll("[data-admin-view]");
@@ -73,18 +102,23 @@ function initNavigation() {
   items.forEach((item) => {
     item.addEventListener("click", () => {
       const target = item.dataset.adminTarget;
+      if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return;
       views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); });
       items.forEach((nav) => nav.classList.toggle("active", nav === item));
       const title = item.querySelector("span")?.textContent?.trim() || "Administration";
       if (els.adminPageTitle) els.adminPageTitle.textContent = title;
       closeMobileNavigation();
       if (target === "stocks-section") void renderStocks();
-      if (target === "dashboard-section") void loadDashboardStats();
+      if (target === "dashboard-section") {
+        void loadDashboardStats();
+        void loadOrdersState();
+      }
     });
   });
 
   if (els.mobileMenu && els.sidebar) {
     els.mobileMenu.addEventListener("click", () => {
+      if (!auth.currentUser || els.dashboard.hidden) return;
       const open = els.sidebar.classList.toggle("is-open");
       els.mobileMenu.setAttribute("aria-expanded", String(open));
     });
@@ -107,11 +141,13 @@ function initAuth() {
       await renderMenus();
       await loadDashboardStats();
       await renderStocks();
+      await loadOrdersState();
     } else {
       els.loginScreen.hidden = false;
       els.dashboard.hidden = true;
       pendingUrls.clear();
       closeMobileNavigation();
+      if (els.userEmail) els.userEmail.textContent = "";
     }
   });
 
@@ -126,17 +162,20 @@ function initAuth() {
     }
   });
 
-  els.logoutBtn.addEventListener("click", () => signOut(auth));
-
-  if (!els.saveButton) {
-    console.error("Le bouton #save-pdfs-btn est introuvable dans le DOM.");
-    return;
-  }
-
-  els.saveButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    void saveAllMenus();
+  els.logoutBtn.addEventListener("click", async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Erreur de déconnexion Firebase :", error);
+    }
   });
+
+  if (els.saveButton) {
+    els.saveButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      void saveAllMenus();
+    });
+  }
 
   if (els.saveChefPresentationButton) {
     els.saveChefPresentationButton.addEventListener("click", (event) => {
@@ -149,9 +188,11 @@ function initAuth() {
 
   if (els.closeOrdersButton) {
     els.closeOrdersButton.addEventListener("click", async () => {
+      if (!auth.currentUser) return;
       try {
         await setDoc(doc(db, "siteContent", "commandes"), { fermetureManuelleGlobale: true, updatedAt: serverTimestamp() }, { merge: true });
         showOrderStatus("🔴 Commandes fermées.", false);
+        updateOrdersStateUI(true);
       } catch (error) {
         showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true);
       }
@@ -160,9 +201,11 @@ function initAuth() {
 
   if (els.openOrdersButton) {
     els.openOrdersButton.addEventListener("click", async () => {
+      if (!auth.currentUser) return;
       try {
         await setDoc(doc(db, "siteContent", "commandes"), { fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true });
         showOrderStatus("🟢 Commandes ouvertes.", false);
+        updateOrdersStateUI(false);
       } catch (error) {
         showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true);
       }
@@ -170,11 +213,32 @@ function initAuth() {
   }
 }
 
+async function loadOrdersState() {
+  if (!auth.currentUser || !els.ordersStateLabel || !els.ordersStateBadge) return;
+  try {
+    const snapshot = await getDoc(doc(db, "siteContent", "commandes"));
+    const closed = snapshot.exists() && snapshot.data()?.fermetureManuelleGlobale === true;
+    updateOrdersStateUI(closed);
+  } catch (error) {
+    console.error("Impossible de lire l’état des commandes :", error);
+    els.ordersStateLabel.textContent = "État indisponible";
+    els.ordersStateBadge.textContent = "Erreur de lecture";
+    els.ordersStateBadge.className = "admin-order-state admin-order-state-unknown";
+  }
+}
+
+function updateOrdersStateUI(closed) {
+  if (!els.ordersStateLabel || !els.ordersStateBadge) return;
+  els.ordersStateLabel.textContent = closed ? "🔴 Commandes fermées" : "🟢 Commandes ouvertes";
+  els.ordersStateBadge.textContent = closed ? "FERMÉES" : "OUVERTES";
+  els.ordersStateBadge.className = `admin-order-state ${closed ? "admin-order-state-closed" : "admin-order-state-open"}`;
+}
+
 function showOrderStatus(message, isError) {
   if (!els.ordersStatus) return;
   els.ordersStatus.textContent = message;
   els.ordersStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
-  els.ordersStatus.style.display = "block";
+  els.ordersStatus.hidden = false;
 }
 
 function traduireErreur(code) {
@@ -242,6 +306,7 @@ async function getCurrentMenus() {
 }
 
 async function renderMenus() {
+  if (!els.menusList || !els.saveStatus) return;
   els.menusList.innerHTML = "";
   els.saveStatus.style.display = "none";
   pendingUrls.clear();
@@ -345,9 +410,7 @@ async function renderStocks() {
   els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>";
   try {
     const snapshot = await getDocs(collection(db, "produits"));
-    const products = snapshot.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+    const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
     if (!products.length) {
       els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>";
       return;
