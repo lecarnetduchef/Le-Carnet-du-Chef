@@ -131,6 +131,29 @@ function closeMobileNavigation() {
   els.mobileMenu.setAttribute("aria-expanded", "false");
 }
 
+function resetAdminToLogin() {
+  if (els.dashboard) els.dashboard.hidden = true;
+  if (els.loginScreen) els.loginScreen.hidden = false;
+  pendingUrls.clear();
+  closeMobileNavigation();
+
+  const views = document.querySelectorAll("[data-admin-view]");
+  views.forEach((view) => {
+    view.hidden = true;
+    view.classList.remove("active");
+  });
+
+  if (els.dashboardSection) {
+    els.dashboardSection.hidden = false;
+    els.dashboardSection.classList.add("active");
+  }
+
+  const navItems = document.querySelectorAll("[data-admin-target]");
+  navItems.forEach((item) => item.classList.toggle("active", item.dataset.adminTarget === "dashboard-section"));
+  if (els.adminPageTitle) els.adminPageTitle.textContent = "Tableau de bord";
+  if (els.userEmail) els.userEmail.textContent = "";
+}
+
 function initAuth() {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -143,11 +166,7 @@ function initAuth() {
       await renderStocks();
       await loadOrdersState();
     } else {
-      els.loginScreen.hidden = false;
-      els.dashboard.hidden = true;
-      pendingUrls.clear();
-      closeMobileNavigation();
-      if (els.userEmail) els.userEmail.textContent = "";
+      resetAdminToLogin();
     }
   });
 
@@ -162,13 +181,20 @@ function initAuth() {
     }
   });
 
-  els.logoutBtn.addEventListener("click", async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Erreur de déconnexion Firebase :", error);
-    }
-  });
+  if (els.logoutBtn) {
+    els.logoutBtn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      els.logoutBtn.disabled = true;
+      try {
+        await signOut(auth);
+        resetAdminToLogin();
+      } catch (error) {
+        console.error("Erreur de déconnexion Firebase :", error);
+      } finally {
+        els.logoutBtn.disabled = false;
+      }
+    });
+  }
 
   if (els.saveButton) {
     els.saveButton.addEventListener("click", (event) => {
