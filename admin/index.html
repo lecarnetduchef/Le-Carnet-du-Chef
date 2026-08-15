@@ -14,12 +14,11 @@
   <link rel="stylesheet" href="admin.css">
 </head>
 <body class="admin-body">
-  <div class="admin-container">
-    <div class="admin-logo">Le Carnet <span>du Chef</span> — Admin</div>
-    <div id="config-warning" class="admin-alert admin-alert-error" hidden><strong>Configuration Firebase manquante.</strong> Renseignez vos identifiants dans <code>js/firebase-init.js</code>.</div>
+  <div class="admin-shell">
+    <div class="admin-brand">Le Carnet <span>du Chef</span></div>
 
     <section id="login-screen" class="admin-login-card">
-      <h1 style="font-size:var(--fs-lg);text-align:center;">Connexion</h1>
+      <h1>Connexion</h1>
       <form id="login-form">
         <div class="form-field"><label for="login-email">Email</label><input type="email" id="login-email" name="email" required autocomplete="username"></div>
         <div class="form-field"><label for="login-password">Mot de passe</label><input type="password" id="login-password" name="password" required autocomplete="current-password"></div>
@@ -28,127 +27,148 @@
       </form>
     </section>
 
-    <div id="dashboard" hidden>
-      <div class="admin-header"><p class="muted">Connecté en tant que <strong id="user-email"></strong></p><button id="logout-btn" class="btn btn-secondary">Se déconnecter</button></div>
+    <div id="config-warning" class="admin-alert admin-alert-error" hidden><strong>Configuration Firebase manquante.</strong> Renseignez vos identifiants dans <code>js/firebase-init.js</code>.</div>
 
-      <section class="admin-section">
-        <h2>PRÉSENTATION DU CHEF</h2>
-        <textarea id="chef-presentation" rows="14" style="width:100%;resize:vertical;" aria-label="Présentation du chef"></textarea>
-        <div style="display:flex;gap:.75rem;align-items:center;margin-top:1rem;flex-wrap:wrap;">
-          <button type="button" id="save-chef-presentation-btn" class="btn btn-primary">Enregistrer</button>
-          <span id="chef-presentation-status" class="muted" aria-live="polite"></span>
-        </div>
-        <div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div>
-      </section>
+    <div id="dashboard" class="admin-app" hidden>
+      <aside id="admin-sidebar" class="admin-sidebar" aria-label="Navigation de l'administration">
+        <div class="admin-sidebar-brand">Le Carnet <span>du Chef</span></div>
+        <nav class="admin-nav">
+          <button type="button" class="admin-nav-item active" data-admin-target="dashboard-section">⌂ <span>Tableau de bord</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="orders-section">▣ <span>Commandes</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="products-section">🍽️ <span>Produits / Menus</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="stocks-section">▤ <span>Stocks</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="requests-section">✉ <span>Demandes</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="quotes-section">▤ <span>Devis</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="invoices-section">▧ <span>Factures</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="payments-section">€ <span>Paiements</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="refunds-section">↩ <span>Remboursements</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="clients-section">◎ <span>Clients</span></button>
+          <button type="button" class="admin-nav-item" data-admin-target="settings-section">⚙ <span>Paramètres</span></button>
+        </nav>
+        <button id="logout-btn" class="btn btn-secondary admin-sidebar-logout">Se déconnecter</button>
+      </aside>
 
-      <section class="admin-section">
-        <h2>🔴 GESTION DES COMMANDES</h2>
-        <div class="admin-alert" style="margin-bottom:1rem;">
-          <strong>Contrôle des commandes du site</strong>
-          <p style="margin:.5rem 0 0;">Vous pouvez fermer temporairement toutes les commandes du site, puis les rouvrir à tout moment.</p>
-        </div>
-        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
-          <button type="button" id="close-orders-btn" class="btn btn-secondary">🔴 Fermer les commandes</button>
-          <button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button>
-        </div>
-        <div id="orders-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-      </section>
-
-      <section id="products-section" class="admin-section" hidden>
-        <h2>🍽️ PRODUITS / STOCKS</h2>
-        <div class="admin-alert">
-          <strong>Phase 1 — base produits</strong>
-          <p style="margin:.5rem 0 0;">Cette rubrique prépare les produits vendables. Aucun paiement ni réservation de stock client n’est géré ici.</p>
-          <p style="margin:.5rem 0 0;">Le <strong>stock vendu</strong> et le <strong>stock réservé</strong> ne sont jamais modifiés par l’ajustement manuel du stock disponible.</p>
-        </div>
-
-        <form id="product-form">
-          <input type="hidden" id="product-id">
-          <div class="admin-form-grid">
-            <div class="form-field">
-              <label for="product-name">Nom</label>
-              <input id="product-name" type="text" required>
-            </div>
-            <div class="form-field">
-              <label for="product-price">Prix (€)</label>
-              <input id="product-price" type="number" min="0" step="0.01" required>
-            </div>
-            <div class="form-field admin-field-full">
-              <label for="product-description">Description</label>
-              <textarea id="product-description" rows="3"></textarea>
-            </div>
-            <div class="form-field">
-              <label for="product-photo">Photo (URL)</label>
-              <input id="product-photo" type="url" placeholder="URL R2 de la photo">
-            </div>
-            <div class="form-field">
-              <label for="product-category">Catégorie</label>
-              <input id="product-category" type="text" placeholder="Plat, formule…">
-            </div>
-            <div class="form-field">
-              <label for="product-order">Ordre d’affichage</label>
-              <input id="product-order" type="number" min="0" step="1" value="0" required>
-            </div>
-            <div class="form-field">
-              <label for="product-stock-initial">Stock initial</label>
-              <input id="product-stock-initial" type="number" min="0" step="1" value="0" required>
-            </div>
-            <div class="form-field">
-              <label for="product-stock-available">Stock disponible</label>
-              <input id="product-stock-available" type="number" min="0" step="1" value="0" required>
-            </div>
-            <div class="form-field">
-              <label for="product-stock-reserved">Stock réservé</label>
-              <input id="product-stock-reserved" type="number" value="0" readonly disabled>
-            </div>
-            <div class="form-field">
-              <label for="product-stock-sold">Stock vendu</label>
-              <input id="product-stock-sold" type="number" value="0" readonly disabled>
+      <div class="admin-main">
+        <header class="admin-topbar">
+          <div class="admin-topbar-title">
+            <button id="admin-menu-toggle" class="admin-mobile-menu" type="button" aria-label="Ouvrir la navigation" aria-expanded="false">☰</button>
+            <div>
+              <p class="admin-eyebrow">ESPACE ADMIN</p>
+              <h1 id="admin-page-title">Tableau de bord</h1>
             </div>
           </div>
+          <div class="admin-user"><span>Connecté en tant que</span><strong id="user-email"></strong></div>
+        </header>
 
-          <div class="admin-checkboxes">
-            <label class="admin-checkbox"><input id="product-active" type="checkbox" checked> Produit actif</label>
-          </div>
+        <main class="admin-content">
+          <section id="dashboard-section" class="admin-view active" data-admin-view>
+            <div class="admin-section-heading">
+              <div><p class="admin-eyebrow">VUE D’ENSEMBLE</p><h2>Tableau de bord</h2></div>
+              <p class="muted">Un accès rapide aux principaux indicateurs de l’ADMIN.</p>
+            </div>
+            <div class="admin-dashboard-grid">
+              <article class="admin-stat-card"><span>Commandes</span><strong id="stat-orders">À venir</strong><small>Gestion des commandes en ligne</small></article>
+              <article class="admin-stat-card"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article>
+              <article class="admin-stat-card"><span>Produits en rupture</span><strong id="stat-out-products">—</strong><small>Actifs avec stock disponible à 0</small></article>
+              <article class="admin-stat-card"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Total des quantités disponibles</small></article>
+              <article class="admin-stat-card"><span>Demandes</span><strong>À venir</strong><small>Traiteur, chef à domicile, conseil</small></article>
+              <article class="admin-stat-card"><span>Devis</span><strong>À venir</strong><small>Suivi des demandes de devis</small></article>
+              <article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article>
+              <article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients centralisée</small></article>
+            </div>
+            <div id="dashboard-status" class="admin-alert" hidden></div>
+          </section>
 
-          <div class="admin-form-actions">
-            <button id="product-save-btn" type="submit" class="btn btn-primary">Créer le produit</button>
-            <button id="product-cancel-btn" type="button" class="btn btn-secondary" hidden>Annuler</button>
-          </div>
-        </form>
+          <section id="orders-section" class="admin-view" data-admin-view hidden>
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">GESTION</p><h2>Commandes</h2></div></div>
+            <div class="admin-empty-state"><span class="admin-empty-icon">▣</span><h3>Gestion des commandes</h3><p>La future gestion des commandes en ligne sera intégrée ici. Aucune commande client n’est gérée par cette rubrique pour le moment.</p><span class="admin-coming">À VENIR</span></div>
+          </section>
 
-        <div class="admin-stock-adjustment">
-          <h3>Ajuster le stock disponible</h3>
-          <p class="muted">Sélectionnez d’abord un produit avec « Modifier ». Cette action ne change ni le stock vendu ni le stock réservé.</p>
-          <div class="admin-form-actions">
-            <input id="product-stock-adjustment" type="number" min="0" step="1" placeholder="Nouveau stock disponible" aria-label="Nouveau stock disponible">
-            <button id="product-stock-adjust-btn" type="button" class="btn btn-secondary">Ajuster</button>
-          </div>
-        </div>
+          <section id="products-section" class="admin-view" data-admin-view hidden>
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">CATALOGUE</p><h2>Produits / Menus</h2></div><p class="muted">Gestion actuelle des produits vendables et des trois menus PDF.</p></div>
+            <div class="admin-section admin-section-inner">
+              <div class="admin-alert">
+                <strong>Produits / stocks — Phase 1</strong>
+                <p>La gestion existante des produits reste active. Aucun paiement, aucune réservation client et aucune logique de commande n’est gérée ici.</p>
+                <p>Le <strong>stock vendu</strong> et le <strong>stock réservé</strong> restent séparés du stock disponible et ne sont jamais modifiés par l’ajustement manuel.</p>
+              </div>
 
-        <div id="products-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-        <div id="products-list" aria-live="polite"></div>
-      </section>
+              <form id="product-form">
+                <input type="hidden" id="product-id">
+                <div class="admin-form-grid">
+                  <div class="form-field"><label for="product-name">Nom</label><input id="product-name" type="text" required></div>
+                  <div class="form-field"><label for="product-price">Prix (€)</label><input id="product-price" type="number" min="0" step="0.01" required></div>
+                  <div class="form-field admin-field-full"><label for="product-description">Description</label><textarea id="product-description" rows="3"></textarea></div>
+                  <div class="form-field"><label for="product-photo">Photo (URL)</label><input id="product-photo" type="url" placeholder="URL R2 de la photo"></div>
+                  <div class="form-field"><label for="product-category">Catégorie</label><input id="product-category" type="text" placeholder="Plat, formule…"></div>
+                  <div class="form-field"><label for="product-order">Ordre d’affichage</label><input id="product-order" type="number" min="0" step="1" value="0" required></div>
+                  <div class="form-field"><label for="product-stock-initial">Stock initial</label><input id="product-stock-initial" type="number" min="0" step="1" value="0" required></div>
+                  <div class="form-field"><label for="product-stock-available">Stock disponible</label><input id="product-stock-available" type="number" min="0" step="1" value="0" required></div>
+                  <div class="form-field"><label for="product-stock-reserved">Stock réservé</label><input id="product-stock-reserved" type="number" value="0" readonly disabled></div>
+                  <div class="form-field"><label for="product-stock-sold">Stock vendu</label><input id="product-stock-sold" type="number" value="0" readonly disabled></div>
+                </div>
+                <div class="admin-checkboxes"><label class="admin-checkbox"><input id="product-active" type="checkbox" checked> Produit actif</label></div>
+                <div class="admin-form-actions"><button id="product-save-btn" type="submit" class="btn btn-primary">Créer le produit</button><button id="product-cancel-btn" type="button" class="btn btn-secondary" hidden>Annuler</button></div>
+              </form>
 
-      <section class="admin-section">
-        <h2>📖 Les 3 menus PDF</h2>
-        <div class="admin-alert" style="margin-bottom:1rem;">
-          <strong>GESTION DES PDF</strong>
-          <p style="margin:.5rem 0 0;">1. Cliquez sur « Remplacer le PDF ».</p>
-          <p style="margin:.25rem 0 0;">2. Sélectionnez votre nouveau fichier PDF.</p>
-          <p style="margin:.25rem 0 0;">3. Vérifiez le fichier sélectionné.</p>
-          <p style="margin:.25rem 0 0;">4. Cliquez sur « SAUVEGARDER LES PDF ».</p>
-          <p style="margin:.25rem 0 0;">5. Attendez le message « PDF sauvegardés avec succès ».<br>Les modifications ne sont réellement publiées sur le site qu’après la sauvegarde.</p>
-        </div>
-        <div id="menus-list"></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
-          <button type="button" id="save-pdfs-btn" class="btn btn-primary">SAUVEGARDER LES PDF</button>
-        </div>
-        <div id="save-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-        <div class="admin-alert" style="margin-top:1rem;">Les PDF sont stockés dans Firebase Storage et leurs URLs publiées sont enregistrées dans Firestore. Aucun autre contenu du site n'est géré ici.</div>
-      </section>
+              <div class="admin-stock-adjustment"><h3>Ajuster le stock disponible</h3><p class="muted">Sélectionnez d’abord un produit avec « Modifier ». Cette action ne change ni le stock vendu ni le stock réservé.</p><div class="admin-form-actions"><input id="product-stock-adjustment" type="number" min="0" step="1" placeholder="Nouveau stock disponible" aria-label="Nouveau stock disponible"><button id="product-stock-adjust-btn" type="button" class="btn btn-secondary">Ajuster</button></div></div>
+              <div id="products-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
+              <div id="products-list" aria-live="polite"></div>
+            </div>
+
+            <div id="menus-pdfs-section" class="admin-section admin-section-inner">
+              <div class="admin-section-heading compact"><div><p class="admin-eyebrow">DOCUMENTS</p><h3>Les 3 menus PDF</h3></div></div>
+              <div class="admin-alert"><strong>Gestion des PDF</strong><p>Les PDF actuels sont hébergés sur Cloudflare R2. L’ADMIN conserve les URLs publiques enregistrées dans Firestore.</p><p>Le remplacement du fichier se fait directement dans R2 ; cette interface ne téléverse aucun fichier.</p></div>
+              <div id="menus-list"></div>
+              <div class="admin-form-actions admin-actions-end"><button type="button" id="save-pdfs-btn" class="btn btn-primary">ENREGISTRER LES URL PDF</button></div>
+              <div id="save-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section id="stocks-section" class="admin-view" data-admin-view hidden>
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">INVENTAIRE</p><h2>Stocks</h2></div><p class="muted">Lecture centralisée des trois états de stock conservés par produit.</p></div>
+            <div id="stocks-status" class="admin-alert" hidden></div>
+            <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Produit</th><th>Stock initial</th><th>Disponible</th><th>Réservé</th><th>Vendu</th><th>Statut</th></tr></thead><tbody id="stocks-table-body"><tr><td colspan="6" class="muted">Chargement…</td></tr></tbody></table></div>
+          </section>
+
+          <section id="requests-section" class="admin-view" data-admin-view hidden>
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div></div>
+            <div class="admin-subnav-grid"><article class="admin-mini-card"><strong>Traiteur</strong><span>À venir</span></article><article class="admin-mini-card"><strong>Chef à domicile</strong><span>À venir</span></article><article class="admin-mini-card"><strong>Conseil culinaire</strong><span>À venir</span></article><article class="admin-mini-card"><strong>Autres demandes</strong><span>À venir</span></article></div>
+            <div class="admin-empty-state compact"><p>Les demandes intégrées au site seront centralisées ici lorsque cette phase sera développée.</p><span class="admin-coming">À VENIR</span></div>
+          </section>
+
+          <section id="quotes-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMMERCIAL</p><h2>Devis</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▤</span><h3>Gestion des devis</h3><p>Création, suivi et acceptation des devis : cette fonction sera connectée lors d’une phase ultérieure.</p><span class="admin-coming">À VENIR</span></div></section>
+
+          <section id="invoices-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMPTABILITÉ</p><h2>Factures</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▧</span><h3>Facturation</h3><p>Les factures commerciales du Carnet du Chef, leurs PDF et leur archivage seront intégrés lors de la phase dédiée.</p><span class="admin-coming">À VENIR</span></div></section>
+
+          <section id="payments-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCE</p><h2>Paiements</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">€</span><h3>Suivi des paiements</h3><p>Le suivi Stripe sera connecté lorsque le paiement en ligne sera développé. Aucun paiement n’est géré ici pour le moment.</p><span class="admin-coming">À VENIR</span></div></section>
+
+          <section id="refunds-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCE</p><h2>Remboursements</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">↩</span><h3>Remboursements</h3><p>La gestion sécurisée des remboursements sera ajoutée avec le futur système de paiement.</p><span class="admin-coming">À VENIR</span></div></section>
+
+          <section id="clients-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Clients</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">◎</span><h3>Base clients</h3><p>La centralisation des clients particuliers et professionnels sera développée lors des phases prévues.</p><span class="admin-coming">À VENIR</span></div></section>
+
+          <section id="settings-section" class="admin-view" data-admin-view hidden>
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">CONFIGURATION</p><h2>Paramètres</h2></div><p class="muted">Les fonctions déjà disponibles restent accessibles ici.</p></div>
+
+            <div class="admin-section admin-section-inner">
+              <h3>PRÉSENTATION DU CHEF</h3>
+              <textarea id="chef-presentation" rows="14" aria-label="Présentation du chef"></textarea>
+              <div class="admin-form-actions" style="margin-top:1rem;"><button type="button" id="save-chef-presentation-btn" class="btn btn-primary">Enregistrer</button><span id="chef-presentation-status" class="muted" aria-live="polite"></span></div>
+              <div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div>
+            </div>
+
+            <div class="admin-section admin-section-inner">
+              <h3>🔴 GESTION DES COMMANDES</h3>
+              <div class="admin-alert"><strong>Contrôle des commandes du site</strong><p>La fermeture manuelle reste prioritaire sur la logique automatique existante.</p></div>
+              <div class="admin-form-actions"><button type="button" id="close-orders-btn" class="btn btn-secondary">🔴 Fermer les commandes</button><button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button></div>
+              <div id="orders-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
   </div>
+
   <script type="module" src="admin.js"></script>
   <script type="module" src="products.js"></script>
 </body>
