@@ -6,6 +6,14 @@
 .admin-body { background: var(--color-cream); min-height: 100vh; margin: 0; padding: 0; }
 .admin-shell { min-height: 100vh; }
 .admin-brand { display: none; }
+
+/* L'application ADMIN reste totalement masquée tant que Firebase n'a pas
+   confirmé l'authentification. */
+.admin-app[hidden] { display: none !important; }
+
+/* Une seule rubrique ADMIN à la fois. */
+.admin-view:not(.active) { display: none !important; }
+
 .admin-login-card { max-width: 390px; margin: 12vh auto; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); box-shadow: var(--shadow-card); }
 .admin-login-card h1 { text-align: center; margin-bottom: var(--space-3); }
 .admin-login-intro { text-align: center; margin: -1rem 0 1.5rem; }
