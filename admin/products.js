@@ -2,7 +2,6 @@ import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import {
   addDoc,
   collection,
-  deleteField,
   doc,
   getDocs,
   orderBy,
