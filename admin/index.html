@@ -8,7 +8,7 @@
   <link rel="icon" href="../favicon/favicon.ico" sizes="any">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="admin.css">
@@ -136,6 +136,8 @@
                 <p>Le <strong>stock vendu</strong> et le <strong>stock réservé</strong> restent séparés du stock disponible et ne sont jamais modifiés par l’ajustement manuel.</p>
               </div>
 
+              <div id="products-list" aria-live="polite"></div>
+
               <form id="product-form">
                 <input type="hidden" id="product-id">
                 <div class="admin-form-grid">
@@ -156,7 +158,6 @@
 
               <div class="admin-stock-adjustment"><h3>Ajuster le stock disponible</h3><p class="muted">Sélectionnez d’abord un produit avec « Modifier ». Cette action ne change ni le stock vendu ni le stock réservé.</p><div class="admin-form-actions"><input id="product-stock-adjustment" type="number" min="0" step="1" placeholder="Nouveau stock disponible" aria-label="Nouveau stock disponible"><button id="product-stock-adjust-btn" type="button" class="btn btn-secondary">Ajuster</button></div></div>
               <div id="products-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-              <div id="products-list" aria-live="polite"></div>
             </div>
 
             <div id="menus-pdfs-section" class="admin-section admin-section-inner">
