@@ -43,10 +43,6 @@ function initProductsParentNavigation() {
     const open = parent.getAttribute("aria-expanded") === "true";
     parent.setAttribute("aria-expanded", String(!open));
     setProductsSubmenu(!open);
-    if (productsSection) {
-      productsSection.hidden = true;
-      productsSection.classList.remove("active");
-    }
   });
 }
 
