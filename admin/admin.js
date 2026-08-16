@@ -146,6 +146,13 @@ function initNavigation() {
       const target = item.dataset.adminTarget;
       if (target === "products-section") return;
       if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return;
+
+      const productsSubmenu = document.querySelector("#admin-products-submenu");
+      if (productsSubmenu) productsSubmenu.hidden = true;
+      const productsParent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item"))
+        .find((nav) => nav.querySelector("span")?.textContent?.trim() === "Produits / Menus");
+      if (productsParent) productsParent.setAttribute("aria-expanded", "false");
+
       views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); });
       items.forEach((nav) => nav.classList.toggle("active", nav === item));
       const title = item.querySelector("span")?.textContent?.trim() || "Administration";
