@@ -31,6 +31,8 @@ const soldInput = document.querySelector("#product-stock-sold");
 const stockAdjustment = document.querySelector("#product-stock-adjustment");
 const adjustButton = document.querySelector("#product-stock-adjust-btn");
 
+const PRODUCT_CATEGORIES = ["Formule", "Plat", "Boisson", "Dessert"];
+
 let currentProducts = [];
 let currentUser = null;
 
@@ -53,6 +55,33 @@ function toPrice(value) {
   return Math.round(number * 100) / 100;
 }
 
+function ensureCategorySelect() {
+  if (!categoryInput || categoryInput.tagName === "SELECT") return categoryInput;
+
+  const select = document.createElement("select");
+  select.id = categoryInput.id;
+  select.name = categoryInput.name || "categorie";
+  select.required = true;
+  select.className = categoryInput.className;
+  PRODUCT_CATEGORIES.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    option.textContent = category;
+    select.appendChild(option);
+  });
+  categoryInput.replaceWith(select);
+  return select;
+}
+
+function getCategoryInput() {
+  return document.querySelector("#product-category");
+}
+
+function normalizeCategory(value) {
+  const category = String(value || "").trim();
+  return PRODUCT_CATEGORIES.includes(category) ? category : "";
+}
+
 function resetForm() {
   form.reset();
   idInput.value = "";
@@ -70,6 +99,8 @@ function resetForm() {
   adjustButton.disabled = true;
   cancelButton.hidden = true;
   saveButton.textContent = "Créer le produit";
+  const categorySelect = getCategoryInput();
+  if (categorySelect) categorySelect.value = PRODUCT_CATEGORIES[0];
 }
 
 function fillForm(product) {
@@ -78,7 +109,8 @@ function fillForm(product) {
   descriptionInput.value = product.description || "";
   priceInput.value = product.prix ?? "";
   photoInput.value = product.photo || "";
-  categoryInput.value = product.categorie || "";
+  const categorySelect = getCategoryInput();
+  if (categorySelect) categorySelect.value = normalizeCategory(product.categorie) || PRODUCT_CATEGORIES[0];
   activeInput.checked = product.actif !== false;
   orderInput.value = Number.isFinite(product.ordre) ? product.ordre : 0;
   initialInput.value = Number.isFinite(product.stockInitial) ? product.stockInitial : 0;
@@ -145,6 +177,44 @@ function productRow(product) {
   return row;
 }
 
+function renderProducts() {
+  list.innerHTML = "";
+  if (!currentProducts.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "Aucun produit n’est encore enregistré dans la collection produits.";
+    list.appendChild(empty);
+    return;
+  }
+
+  const grouped = new Map(PRODUCT_CATEGORIES.map((category) => [category, []]));
+  currentProducts.forEach((product) => {
+    const category = normalizeCategory(product.categorie) || "Formule";
+    grouped.get(category).push(product);
+  });
+
+  PRODUCT_CATEGORIES.forEach((category) => {
+    const products = grouped.get(category);
+    const section = document.createElement("section");
+    section.className = "admin-catalog-category";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `${category} (${products.length})`;
+    section.appendChild(heading);
+
+    if (!products.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "Aucun produit dans cette catégorie.";
+      section.appendChild(empty);
+    } else {
+      products.forEach((product) => section.appendChild(productRow(product)));
+    }
+
+    list.appendChild(section);
+  });
+}
+
 async function loadProducts() {
   if (!currentUser || !FIREBASE_READY) return;
   setStatus("Chargement des produits…");
@@ -161,18 +231,6 @@ async function loadProducts() {
   }
 }
 
-function renderProducts() {
-  list.innerHTML = "";
-  if (!currentProducts.length) {
-    const empty = document.createElement("p");
-    empty.className = "muted";
-    empty.textContent = "Aucun produit n’est encore enregistré dans la collection produits.";
-    list.appendChild(empty);
-    return;
-  }
-  currentProducts.forEach((product) => list.appendChild(productRow(product)));
-}
-
 async function saveProduct(event) {
   event.preventDefault();
   if (!currentUser) return;
@@ -183,6 +241,9 @@ async function saveProduct(event) {
   try {
     const nom = nameInput.value.trim();
     if (!nom) throw new Error("Le nom du produit est obligatoire.");
+
+    const categorie = normalizeCategory(getCategoryInput()?.value);
+    if (!categorie) throw new Error("La catégorie doit être Formule, Plat, Boisson ou Dessert.");
 
     const prix = toPrice(priceInput.value);
     const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
@@ -195,7 +256,7 @@ async function saveProduct(event) {
       description: descriptionInput.value.trim(),
       prix,
       photo: photoInput.value.trim(),
-      categorie: categoryInput.value.trim(),
+      categorie,
       actif: activeInput.checked,
       ordre,
       stockDisponible,
@@ -266,6 +327,7 @@ function init() {
     return;
   }
 
+  ensureCategorySelect();
   resetForm();
 
   form.addEventListener("submit", saveProduct);
