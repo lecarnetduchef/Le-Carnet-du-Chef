@@ -27,9 +27,7 @@ function closeMobileNavigation() {
 }
 
 function setProductsSubmenu(open) {
-  subItems.forEach((item) => {
-    item.hidden = !open;
-  });
+  subItems.forEach((item) => { item.hidden = !open; });
 }
 
 function initProductsParentNavigation() {
@@ -39,9 +37,6 @@ function initProductsParentNavigation() {
 
   setProductsSubmenu(false);
   parent.setAttribute("aria-expanded", "false");
-  parent.setAttribute("aria-controls", "admin-products-submenu");
-  subItems.forEach((item) => { item.parentElement?.setAttribute("id", "admin-products-submenu"); });
-
   parent.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -92,12 +87,24 @@ async function renderMenus() {
         <div class="admin-row-main" style="display:block;">
           <strong>MENU ${id}</strong>
           <span class="muted" style="display:block;margin-top:.25rem;">Fichier attendu : <strong>menu${id}.pdf</strong></span>
+          <span style="display:inline-block;margin-top:.5rem;" class="${data.url ? "admin-status-success" : "admin-status-muted"}">${data.url ? "URL R2 enregistrée" : "URL R2 non enregistrée"}</span>
           <span class="muted" style="display:block;margin-top:.5rem;word-break:break-all;">URL actuelle : <strong>${escapeHtml(url)}</strong></span>
           <a href="${escapeAttr(url)}" target="_blank" rel="noopener" class="muted" style="display:block;margin-top:.5rem;">Ouvrir le PDF actuel</a>
+        </div>
+        <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+          <button type="button" class="btn btn-secondary" data-r2-replace="${id}">Remplacer le PDF dans Cloudflare R2</button>
         </div>
         <p id="menu-status-${id}" class="muted" style="margin:.75rem 0 0;" aria-live="polite"></p>
       `;
       menusList.appendChild(row);
+    });
+
+    menusList.querySelectorAll("[data-r2-replace]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const id = Number(button.dataset.r2Replace);
+        const statusEl = document.querySelector(`#menu-status-${id}`);
+        if (statusEl) statusEl.textContent = `Le fichier menu${id}.pdf doit être remplacé directement dans Cloudflare R2. L’ADMIN ne téléverse plus de fichier. L’URL publique utilisée par le site est : ${R2_URLS[id]}`;
+      });
     });
   } catch (error) {
     console.error("Erreur de lecture Firestore menuPdfs :", error);
