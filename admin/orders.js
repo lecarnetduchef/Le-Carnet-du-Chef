@@ -236,7 +236,7 @@ function closeDetail() {
 async function saveSelectedStatus() {
   if (!selectedOrder || !auth.currentUser || !elements.detailStatus) return;
 
-  const nextStatus = elements.detailStatus.value;
+  const nextStatus = normalizeStatus(elements.detailStatus.value);
   if (!STATUS_VALUES.includes(nextStatus)) {
     showStatusMessage("Statut invalide.", true);
     return;
