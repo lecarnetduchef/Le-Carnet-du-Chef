@@ -179,18 +179,11 @@ function productRow(product) {
 
 function renderProducts() {
   list.innerHTML = "";
-  if (!currentProducts.length) {
-    const empty = document.createElement("p");
-    empty.className = "muted";
-    empty.textContent = "Aucun produit n’est encore enregistré dans la collection produits.";
-    list.appendChild(empty);
-    return;
-  }
 
   const grouped = new Map(PRODUCT_CATEGORIES.map((category) => [category, []]));
   currentProducts.forEach((product) => {
-    const category = normalizeCategory(product.categorie) || "Formule";
-    grouped.get(category).push(product);
+    const category = normalizeCategory(product.categorie);
+    if (category) grouped.get(category).push(product);
   });
 
   PRODUCT_CATEGORIES.forEach((category) => {
@@ -199,7 +192,7 @@ function renderProducts() {
     section.className = "admin-catalog-category";
 
     const heading = document.createElement("h3");
-    heading.textContent = `${category} (${products.length})`;
+    heading.textContent = category.toUpperCase();
     section.appendChild(heading);
 
     if (!products.length) {
