@@ -52,6 +52,7 @@ function start() {
   initialized = true;
   cacheElements();
   initNavigation();
+  initProductsParentNavigation();
   injectOrderControlIfNeeded();
 
   if (!FIREBASE_READY) {
@@ -95,6 +96,34 @@ function injectOrderControlIfNeeded() {
   cacheElements();
 }
 
+function initProductsParentNavigation() {
+  const parent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item"))
+    .find((item) => item.querySelector("span")?.textContent?.trim() === "Produits / Menus");
+  const subItems = Array.from(document.querySelectorAll(".admin-nav-item[href$='.html']"))
+    .filter((item) => ["Formules", "Plats", "Boissons", "Desserts"].includes(item.querySelector("span")?.textContent?.trim()));
+  if (!parent) return;
+
+  const setOpen = (open) => {
+    subItems.forEach((item) => { item.hidden = !open; });
+    parent.setAttribute("aria-expanded", String(open));
+  };
+
+  setOpen(false);
+  parent.setAttribute("aria-controls", "admin-products-submenu");
+  subItems.forEach((item) => { item.parentElement?.setAttribute("id", "admin-products-submenu"); });
+  parent.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const open = parent.getAttribute("aria-expanded") === "true";
+    setOpen(!open);
+    const productsSection = document.querySelector("#products-section");
+    if (productsSection) {
+      productsSection.hidden = true;
+      productsSection.classList.remove("active");
+    }
+  }, true);
+}
+
 function initNavigation() {
   const items = document.querySelectorAll("[data-admin-target]");
   const views = document.querySelectorAll("[data-admin-view]");
@@ -102,6 +131,7 @@ function initNavigation() {
   items.forEach((item) => {
     item.addEventListener("click", () => {
       const target = item.dataset.adminTarget;
+      if (target === "products-section") return;
       if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return;
       views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); });
       items.forEach((nav) => nav.classList.toggle("active", nav === item));
