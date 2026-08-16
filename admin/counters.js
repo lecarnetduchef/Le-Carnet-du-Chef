@@ -3,18 +3,26 @@ import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const COUNTERS = [
-  { id: "stat-orders", collection: "commandes", filter: (data) => ["nouvelle", "en_preparation", "prete"].includes(data.statut) },
-  { id: "stat-products-count", collection: "produits" },
-  { id: "stat-requests", collection: "demandes" },
-  { id: "stat-quotes", collection: "devis" },
-  { id: "stat-invoices", collection: "factures" },
-  { id: "stat-payments", collection: "paiements" },
-  { id: "stat-refunds", collection: "remboursements" },
-  { id: "stat-clients", collection: "clients" }
+  { label: "Commandes", collection: "commandes", filter: (data) => ["nouvelle", "en_preparation", "prete"].includes(data.statut) },
+  { label: "Demandes", collection: "demandes" },
+  { label: "Devis", collection: "devis" },
+  { label: "Factures", collection: "factures" },
+  { label: "Paiements", collection: "paiements" },
+  { label: "Remboursements", collection: "remboursements" },
+  { label: "Clients", collection: "clients" }
 ];
 
-function setCounter(id, value) {
-  const element = document.querySelector(`#${id}`);
+function findDashboardCounter(label) {
+  const cards = document.querySelectorAll("#dashboard-section .admin-stat-card");
+  for (const card of cards) {
+    const title = card.querySelector("span");
+    if (title?.textContent?.trim() === label) return card.querySelector("strong");
+  }
+  return null;
+}
+
+function setCounter(label, value) {
+  const element = findDashboardCounter(label);
   if (element) element.textContent = String(value);
 }
 
@@ -27,13 +35,13 @@ async function countCollection(collectionName, filter) {
 async function updateCounters() {
   if (!FIREBASE_READY || !auth.currentUser) return;
 
-  await Promise.all(COUNTERS.map(async ({ id, collection: collectionName, filter }) => {
+  await Promise.all(COUNTERS.map(async ({ label, collection: collectionName, filter }) => {
     try {
       const count = await countCollection(collectionName, filter);
-      setCounter(id, count);
+      setCounter(label, count);
     } catch (error) {
       console.error(`Impossible de compter la collection ${collectionName} :`, error);
-      setCounter(id, 0);
+      setCounter(label, 0);
     }
   }));
 }
@@ -42,7 +50,7 @@ function start() {
   if (!FIREBASE_READY) return;
   onAuthStateChanged(auth, (user) => {
     if (user) void updateCounters();
-    else COUNTERS.forEach(({ id }) => setCounter(id, 0));
+    else COUNTERS.forEach(({ label }) => setCounter(label, 0));
   });
 }
 
