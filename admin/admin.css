@@ -20,6 +20,7 @@
 .admin-sidebar-brand span { color: var(--color-gold); }
 .admin-nav { display: flex; flex-direction: column; gap: .35rem; overflow-y: auto; }
 .admin-nav-item { appearance: none; width: 100%; display: flex; align-items: center; gap: .75rem; border: 0; border-radius: var(--radius-sm); padding: .75rem .85rem; background: transparent; color: rgba(255,255,255,.86); font: inherit; text-align: left; cursor: pointer; transition: background .15s ease, transform .15s ease; }
+.admin-nav-item[hidden] { display: none !important; }
 .admin-nav-item:hover { background: rgba(255,255,255,.09); color: var(--color-white); }
 .admin-nav-item.active { background: rgba(255,255,255,.16); color: var(--color-white); box-shadow: inset 3px 0 0 var(--color-gold); }
 .admin-nav-item:focus-visible, .admin-mobile-menu:focus-visible, .admin-command-actions button:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
