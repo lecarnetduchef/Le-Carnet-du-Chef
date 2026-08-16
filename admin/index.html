@@ -80,8 +80,51 @@
           </section>
 
           <section id="orders-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading"><div><p class="admin-eyebrow">GESTION</p><h2>Commandes</h2></div></div>
-            <div class="admin-empty-state"><span class="admin-empty-icon">▣</span><h3>Gestion des commandes</h3><p>La future gestion des commandes en ligne sera intégrée ici. Aucune commande client n’est gérée par cette rubrique pour le moment.</p><span class="admin-coming">À VENIR</span></div>
+            <div class="admin-section-heading">
+              <div><p class="admin-eyebrow">GESTION</p><h2>Commandes</h2></div>
+              <div class="admin-orders-header-actions">
+                <span class="admin-orders-total"><strong id="orders-total">0</strong> commande(s)</span>
+                <button id="orders-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button>
+              </div>
+            </div>
+
+            <div class="admin-order-filters" role="toolbar" aria-label="Filtres des commandes">
+              <button type="button" class="admin-filter-btn active" data-order-filter="all">Toutes</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="new">Nouvelles</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="preparing">En préparation</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="ready">Prêtes</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="pickup">Retrait</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="delivery">Livraison</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="completed">Terminées</button>
+              <button type="button" class="admin-filter-btn" data-order-filter="cancelled">Annulées</button>
+            </div>
+
+            <div id="orders-list-status" class="admin-alert" hidden aria-live="polite"></div>
+            <div id="orders-list" class="admin-orders-list" aria-live="polite">
+              <div class="admin-empty-state compact"><span class="admin-empty-icon">▣</span><h3>Chargement des commandes</h3><p>Les commandes disponibles seront affichées ici.</p></div>
+            </div>
+
+            <section id="order-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="order-detail-title">
+              <div class="admin-section-heading compact">
+                <div><p class="admin-eyebrow">DÉTAIL</p><h3 id="order-detail-title">Commande</h3></div>
+                <button id="order-detail-close" type="button" class="btn btn-secondary">Fermer</button>
+              </div>
+              <div id="order-detail-content"></div>
+              <div class="admin-order-status-editor">
+                <label for="order-detail-status">Statut de la commande</label>
+                <div class="admin-form-actions">
+                  <select id="order-detail-status">
+                    <option>Nouvelle</option>
+                    <option>En préparation</option>
+                    <option>Prête</option>
+                    <option>Terminée</option>
+                    <option>Annulée</option>
+                  </select>
+                  <button id="order-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button>
+                  <span id="order-detail-status-message" class="muted" aria-live="polite"></span>
+                </div>
+              </div>
+            </section>
           </section>
 
           <section id="products-section" class="admin-view" data-admin-view hidden>
@@ -171,5 +214,6 @@
 
   <script type="module" src="admin.js"></script>
   <script type="module" src="products.js"></script>
+  <script type="module" src="orders.js"></script>
 </body>
 </html>
