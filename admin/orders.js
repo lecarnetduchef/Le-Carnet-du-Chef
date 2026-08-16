@@ -1,5 +1,8 @@
 import { auth, db } from "../js/firebase-init.js";
 import {
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
   collection,
   getDocs,
   updateDoc,
@@ -50,7 +53,11 @@ function init() {
   elements.detailClose?.addEventListener("click", closeDetail);
   elements.detailSave?.addEventListener("click", () => void saveSelectedStatus());
 
-  if (auth.currentUser) void loadOrders();
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      void loadOrders();
+    }
+  });
 }
 
 if (document.readyState === "loading") {
