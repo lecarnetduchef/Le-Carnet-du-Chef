@@ -23,6 +23,18 @@ let orders = [];
 let activeFilter = "all";
 let selectedOrder = null;
 
+function statusClass(status) {
+  const safeStatus = normalizeStatus(status);
+  const classes = {
+    nouvelle: "new",
+    en_preparation: "preparing",
+    prete: "ready",
+    terminee: "completed",
+    annulee: "cancelled",
+  };
+  return classes[safeStatus] || "unknown";
+}
+
 function init() {
   elements.section = document.querySelector("#orders-section");
   if (!elements.section) return;
