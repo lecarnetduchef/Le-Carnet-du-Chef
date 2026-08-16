@@ -2,6 +2,7 @@ import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   orderBy,
@@ -149,6 +150,12 @@ function productRow(product) {
   toggleButton.addEventListener("click", () => toggleProduct(product));
   actions.appendChild(toggleButton);
 
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.textContent = "Supprimer";
+  deleteButton.addEventListener("click", () => deleteProduct(product));
+  actions.appendChild(deleteButton);
+
   row.append(main, actions);
   return row;
 }
@@ -249,6 +256,22 @@ async function toggleProduct(product) {
   } catch (error) {
     console.error("Erreur d’activation/désactivation :", error);
     setStatus(`Modification impossible : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
+async function deleteProduct(product) {
+  if (!currentUser) return;
+
+  const confirmed = window.confirm(`Supprimer définitivement le produit « ${product.nom || "Produit sans nom"} » ?`);
+  if (!confirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "produits", product.id));
+    setStatus("Produit supprimé avec succès.");
+    await loadProducts();
+  } catch (error) {
+    console.error("Erreur de suppression du produit :", error);
+    setStatus(`Suppression impossible : ${error?.message || "erreur inconnue"}`, true);
   }
 }
 
