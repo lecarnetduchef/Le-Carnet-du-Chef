@@ -10,6 +10,16 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
+const CATEGORY_MAP = {
+  formules: "Formule",
+  plats: "Plat",
+  boissons: "Boisson",
+  desserts: "Dessert"
+};
+
+const pageCategoryKey = String(document.body.dataset.category || "").trim().toLowerCase();
+const pageCategory = CATEGORY_MAP[pageCategoryKey] || "";
+
 const productsSection = document.querySelector("#products-section");
 const form = document.querySelector("#product-form");
 const list = document.querySelector("#products-list");
@@ -21,7 +31,6 @@ const nameInput = document.querySelector("#product-name");
 const descriptionInput = document.querySelector("#product-description");
 const priceInput = document.querySelector("#product-price");
 const photoInput = document.querySelector("#product-photo");
-const categoryInput = document.querySelector("#product-category");
 const activeInput = document.querySelector("#product-active");
 const orderInput = document.querySelector("#product-order");
 const initialInput = document.querySelector("#product-stock-initial");
@@ -30,14 +39,6 @@ const reservedInput = document.querySelector("#product-stock-reserved");
 const soldInput = document.querySelector("#product-stock-sold");
 const stockAdjustment = document.querySelector("#product-stock-adjustment");
 const adjustButton = document.querySelector("#product-stock-adjust-btn");
-
-const PRODUCT_CATEGORIES = ["Formule", "Plat", "Boisson", "Dessert"];
-const PRODUCT_CATEGORY_LABELS = {
-  Formule: "FORMULES",
-  Plat: "PLATS",
-  Boisson: "BOISSONS",
-  Dessert: "DESSERTS"
-};
 
 let currentProducts = [];
 let currentUser = null;
@@ -61,33 +62,6 @@ function toPrice(value) {
   return Math.round(number * 100) / 100;
 }
 
-function ensureCategorySelect() {
-  if (!categoryInput || categoryInput.tagName === "SELECT") return categoryInput;
-
-  const select = document.createElement("select");
-  select.id = categoryInput.id;
-  select.name = categoryInput.name || "categorie";
-  select.required = true;
-  select.className = categoryInput.className;
-  PRODUCT_CATEGORIES.forEach((category) => {
-    const option = document.createElement("option");
-    option.value = category;
-    option.textContent = category;
-    select.appendChild(option);
-  });
-  categoryInput.replaceWith(select);
-  return select;
-}
-
-function getCategoryInput() {
-  return document.querySelector("#product-category");
-}
-
-function normalizeCategory(value) {
-  const category = String(value || "").trim();
-  return PRODUCT_CATEGORIES.includes(category) ? category : "";
-}
-
 function resetForm() {
   form.reset();
   idInput.value = "";
@@ -104,9 +78,7 @@ function resetForm() {
   stockAdjustment.value = "";
   adjustButton.disabled = true;
   cancelButton.hidden = true;
-  saveButton.textContent = "Créer le produit";
-  const categorySelect = getCategoryInput();
-  if (categorySelect) categorySelect.value = PRODUCT_CATEGORIES[0];
+  saveButton.textContent = `Créer la ${pageCategory.toLowerCase()}`;
 }
 
 function fillForm(product) {
@@ -115,8 +87,6 @@ function fillForm(product) {
   descriptionInput.value = product.description || "";
   priceInput.value = product.prix ?? "";
   photoInput.value = product.photo || "";
-  const categorySelect = getCategoryInput();
-  if (categorySelect) categorySelect.value = normalizeCategory(product.categorie) || PRODUCT_CATEGORIES[0];
   activeInput.checked = product.actif !== false;
   orderInput.value = Number.isFinite(product.ordre) ? product.ordre : 0;
   initialInput.value = Number.isFinite(product.stockInitial) ? product.stockInitial : 0;
@@ -130,7 +100,7 @@ function fillForm(product) {
   stockAdjustment.value = "";
   adjustButton.disabled = false;
   cancelButton.hidden = false;
-  saveButton.textContent = "Enregistrer les modifications";
+  saveButton.textContent = `Enregistrer les modifications`;
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -147,7 +117,7 @@ function productRow(product) {
 
   const meta = document.createElement("span");
   meta.className = "muted";
-  meta.textContent = `${Number(product.prix || 0).toFixed(2)} € · ${product.categorie || "Sans catégorie"} · ordre ${Number(product.ordre || 0)}`;
+  meta.textContent = `${Number(product.prix || 0).toFixed(2)} € · ${pageCategory} · ordre ${Number(product.ordre || 0)}`;
   main.appendChild(meta);
 
   const stocks = document.createElement("div");
@@ -186,43 +156,28 @@ function productRow(product) {
 function renderProducts() {
   list.innerHTML = "";
 
-  const grouped = new Map(PRODUCT_CATEGORIES.map((category) => [category, []]));
-  currentProducts.forEach((product) => {
-    const category = normalizeCategory(product.categorie);
-    if (category) grouped.get(category).push(product);
-  });
+  if (!currentProducts.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = `Aucun produit dans la catégorie ${pageCategory}.`;
+    list.appendChild(empty);
+    return;
+  }
 
-  PRODUCT_CATEGORIES.forEach((category) => {
-    const products = grouped.get(category);
-    const section = document.createElement("section");
-    section.className = "admin-catalog-category";
-
-    const heading = document.createElement("h3");
-    heading.textContent = PRODUCT_CATEGORY_LABELS[category];
-    section.appendChild(heading);
-
-    if (!products.length) {
-      const empty = document.createElement("p");
-      empty.className = "muted";
-      empty.textContent = "Aucun produit dans cette catégorie.";
-      section.appendChild(empty);
-    } else {
-      products.forEach((product) => section.appendChild(productRow(product)));
-    }
-
-    list.appendChild(section);
-  });
+  currentProducts.forEach((product) => list.appendChild(productRow(product)));
 }
 
 async function loadProducts() {
-  if (!currentUser || !FIREBASE_READY) return;
+  if (!currentUser || !FIREBASE_READY || !pageCategory) return;
   setStatus("Chargement des produits…");
   try {
     const productsQuery = query(collection(db, "produits"), orderBy("ordre", "asc"));
     const snapshot = await getDocs(productsQuery);
-    currentProducts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    currentProducts = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .filter((product) => String(product.categorie || "").trim() === pageCategory);
     renderProducts();
-    setStatus(`${currentProducts.length} produit${currentProducts.length > 1 ? "s" : ""} chargé${currentProducts.length > 1 ? "s" : ""}.`);
+    setStatus(`${currentProducts.length} ${pageCategory.toLowerCase()}${currentProducts.length > 1 ? "s" : ""} chargé${currentProducts.length > 1 ? "s" : ""}.`);
   } catch (error) {
     console.error("Erreur de lecture de la collection produits :", error);
     setStatus(`Impossible de charger les produits : ${error?.message || "erreur inconnue"}`, true);
@@ -232,7 +187,7 @@ async function loadProducts() {
 
 async function saveProduct(event) {
   event.preventDefault();
-  if (!currentUser) return;
+  if (!currentUser || !pageCategory) return;
 
   saveButton.disabled = true;
   setStatus("Enregistrement en cours…");
@@ -240,9 +195,6 @@ async function saveProduct(event) {
   try {
     const nom = nameInput.value.trim();
     if (!nom) throw new Error("Le nom du produit est obligatoire.");
-
-    const categorie = normalizeCategory(getCategoryInput()?.value);
-    if (!categorie) throw new Error("La catégorie doit être Formule, Plat, Boisson ou Dessert.");
 
     const prix = toPrice(priceInput.value);
     const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
@@ -255,7 +207,7 @@ async function saveProduct(event) {
       description: descriptionInput.value.trim(),
       prix,
       photo: photoInput.value.trim(),
-      categorie,
+      categorie: pageCategory,
       actif: activeInput.checked,
       ordre,
       stockDisponible,
@@ -319,16 +271,14 @@ async function adjustAvailableStock() {
 }
 
 function init() {
-  if (!productsSection || !form) return;
+  if (!productsSection || !form || !pageCategory) return;
 
   if (!FIREBASE_READY) {
     productsSection.hidden = true;
     return;
   }
 
-  ensureCategorySelect();
   resetForm();
-
   form.addEventListener("submit", saveProduct);
   cancelButton.addEventListener("click", resetForm);
   adjustButton.addEventListener("click", adjustAvailableStock);
@@ -337,33 +287,16 @@ function init() {
     if (!idInput.value) availableInput.value = initialInput.value;
   });
 
-  onAuthStateChangedSafe();
-}
-
-function onAuthStateChangedSafe() {
   auth.onAuthStateChanged((user) => {
     currentUser = user;
     productsSection.hidden = !user;
     if (user) {
-      void diagnoseCurrentUser();
       void loadProducts();
     } else {
       currentProducts = [];
       list.innerHTML = "";
     }
   });
-}
-
-async function diagnoseCurrentUser() {
-  console.log("DIAGNOSTIC ADMIN TOKEN EXECUTE");
-  try {
-    const tokenResult = await currentUser.getIdTokenResult(true);
-    console.log("EMAIL", currentUser.email);
-    console.log("UID", currentUser.uid);
-    console.log("CLAIMS DU TOKEN", tokenResult.claims);
-  } catch (error) {
-    console.error("DIAGNOSTIC TOKEN FIREBASE — impossible de récupérer le token :", error);
-  }
 }
 
 if (document.readyState === "loading") {
