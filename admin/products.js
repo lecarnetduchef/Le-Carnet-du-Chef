@@ -32,6 +32,12 @@ const stockAdjustment = document.querySelector("#product-stock-adjustment");
 const adjustButton = document.querySelector("#product-stock-adjust-btn");
 
 const PRODUCT_CATEGORIES = ["Formule", "Plat", "Boisson", "Dessert"];
+const PRODUCT_CATEGORY_LABELS = {
+  Formule: "FORMULES",
+  Plat: "PLATS",
+  Boisson: "BOISSONS",
+  Dessert: "DESSERTS"
+};
 
 let currentProducts = [];
 let currentUser = null;
@@ -192,7 +198,7 @@ function renderProducts() {
     section.className = "admin-catalog-category";
 
     const heading = document.createElement("h3");
-    heading.textContent = category.toUpperCase();
+    heading.textContent = PRODUCT_CATEGORY_LABELS[category];
     section.appendChild(heading);
 
     if (!products.length) {
