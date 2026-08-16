@@ -101,16 +101,29 @@ function initProductsParentNavigation() {
     .find((item) => item.querySelector("span")?.textContent?.trim() === "Produits / Menus");
   const subItems = Array.from(document.querySelectorAll(".admin-nav-item[href$='.html']"))
     .filter((item) => ["Formules", "Plats", "Boissons", "Desserts"].includes(item.querySelector("span")?.textContent?.trim()));
-  if (!parent) return;
+  if (!parent || subItems.length !== 4) return;
+
+  const submenu = document.createElement("div");
+  submenu.id = "admin-products-submenu";
+  submenu.className = "admin-nav-submenu";
+  submenu.hidden = true;
+  submenu.setAttribute("role", "group");
+  submenu.setAttribute("aria-label", "Produits / Menus");
+
+  const firstSubItem = subItems[0];
+  parent.insertAdjacentElement("afterend", submenu);
+  subItems.forEach((item) => {
+    submenu.appendChild(item);
+    item.classList.add("admin-nav-subitem");
+  });
 
   const setOpen = (open) => {
-    subItems.forEach((item) => { item.hidden = !open; });
+    submenu.hidden = !open;
     parent.setAttribute("aria-expanded", String(open));
+    parent.setAttribute("aria-controls", submenu.id);
   };
 
   setOpen(false);
-  parent.setAttribute("aria-controls", "admin-products-submenu");
-  subItems.forEach((item) => { item.parentElement?.setAttribute("id", "admin-products-submenu"); });
   parent.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
