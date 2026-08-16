@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commander — Le Carnet du Chef</title>
+  <meta name="description" content="Composez vos formules et préparez votre panier avec Le Carnet du Chef.">
+  <link rel="icon" href="../favicon/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../favicon/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .order-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:2rem;align-items:start}
+    .catalog-grid{display:grid;gap:1.25rem}
+    .formula-card,.cart-card{background:#fff;border:1px solid rgba(49,76,64,.14);border-radius:18px;padding:1.5rem;box-shadow:0 10px 30px rgba(39,55,47,.08)}
+    .formula-card{display:grid;grid-template-columns:140px minmax(0,1fr);gap:1.25rem}
+    .formula-photo{width:140px;height:140px;border-radius:14px;object-fit:cover;background:#edf0ea}
+    .formula-photo-placeholder{width:140px;height:140px;border-radius:14px;background:linear-gradient(145deg,#314c40,#6f8b78);display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:2rem}
+    .formula-head{display:flex;justify-content:space-between;gap:1rem;align-items:start}
+    .formula-head h2{margin:0}.formula-price{font-weight:700;white-space:nowrap}
+    .composition{display:grid;gap:.75rem;margin:1rem 0}
+    .component-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:.75rem;align-items:center}
+    .component-row label{font-weight:600}.component-row select,.quantity-control button,.quantity-control output{font:inherit}
+    .component-row select{width:100%;padding:.65rem .75rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff}
+    .quantity-control{display:flex;align-items:center;gap:.6rem;margin-top:1rem}.quantity-control button{width:38px;height:38px;border:1px solid rgba(49,76,64,.25);border-radius:50%;background:#fff;cursor:pointer}.quantity-control output{min-width:2rem;text-align:center;font-weight:700}
+    .add-button{margin-top:1rem}.status{margin:0 0 1rem}.error{color:#8b2e2e}.success{color:#315f43}
+    .cart-card{position:sticky;top:1rem}.cart-lines{display:grid;gap:1rem;margin:1rem 0}.cart-line{border-top:1px solid rgba(49,76,64,.12);padding-top:1rem}.cart-line:first-child{border-top:0;padding-top:0}.cart-line-title{display:flex;justify-content:space-between;gap:.75rem;font-weight:700}.cart-components{margin:.45rem 0;color:#59635d;font-size:.9rem}.cart-actions{display:flex;align-items:center;gap:.5rem}.cart-actions button{border:0;background:transparent;cursor:pointer;padding:.2rem .35rem}.cart-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem}.empty{color:#66706a}.notice{padding:.9rem 1rem;border-radius:12px;background:#f4ead8;color:#314c40;margin-bottom:1rem}
+    @media(max-width:900px){.order-layout{grid-template-columns:1fr}.cart-card{position:static}}
+    @media(max-width:620px){.formula-card{grid-template-columns:1fr}.formula-photo,.formula-photo-placeholder{width:100%;height:220px}.component-row{grid-template-columns:1fr;gap:.35rem}}
+  </style>
+</head>
+<body>
+  <a href="#contenu" class="visually-hidden-focusable">Aller au contenu</a>
+  <header class="site-header">
+    <div class="container">
+      <a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a>
+      <nav class="nav-links" id="nav-links">
+        <a href="../index.html">Accueil</a>
+        <a href="prestations.html">Prestations</a>
+        <a href="menus.html">Menus</a>
+        <a href="traiteur.html">Traiteur</a>
+        <a href="apropos.html">À propos</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links"><span></span></button>
+    </div>
+  </header>
+
+  <main id="contenu">
+    <section class="page-hero">
+      <div class="container" style="max-width:860px;">
+        <p class="eyebrow">Commander</p>
+        <h1>Composez votre commande</h1>
+        <p class="muted">Choisissez une formule, sélectionnez ses composants, indiquez la quantité puis ajoutez-la à votre panier.</p>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:0;">
+      <div class="container order-layout">
+        <div>
+          <div id="catalogue-status" class="notice status" aria-live="polite">Chargement du catalogue…</div>
+          <div id="catalogue" class="catalog-grid" aria-live="polite"></div>
+        </div>
+        <aside class="cart-card" aria-label="Panier">
+          <p class="eyebrow">Votre panier</p>
+          <h2>Commande</h2>
+          <div id="cart-lines" class="cart-lines"></div>
+          <p id="cart-empty" class="empty">Votre panier est vide.</p>
+          <div class="cart-total"><span>Total</span><span id="cart-total">0,00 €</span></div>
+          <p class="muted" style="font-size:.9rem;margin-top:1rem;">Le panier est temporaire. Aucun paiement ni aucune commande Firestore n'est effectué à cette étape.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html">Politique de confidentialité</a></span></div>
+    </div>
+  </footer>
+
+  <script src="../js/config.js"></script>
+  <script src="../js/script.js"></script>
+  <script type="module" src="../js/panier.js"></script>
+  <script type="module" src="../js/catalogue.js"></script>
+</body>
+</html>
