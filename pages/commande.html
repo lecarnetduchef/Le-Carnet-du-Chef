@@ -233,6 +233,11 @@
       const postalInput = document.querySelector("#code-postal");
       const citySelect = document.querySelector("#ville");
       const checkoutSection = document.querySelector(".checkout-section");
+      const confirmation = document.createElement("p");
+      confirmation.className = "notice success";
+      confirmation.hidden = true;
+      confirmation.setAttribute("role", "status");
+      finalSummary.prepend(confirmation);
       let activeRequestId = null;
       let submitting = false;
 
@@ -248,7 +253,7 @@
         return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
       }
 
-      function getParisParts(date = new Date()) {
+      const getParisParts = (date = new Date()) => {
         const parts = new Intl.DateTimeFormat("fr-FR", {
           timeZone: "Europe/Paris",
           year: "numeric",
@@ -266,7 +271,7 @@
           hour: Number(value("hour")),
           minute: Number(value("minute"))
         };
-      }
+      };
 
       const toDateValue = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const addDays = (parts, days) => {
@@ -610,8 +615,7 @@
           }
 
           confirmation.hidden = false;
-          confirmation.textContent = `Commande confirmée — ${data.numeroCommande}. Total serveur : ${(Number(data.totalCentimes) / 100).toLocaleString("fr-FR", { style: "currency", currency: data.devise || "EUR" })}.`;
-          confirmation.setAttribute("role", "status");
+          confirmation.textContent = `Commande confirmée — ${data.numeroCommande}. Référence : ${data.commandeId}. Total serveur : ${(Number(data.totalCentimes) / 100).toLocaleString("fr-FR", { style: "currency", currency: data.devise || "EUR" })}.`;
           finalValidationButton.hidden = true;
           backButton.hidden = true;
           summaryError.hidden = true;
