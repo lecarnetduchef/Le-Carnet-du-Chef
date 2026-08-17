@@ -109,6 +109,15 @@ function validateScheduleIntent(input, config, now = new Date()) {
   if (!SLOTS.has(creneau)) fail("Créneau invalide.", "INVALID_SLOT");
   if (!Number.isFinite(dateMs(date))) fail("Date invalide.", "INVALID_DATE");
 
+  const slotKey = `${modeReception}|${creneau}`;
+  const commercialSlots = new Set([
+    "retrait|midi",
+    "livraison|midi",
+    "retrait|soir",
+    "livraison|soir",
+  ]);
+  if (!commercialSlots.has(slotKey)) fail("Couple mode de réception / créneau invalide.", "INVALID_RECEPTION_SLOT");
+
   const today = parisDate(now), todayMs = dateMs(today), requestedMs = dateMs(date);
   if (requestedMs < todayMs || requestedMs > todayMs + 3 * 86400000) fail("La date doit être comprise entre J et J+3.", "DATE_OUT_OF_RANGE");
   if (config.fermetureManuelleGlobale === true) fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
