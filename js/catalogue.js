@@ -31,6 +31,89 @@ function normalizeComposition(composition) {
     .map((item) => ({ categorie: item.categorie, quantite: Number(item.quantite) }));
 }
 
+function setupImageModal() {
+  if (document.getElementById("catalogue-image-modal")) return;
+
+  const style = document.createElement("style");
+  style.id = "catalogue-image-modal-style";
+  style.textContent = `
+    .catalogue-image-clickable{cursor:zoom-in}
+    .catalogue-image-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(20,28,24,.82);box-sizing:border-box}
+    .catalogue-image-modal[hidden]{display:none}
+    .catalogue-image-modal-content{position:relative;display:flex;align-items:center;justify-content:center;width:min(96vw,1200px);height:min(94vh,900px);box-sizing:border-box}
+    .catalogue-image-modal img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .catalogue-image-modal-close{position:absolute;top:-.75rem;right:-.75rem;width:2.5rem;height:2.5rem;border:0;border-radius:50%;background:#fff;color:#314c40;font-size:1.8rem;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+    .catalogue-image-modal-close:focus-visible{outline:3px solid #fff;outline-offset:3px}
+    @media(max-width:620px){.catalogue-image-modal{padding:.65rem}.catalogue-image-modal-content{width:100%;height:92vh}.catalogue-image-modal-close{top:.25rem;right:.25rem}}
+  `;
+  document.head.appendChild(style);
+
+  const modal = document.createElement("div");
+  modal.id = "catalogue-image-modal";
+  modal.className = "catalogue-image-modal";
+  modal.hidden = true;
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-label", "Image agrandie");
+
+  const content = document.createElement("div");
+  content.className = "catalogue-image-modal-content";
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "catalogue-image-modal-close";
+  closeButton.setAttribute("aria-label", "Fermer l'image agrandie");
+  closeButton.textContent = "×";
+
+  const modalImage = document.createElement("img");
+  modalImage.alt = "";
+
+  content.append(closeButton, modalImage);
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  const closeModal = () => {
+    modal.hidden = true;
+    modalImage.removeAttribute("src");
+    document.body.style.removeProperty("overflow");
+  };
+
+  closeButton.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) closeModal();
+  });
+
+  window.__catalogueOpenImageModal = (url, alt) => {
+    if (!url) return;
+    modalImage.src = url;
+    modalImage.alt = alt || "";
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    closeButton.focus();
+  };
+}
+
+function makeImageClickable(img, alt) {
+  if (!img) return;
+  setupImageModal();
+  img.classList.add("catalogue-image-clickable");
+  img.setAttribute("role", "button");
+  img.setAttribute("tabindex", "0");
+  img.setAttribute("aria-label", `Agrandir l'image${alt ? ` : ${alt}` : ""}`);
+
+  const open = () => window.__catalogueOpenImageModal?.(img.currentSrc || img.src, alt);
+  img.addEventListener("click", open);
+  img.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
+  });
+}
+
 function createImageElement(url, className, alt) {
   if (!url || typeof url !== "string" || !url.trim()) return null;
 
@@ -39,6 +122,7 @@ function createImageElement(url, className, alt) {
   img.src = url;
   img.alt = alt || "";
   img.loading = "lazy";
+  makeImageClickable(img, alt);
   img.addEventListener("error", () => {
     const placeholder = document.createElement("span");
     placeholder.className = `${className}-placeholder`;
