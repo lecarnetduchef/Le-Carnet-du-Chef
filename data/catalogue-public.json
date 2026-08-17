@@ -1,6 +1,7 @@
 {
   "formules": [
     {
+      "id": "formule-1",
       "nom": "Formule 1",
       "prix": 15.99,
       "ordre": 1,
@@ -17,6 +18,7 @@
       ]
     },
     {
+      "id": "formule-2",
       "nom": "Formule 2",
       "prix": 18.99,
       "ordre": 2,
@@ -33,6 +35,7 @@
       ]
     },
     {
+      "id": "formule-3",
       "nom": "Formule 3",
       "prix": 22.99,
       "ordre": 3,
@@ -55,6 +58,7 @@
   ],
   "produits": [
     {
+      "id": "plat-1",
       "nom": "Plat 1",
       "prix": 11.99,
       "categorie": "Plat",
@@ -63,6 +67,7 @@
       "disponible": true
     },
     {
+      "id": "plat-2",
       "nom": "Plat 2",
       "prix": 14.99,
       "categorie": "Plat",
@@ -71,6 +76,7 @@
       "disponible": true
     },
     {
+      "id": "plat-3",
       "nom": "Plat 3",
       "prix": 16.99,
       "categorie": "Plat",
@@ -79,6 +85,7 @@
       "disponible": true
     },
     {
+      "id": "boisson-1",
       "nom": "Coca cola",
       "prix": 3.0,
       "categorie": "Boisson",
@@ -87,6 +94,7 @@
       "disponible": true
     },
     {
+      "id": "boisson-2",
       "nom": "Fanta",
       "prix": 3.0,
       "categorie": "Boisson",
@@ -95,6 +103,7 @@
       "disponible": true
     },
     {
+      "id": "boisson-3",
       "nom": "Perrier",
       "prix": 3.0,
       "categorie": "Boisson",
@@ -103,6 +112,7 @@
       "disponible": true
     },
     {
+      "id": "dessert-1",
       "nom": "Mousse chocolat",
       "prix": 3.99,
       "categorie": "Dessert",
@@ -111,6 +121,7 @@
       "disponible": true
     },
     {
+      "id": "dessert-2",
       "nom": "Poire belle Hélène",
       "prix": 4.99,
       "categorie": "Dessert",
@@ -119,6 +130,7 @@
       "disponible": true
     },
     {
+      "id": "dessert-3",
       "nom": "Moelleux chocolat",
       "prix": 2.99,
       "categorie": "Dessert",
