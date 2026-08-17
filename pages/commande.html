@@ -36,6 +36,7 @@
     .checkout-section{padding-top:0}.checkout-card{max-width:920px;margin:0 auto}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.checkout-field{display:grid;gap:.4rem}.checkout-field-full{grid-column:1/-1}.checkout-field label,.checkout-legend{font-weight:600}.checkout-field input,.checkout-field select,.checkout-field textarea{width:100%;box-sizing:border-box;padding:.75rem .8rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff;font:inherit}.checkout-field textarea{min-height:100px;resize:vertical}.checkout-choice{display:flex;gap:1rem;flex-wrap:wrap}.checkout-choice label{display:flex;align-items:center;gap:.45rem;font-weight:500}.checkout-choice input{accent-color:#314c40}.delivery-fields{display:grid;grid-template-columns:1.5fr .7fr 1fr;gap:1rem}.delivery-fields[hidden]{display:none}.checkout-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem}.checkout-actions .btn:disabled{opacity:.55;cursor:not-allowed}.checkout-help{font-size:.9rem;color:#66706a}.checkout-summary{display:grid;gap:1rem}.summary-line{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.summary-line:last-child{border-bottom:0}.summary-components{margin:.35rem 0 0;color:#59635d;font-size:.92rem}.summary-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:grid;gap:.5rem}.summary-total div{display:flex;justify-content:space-between;gap:1rem}.summary-total .grand-total{font-size:1.15rem;font-weight:700}.summary-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.summary-meta div{padding:.75rem;border-radius:10px;background:#f8faf7}.summary-meta strong{display:block;margin-bottom:.25rem}.delivery-notice{padding:.8rem 1rem;border-radius:10px;background:#f8faf7;color:#59635d;font-size:.9rem}.provisional-total{color:#59635d;font-size:.9rem}.checkout-status{margin-top:1rem}
     @media(max-width:900px){.order-layout{grid-template-columns:1fr}.cart-card{position:static}.checkout-grid{grid-template-columns:1fr}.summary-meta{grid-template-columns:1fr}}
     @media(max-width:620px){.formula-card{grid-template-columns:1fr}.formula-photo,.formula-photo-placeholder{width:100%;height:220px}.component-row{grid-template-columns:1fr;gap:.35rem}.product-photo-preview{width:100%;height:120px}.delivery-fields{grid-template-columns:1fr}.checkout-actions{flex-direction:column}.checkout-actions .btn{width:100%}}
+    @media(max-width:620px){.order-layout,.catalog-grid,.formula-card,.cart-card,.checkout-card,.checkout-grid,.checkout-field,.delivery-fields,.summary-meta{min-width:0;max-width:100%;box-sizing:border-box}.formula-head,.cart-line-title,.summary-line{min-width:0}.formula-head>*,.cart-line-title>*{min-width:0}.cart-components,.summary-components,.checkout-help,.provisional-total{overflow-wrap:anywhere;word-break:break-word}.checkout-field input,.checkout-field select,.checkout-field textarea{min-width:0;max-width:100%}.delivery-fields>.checkout-field{min-width:0}.checkout-actions .btn{max-width:100%;box-sizing:border-box}}
   </style>
 </head>
 <body>
@@ -203,7 +204,14 @@
   <script>
     (() => {
       const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
-      const ALLOWED_CITIES = ["Roanne", "Le Coteau", "Riorges", "Mably", "Perreux", "Villerest"];
+      const ALLOWED_CITY_POSTCODES = {
+        "Roanne": "42300",
+        "Le Coteau": "42120",
+        "Riorges": "42153",
+        "Mably": "42300",
+        "Perreux": "42120",
+        "Villerest": "42300"
+      };
       const MIN_DELIVERY_FEE = 2.5;
       const form = document.querySelector("#checkout-form");
       const reviewButton = document.querySelector("#checkout-review-button");
@@ -247,17 +255,12 @@
       const toDateValue = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const addDays = (parts, days) => {
         const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
-        return {
-          year: date.getUTCFullYear(),
-          month: date.getUTCMonth() + 1,
-          day: date.getUTCDate()
-        };
+        return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
       };
       const formatDate = (dateValue) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${dateValue}T12:00:00+02:00`));
 
       const currentParis = getParisParts();
       const todayValue = toDateValue(currentParis.year, currentParis.month, currentParis.day);
-      let latestFormState = null;
 
       function currentMinutesParis() {
         const parts = getParisParts();
@@ -412,8 +415,10 @@
 
         if (mode === "livraison") {
           const city = citySelect.value;
-          if (!ALLOWED_CITIES.includes(city)) return "La livraison est disponible uniquement à Roanne, Le Coteau, Riorges, Mably, Perreux ou Villerest.";
-          if (!/^[0-9]{5}$/.test(postalInput.value.trim())) return "Le code postal doit comporter 5 chiffres.";
+          const postalCode = postalInput.value.trim();
+          if (!Object.prototype.hasOwnProperty.call(ALLOWED_CITY_POSTCODES, city)) return "La livraison est disponible uniquement à Roanne, Le Coteau, Riorges, Mably, Perreux ou Villerest.";
+          if (!/^\d{5}$/.test(postalCode)) return "Le code postal doit comporter exactement 5 chiffres.";
+          if (postalCode !== ALLOWED_CITY_POSTCODES[city]) return `Le code postal ${postalCode} ne correspond pas à ${city}. Pour cette commune, utilisez ${ALLOWED_CITY_POSTCODES[city]}.`;
           if (!addressInput.value.trim()) return "L’adresse est obligatoire pour une livraison.";
         }
         return "";
@@ -481,7 +486,6 @@
           extra.textContent = `Précisions : ${form.precisions.value.trim() || "Aucune"} · Allergies/intolérances : ${form.allergies.value.trim() || "Aucune"}`;
           summaryMeta.appendChild(extra);
         }
-        latestFormState = { subtotal, deliveryFee, total };
       }
 
       reviewButton.addEventListener("click", () => {
@@ -507,10 +511,6 @@
 
       modeInputs.forEach((input) => input.addEventListener("change", refreshDeliveryFields));
       dateSelect.addEventListener("change", refreshSlots);
-
-      window.addEventListener("storage", () => {
-        if (!finalSummary.hidden) renderSummary();
-      });
 
       refreshDates();
       refreshDeliveryFields();
