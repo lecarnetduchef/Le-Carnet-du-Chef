@@ -1,13 +1,6 @@
 import { auth, db } from "../js/firebase-init.js";
-import {
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import {
-  collection,
-  getDocs,
-  updateDoc,
-  doc,
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const STATUS_VALUES = ["nouvelle", "en_preparation", "prete", "terminee", "annulee"];
 const STATUS_LABELS = {
@@ -343,3 +336,5 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+import("./commandes-config.js").catch((error) => console.error("Impossible de charger la configuration des commandes :", error));
