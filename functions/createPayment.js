@@ -1,9 +1,9 @@
-const { validateRequestId, getOrCreatePaymentAttempt } = require("./idempotency");
+const { validateRequestId, getOrCreatePaymentAttempt, IdempotencyError } = require("./idempotency");
 const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
-const { validateCartIntent, validateScheduleIntent } = require("./validation");
-const { calculateValidatedOrder } = require("./pricing");
+const { validateCartIntent, validateScheduleIntent, ValidationError } = require("./validation");
+const { calculateValidatedOrder, PricingError } = require("./pricing");
 const { getDeliveryDistance } = require("./delivery");
-const { createPendingOrder } = require("./order");
+const { createPendingOrder, OrderCreationError } = require("./order");
 
 class CreatePaymentError extends Error {
   constructor(message, code = "CREATE_PAYMENT_FAILED") {
@@ -20,70 +20,100 @@ function bodyFromRequest(request) {
   return request && typeof request === "object" ? request : {};
 }
 
+function safeBusinessError(error, stage) {
+  if (error instanceof ValidationError || error instanceof IdempotencyError || error instanceof PricingError || error instanceof OrderCreationError) {
+    return new CreatePaymentError("La demande ne peut pas être traitée.", error.code);
+  }
+
+  if (stage === "delivery") {
+    return new CreatePaymentError("Les informations de livraison ne peuvent pas être validées.", "DELIVERY_ERROR");
+  }
+
+  return new CreatePaymentError("Une erreur interne est survenue.", "INTERNAL_ERROR");
+}
+
 /**
  * Server-side createPayment orchestration without any Revolut integration.
  * This module is intentionally not registered as a Cloud Function endpoint yet.
  */
 async function createPayment(request) {
-  const input = bodyFromRequest(request);
-  const requestId = validateRequestId(input.requestId);
+  let stage = "request";
 
-  await getOrCreatePaymentAttempt(requestId);
+  try {
+    const input = bodyFromRequest(request);
 
-  const validatedCart = await validateCartIntent(
-    { lignes: input.lignes },
-    { getFormules, getProduits },
-  );
+    stage = "requestId";
+    const requestId = validateRequestId(input.requestId);
 
-  const config = await getCommandesConfig();
-  const schedule = validateScheduleIntent(
-    {
-      modeReception: input.modeReception,
-      creneau: input.creneau,
-      date: input.date,
-    },
-    config,
-  );
+    stage = "idempotency";
+    await getOrCreatePaymentAttempt(requestId);
 
-  let distanceKm = null;
-  if (schedule.modeReception === "livraison") {
-    const delivery = await getDeliveryDistance({
+    stage = "cart";
+    const validatedCart = await validateCartIntent(
+      { lignes: input.lignes },
+      { getFormules, getProduits },
+    );
+
+    stage = "schedule";
+    const config = await getCommandesConfig();
+    const schedule = validateScheduleIntent(
+      {
+        modeReception: input.modeReception,
+        creneau: input.creneau,
+        date: input.date,
+      },
+      config,
+    );
+
+    let distanceKm = null;
+    if (schedule.modeReception === "livraison") {
+      stage = "delivery";
+      const delivery = await getDeliveryDistance({
+        adresse: input.adresse,
+        codePostal: input.codePostal,
+        ville: input.ville,
+      });
+      distanceKm = delivery.distanceKm;
+    }
+
+    stage = "pricing";
+    const pricing = calculateValidatedOrder(validatedCart, {
+      modeReception: schedule.modeReception,
+      distanceKm,
+    });
+
+    stage = "order";
+    const order = await createPendingOrder({
+      requestId,
+      pricing,
+      client: input.client,
+      modeReception: schedule.modeReception,
+      dateCommande: schedule.date,
+      creneau: schedule.creneau,
       adresse: input.adresse,
       codePostal: input.codePostal,
       ville: input.ville,
+      precisions: input.precisions,
+      allergies: input.allergies,
     });
-    distanceKm = delivery.distanceKm;
+
+    return {
+      ok: true,
+      requestId,
+      commandeId: String(order.commandeId),
+      numeroCommande: String(order.numeroCommande),
+      totalCentimes: order.montants.totalCentimes,
+      devise: order.montants.devise,
+      checkoutUrl: order.paiement.checkoutUrl,
+      idempotent: order.idempotent === true,
+    };
+  } catch (error) {
+    if (error instanceof CreatePaymentError) {
+      throw error;
+    }
+
+    throw safeBusinessError(error, stage);
   }
-
-  const pricing = calculateValidatedOrder(validatedCart, {
-    modeReception: schedule.modeReception,
-    distanceKm,
-  });
-
-  const order = await createPendingOrder({
-    requestId,
-    pricing,
-    client: input.client,
-    modeReception: schedule.modeReception,
-    dateCommande: schedule.date,
-    creneau: schedule.creneau,
-    adresse: input.adresse,
-    codePostal: input.codePostal,
-    ville: input.ville,
-    precisions: input.precisions,
-    allergies: input.allergies,
-  });
-
-  return {
-    ok: true,
-    requestId,
-    commandeId: String(order.commandeId),
-    numeroCommande: String(order.numeroCommande),
-    totalCentimes: order.montants.totalCentimes,
-    devise: order.montants.devise,
-    checkoutUrl: order.paiement.checkoutUrl,
-    idempotent: order.idempotent === true,
-  };
 }
 
 module.exports = {
