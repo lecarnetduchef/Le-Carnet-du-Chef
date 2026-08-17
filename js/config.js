@@ -62,36 +62,11 @@ const CDC_CONFIG = {
     },
   },
 };
-async function synchroniserFermetureGlobale() {
-  try {
-    const response = await fetch(
-      "https://firestore.googleapis.com/v1/projects/carnet-du-chef/databases/(default)/documents/siteContent/commandes"
-    );
 
-    if (!response.ok) return;
-
-    const data = await response.json();
-    const ferme =
-      data.fields?.fermetureManuelleGlobale?.booleanValue === true;
-
-    CDC_CONFIG.commandes.fermetureManuelleGlobale = ferme;
-
-    if (ferme) {
-      CDC_CONFIG.commandes.etat = {
-        dejeunerOuvert: false,
-        dinerOuvert: false,
-        commandesOuvertes: false,
-        afficherBanniere: true,
-        message:
-          "Les commandes sont actuellement fermées. Retrouvez-nous sur nos réseaux sociaux pour connaître les prochaines ouvertures."
-      };
-    }
-  } catch (error) {
-    console.error("Impossible de lire l'état global des commandes :", error);
-  }
-}
-(function calculerEtatCommandes() {
+function calculerEtatCommandes() {
   const c = CDC_CONFIG.commandes;
+  const mode = c.modeManuel === "ouvert" ? "ouvert" : c.modeManuel === "ferme" ? "ferme" : "aucun";
+
   function minutesActuellesParis() {
     const parts = new Intl.DateTimeFormat("fr-FR", {
       timeZone: "Europe/Paris",
@@ -108,22 +83,40 @@ async function synchroniserFermetureGlobale() {
     return h * 60 + m;
   }
 
+  if (mode === "ouvert") {
+    c.fermetureManuelleGlobale = false;
+    c.fermetureExceptionnelle = { ...c.fermetureExceptionnelle, active: false };
+    c.fermetureManuelleDejeuner = false;
+    c.fermetureManuelleDiner = false;
+    c.automatique = false;
+    c.etat = { dejeunerOuvert: true, dinerOuvert: true, commandesOuvertes: true, afficherBanniere: false, message: "" };
+    return;
+  }
+
+  if (mode === "ferme") {
+    c.fermetureManuelleGlobale = true;
+    c.etat = {
+      dejeunerOuvert: false,
+      dinerOuvert: false,
+      commandesOuvertes: false,
+      afficherBanniere: true,
+      message: "Les commandes sont actuellement fermées."
+    };
+    return;
+  }
+
+  c.fermetureManuelleGlobale = false;
   const maintenant = minutesActuellesParis();
   const avantLimiteDejeuner = !c.automatique || maintenant < minutesDepuisHeureTexte(c.limiteDejeuner);
   const avantLimiteDiner = !c.automatique || maintenant < minutesDepuisHeureTexte(c.limiteDiner);
   const exceptionnelle = c.fermetureExceptionnelle.active;
-
   const dejeunerOuvert = !exceptionnelle && !c.fermetureManuelleDejeuner && avantLimiteDejeuner;
   const dinerOuvert = !exceptionnelle && !c.fermetureManuelleDiner && avantLimiteDiner;
 
   let message = "";
-  if (exceptionnelle) {
-    message = c.fermetureExceptionnelle.message;
-  } else if (!dejeunerOuvert && !dinerOuvert) {
-    message = c.messageDinerFerme;
-  } else if (!dejeunerOuvert) {
-    message = c.messageDejeunerFerme;
-  }
+  if (exceptionnelle) message = c.fermetureExceptionnelle.message;
+  else if (!dejeunerOuvert && !dinerOuvert) message = c.messageDinerFerme;
+  else if (!dejeunerOuvert) message = c.messageDejeunerFerme;
 
   c.etat = {
     dejeunerOuvert,
@@ -132,87 +125,45 @@ async function synchroniserFermetureGlobale() {
     afficherBanniere: message !== "",
     message,
   };
-})();
+}
+
+async function synchroniserFermetureGlobale() {
+  try {
+    const response = await fetch("https://firestore.googleapis.com/v1/projects/carnet-du-chef/databases/(default)/documents/siteContent/commandes");
+    if (!response.ok) return;
+    const data = await response.json();
+    const fields = data.fields || {};
+    const modeManuel = fields.modeManuel?.stringValue;
+
+    if (modeManuel === "ouvert" || modeManuel === "ferme") {
+      CDC_CONFIG.commandes.modeManuel = modeManuel;
+    } else {
+      CDC_CONFIG.commandes.modeManuel = null;
+      CDC_CONFIG.commandes.fermetureManuelleGlobale = fields.fermetureManuelleGlobale?.booleanValue === true;
+    }
+
+    calculerEtatCommandes();
+  } catch (error) {
+    console.error("Impossible de lire l'état global des commandes :", error);
+  }
+}
+
+calculerEtatCommandes();
 
 document.addEventListener("DOMContentLoaded", () => {
   synchroniserFermetureGlobale().then(() => {
-  if (!CDC_CONFIG.commandes.fermetureManuelleGlobale) {
-    (function recalculerEtatCommandes() {
-      const c = CDC_CONFIG.commandes;
+    if (!CDC_CONFIG.commandes.etat.commandesOuvertes) {
+      document.querySelectorAll("[data-cdc-order-button]").forEach((el) => {
+        el.classList.add("btn-disabled");
+        el.setAttribute("aria-disabled", "true");
+        el.removeAttribute("href");
+        el.removeAttribute("target");
+        el.textContent = "Commandes fermées";
+        if (CDC_CONFIG.commandes.etat.message) el.title = CDC_CONFIG.commandes.etat.message;
+      });
+    }
+  });
 
-      function minutesActuellesParis() {
-        const parts = new Intl.DateTimeFormat("fr-FR", {
-          timeZone: "Europe/Paris",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }).formatToParts(new Date());
-
-        const h = Number(parts.find((p) => p.type === "hour").value);
-        const m = Number(parts.find((p) => p.type === "minute").value);
-        return h * 60 + m;
-      }
-
-      function minutesDepuisHeureTexte(str) {
-        const [h, m] = str.split(":").map(Number);
-        return h * 60 + m;
-      }
-
-      const maintenant = minutesActuellesParis();
-      const avantLimiteDejeuner =
-        !c.automatique ||
-        maintenant < minutesDepuisHeureTexte(c.limiteDejeuner);
-
-      const avantLimiteDiner =
-        !c.automatique ||
-        maintenant < minutesDepuisHeureTexte(c.limiteDiner);
-
-      const exceptionnelle = c.fermetureExceptionnelle.active;
-
-      const dejeunerOuvert =
-        !exceptionnelle &&
-        !c.fermetureManuelleDejeuner &&
-        avantLimiteDejeuner;
-
-      const dinerOuvert =
-        !exceptionnelle &&
-        !c.fermetureManuelleDiner &&
-        avantLimiteDiner;
-
-      let message = "";
-
-      if (exceptionnelle) {
-        message = c.fermetureExceptionnelle.message;
-      } else if (!dejeunerOuvert && !dinerOuvert) {
-        message = c.messageDinerFerme;
-      } else if (!dejeunerOuvert) {
-        message = c.messageDejeunerFerme;
-      }
-
-      c.etat = {
-        dejeunerOuvert,
-        dinerOuvert,
-        commandesOuvertes: dejeunerOuvert || dinerOuvert,
-        afficherBanniere: message !== "",
-        message,
-      };
-    })();
-  }
-
-  if (!CDC_CONFIG.commandes.etat.commandesOuvertes) {
-    document.querySelectorAll("[data-cdc-order-button]").forEach((el) => {
-      el.classList.add("btn-disabled");
-      el.setAttribute("aria-disabled", "true");
-      el.removeAttribute("href");
-      el.removeAttribute("target");
-      el.textContent = "Commandes fermées";
-
-      if (CDC_CONFIG.commandes.etat.message) {
-        el.title = CDC_CONFIG.commandes.etat.message;
-      }
-    });
-  }
-});
   const SOURCE = {
     liens: CDC_CONFIG.liens,
     contact: CDC_CONFIG.contact,
@@ -223,26 +174,21 @@ document.addEventListener("DOMContentLoaded", () => {
     commandes: CDC_CONFIG.commandes,
   };
 
-  const get = (path) =>
-    path.split(".").reduce((obj, key) => (obj ? obj[key] : undefined), SOURCE);
+  const get = (path) => path.split(".").reduce((obj, key) => (obj ? obj[key] : undefined), SOURCE);
 
   document.querySelectorAll("[data-cdc-link]").forEach((el) => {
     const value = get(el.getAttribute("data-cdc-link"));
     if (value) el.setAttribute("href", value);
   });
-
   document.querySelectorAll("[data-cdc-text]").forEach((el) => {
     const value = get(el.getAttribute("data-cdc-text"));
     if (value) el.textContent = value;
   });
-
   document.querySelectorAll("[data-cdc-bg]").forEach((el) => {
     const value = get(el.getAttribute("data-cdc-bg"));
     if (!value) return;
-
-    if (el.classList.contains("hero")) {
-      el.style.setProperty("--hero-image", `url("${value}")`);
-    } else {
+    if (el.classList.contains("hero")) el.style.setProperty("--hero-image", `url("${value}")`);
+    else {
       el.style.backgroundImage = `url("${value}")`;
       el.style.backgroundSize = "cover";
       el.style.backgroundPosition = "center";
@@ -250,7 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
       el.textContent = "";
     }
   });
-
   document.querySelectorAll("[data-cdc-show]").forEach((el) => {
     const value = get(el.getAttribute("data-cdc-show"));
     el.hidden = !value;
