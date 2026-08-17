@@ -31,9 +31,27 @@ function normalizeComposition(composition) {
     .map((item) => ({ categorie: item.categorie, quantite: Number(item.quantite) }));
 }
 
-function renderProductOptions(select, category) {
+function createImageElement(url, className, alt) {
+  if (!url || typeof url !== "string" || !url.trim()) return null;
+
+  const img = document.createElement("img");
+  img.className = className;
+  img.src = url;
+  img.alt = alt || "";
+  img.loading = "lazy";
+  img.addEventListener("error", () => {
+    const placeholder = document.createElement("span");
+    placeholder.className = `${className}-placeholder`;
+    placeholder.textContent = "Aucune image";
+    img.replaceWith(placeholder);
+  }, { once: true });
+  return img;
+}
+
+function renderProductOptions(select, category, previewContainer) {
   const products = productsByCategory.get(category) || [];
   select.innerHTML = "";
+  previewContainer.innerHTML = "";
   if (!products.length) {
     const option = document.createElement("option");
     option.value = "";
@@ -58,6 +76,22 @@ function renderProductOptions(select, category) {
     option.disabled = !product.id;
     if (!product.id) option.textContent += " — identifiant indisponible";
     select.appendChild(option);
+  });
+
+  select.addEventListener("change", () => {
+    previewContainer.innerHTML = "";
+    const product = products.find((item) => item.id === select.value);
+    if (!product) return;
+
+    const image = createImageElement(product.photo, "product-photo", product.nom);
+    if (image) {
+      previewContainer.appendChild(image);
+    } else {
+      const placeholderImage = document.createElement("span");
+      placeholderImage.className = "product-photo-placeholder";
+      placeholderImage.textContent = "Aucune image";
+      previewContainer.appendChild(placeholderImage);
+    }
   });
 }
 
@@ -112,8 +146,6 @@ function updateCartLinePreservingId(lineId, composants, quantite) {
     const line = cart.lines.find((item) => item.lineId === lineId);
     if (!line) return false;
 
-    // La ligne commerciale reste exactement la même formule.
-    // Seuls ses composants et sa quantité sont remplacés.
     line.composants = composants.map((item) => ({
       categorie: item.categorie,
       produitId: item.produitId,
@@ -142,6 +174,7 @@ function startEditingLine(line) {
   article.querySelectorAll("select[data-category]").forEach((select) => {
     const component = getComponentForCategory(line, select.dataset.category);
     select.value = component?.produitId || "";
+    select.dispatchEvent(new Event("change"));
   });
 
   const setQuantity = article._setQuantity;
@@ -171,17 +204,13 @@ function createFormulaCard(formule) {
   article.className = "formula-card";
   if (formule.id) article.dataset.formuleId = formule.id;
 
-  if (formule.photo) {
-    const img = document.createElement("img");
-    img.className = "formula-photo";
-    img.src = formule.photo;
-    img.alt = formule.nom || "Formule";
-    img.loading = "lazy";
-    article.appendChild(img);
+  const image = createImageElement(formule.photo, "formula-photo", formule.nom || "Formule");
+  if (image) {
+    article.appendChild(image);
   } else {
     const placeholder = document.createElement("div");
     placeholder.className = "formula-photo-placeholder";
-    placeholder.textContent = formule.nom || "F";
+    placeholder.textContent = "Aucune image";
     article.appendChild(placeholder);
   }
 
@@ -211,14 +240,16 @@ function createFormulaCard(formule) {
     row.className = "component-row";
     const label = document.createElement("label");
     const select = document.createElement("select");
+    const preview = document.createElement("div");
     const selectId = `component-${formule.id || formule.nom}-${categorie}`;
     label.htmlFor = selectId;
     label.textContent = `${CATEGORY_LABELS[categorie]} × ${quantite}`;
     select.id = selectId;
     select.dataset.category = categorie;
     select.dataset.requiredQuantity = String(quantite);
-    renderProductOptions(select, categorie);
-    row.append(label, select);
+    preview.className = "product-photo-preview";
+    renderProductOptions(select, categorie, preview);
+    row.append(label, select, preview);
     compositionEl.appendChild(row);
   });
 
@@ -291,9 +322,6 @@ function createFormulaCard(formule) {
         button.textContent = "Ajouter au panier";
       });
       setStatus(`${formule.nom} × ${quantity} a été modifiée dans le panier.`, "success");
-
-      // Recharge uniquement l'interface pour que panier.js relise le même panier.
-      // Aucun nouvel identifiant de ligne n'est créé et la formule reste la même.
       window.location.reload();
       return;
     }
