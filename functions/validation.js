@@ -120,6 +120,11 @@ function validateScheduleIntent(input, config, now = new Date()) {
 
   const today = parisDate(now), todayMs = dateMs(today), requestedMs = dateMs(date);
   if (requestedMs < todayMs || requestedMs > todayMs + 3 * 86400000) fail("La date doit être comprise entre J et J+3.", "DATE_OUT_OF_RANGE");
+
+  const modeManuel = config.modeManuel;
+  if (modeManuel === "ferme") fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
+  if (modeManuel === "ouvert") return { date, modeReception, creneau, timeZone: TIME_ZONE };
+
   if (config.fermetureManuelleGlobale === true) fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
 
   const exceptional = config.fermetureExceptionnelle;
