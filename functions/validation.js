@@ -80,6 +80,7 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
       const product = products.get(produitId);
       if (!product) fail(`Ligne ${i + 1}: produit introuvable.`, "INVALID_PRODUCT");
       if (product.actif !== true) fail(`Ligne ${i + 1}: produit inactif.`, "PRODUCT_INACTIVE");
+      if (product.disponible !== true) fail(`Ligne ${i + 1}: produit indisponible.`, "PRODUCT_UNAVAILABLE");
       if (String(product.categorie || "") !== category) fail(`Ligne ${i + 1}: catégorie produit incorrecte.`, "PRODUCT_CATEGORY_MISMATCH");
       const perFormula = required.get(category);
       demanded.set(produitId, (demanded.get(produitId) || 0) + quantity * perFormula);
