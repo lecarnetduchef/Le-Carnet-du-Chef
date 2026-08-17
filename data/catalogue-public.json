@@ -1,0 +1,130 @@
+{
+  "formules": [
+    {
+      "nom": "Formule 1",
+      "prix": 15.99,
+      "ordre": 1,
+      "actif": true,
+      "composition": [
+        {
+          "categorie": "Plat",
+          "quantite": 1
+        },
+        {
+          "categorie": "Boisson",
+          "quantite": 1
+        }
+      ]
+    },
+    {
+      "nom": "Formule 2",
+      "prix": 18.99,
+      "ordre": 2,
+      "actif": true,
+      "composition": [
+        {
+          "categorie": "Plat",
+          "quantite": 1
+        },
+        {
+          "categorie": "Dessert",
+          "quantite": 1
+        }
+      ]
+    },
+    {
+      "nom": "Formule 3",
+      "prix": 22.99,
+      "ordre": 3,
+      "actif": true,
+      "composition": [
+        {
+          "categorie": "Plat",
+          "quantite": 1
+        },
+        {
+          "categorie": "Boisson",
+          "quantite": 1
+        },
+        {
+          "categorie": "Dessert",
+          "quantite": 1
+        }
+      ]
+    }
+  ],
+  "produits": [
+    {
+      "nom": "Plat 1",
+      "prix": 11.99,
+      "categorie": "Plat",
+      "ordre": 1,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Plat 2",
+      "prix": 14.99,
+      "categorie": "Plat",
+      "ordre": 2,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Plat 3",
+      "prix": 16.99,
+      "categorie": "Plat",
+      "ordre": 3,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Coca cola",
+      "prix": 3.0,
+      "categorie": "Boisson",
+      "ordre": 1,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Fanta",
+      "prix": 3.0,
+      "categorie": "Boisson",
+      "ordre": 2,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Perrier",
+      "prix": 3.0,
+      "categorie": "Boisson",
+      "ordre": 3,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Mousse chocolat",
+      "prix": 3.99,
+      "categorie": "Dessert",
+      "ordre": 1,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Poire belle Hélène",
+      "prix": 4.99,
+      "categorie": "Dessert",
+      "ordre": 2,
+      "actif": true,
+      "disponible": true
+    },
+    {
+      "nom": "Moelleux chocolat",
+      "prix": 2.99,
+      "categorie": "Dessert",
+      "ordre": 3,
+      "actif": true,
+      "disponible": true
+    }
+  ]
+}
