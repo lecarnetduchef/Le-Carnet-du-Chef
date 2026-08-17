@@ -134,12 +134,14 @@ async function synchroniserFermetureGlobale() {
     const data = await response.json();
     const fields = data.fields || {};
     const modeManuel = fields.modeManuel?.stringValue;
+    const legacyClosed = fields.fermetureManuelleGlobale?.booleanValue === true;
 
     if (modeManuel === "ouvert" || modeManuel === "ferme") {
       CDC_CONFIG.commandes.modeManuel = modeManuel;
+    } else if (legacyClosed) {
+      CDC_CONFIG.commandes.modeManuel = "ferme";
     } else {
       CDC_CONFIG.commandes.modeManuel = null;
-      CDC_CONFIG.commandes.fermetureManuelleGlobale = fields.fermetureManuelleGlobale?.booleanValue === true;
     }
 
     calculerEtatCommandes();
