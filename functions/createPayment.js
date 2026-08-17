@@ -1,4 +1,9 @@
-const { validateRequestId, getOrCreatePaymentAttempt, IdempotencyError } = require("./idempotency");
+const {
+  validateRequestId,
+  buildRequestFingerprint,
+  getOrCreatePaymentAttempt,
+  IdempotencyError,
+} = require("./idempotency");
 const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { validateCartIntent, validateScheduleIntent, ValidationError } = require("./validation");
 const { calculateValidatedOrder, PricingError } = require("./pricing");
@@ -46,7 +51,8 @@ async function createPayment(request) {
     const requestId = validateRequestId(input.requestId);
 
     stage = "idempotency";
-    await getOrCreatePaymentAttempt(requestId);
+    const requestFingerprint = buildRequestFingerprint(input);
+    await getOrCreatePaymentAttempt(requestId, requestFingerprint);
 
     stage = "cart";
     const validatedCart = await validateCartIntent(
