@@ -11,7 +11,7 @@ const { createPayment, CreatePaymentError } = require("./createPayment");
 // Expose createPayment as a 2nd gen HTTP function in europe-west9.
 // The payment flow itself remains free of Revolut integration at this stage.
 const createPaymentHttp = onRequest(
-  { region: "europe-west9" },
+  { region: "europe-west9", cors: true },
   async (req, res) => {
     if (req.method !== "POST") {
       res.set("Allow", "POST");
