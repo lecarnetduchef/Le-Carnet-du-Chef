@@ -1,5 +1,3 @@
-import { collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { db } from "./firebase-init.js";
 import { addToCart } from "./panier.js";
 
 const catalogueEl = document.querySelector("#catalogue");
@@ -50,8 +48,12 @@ function renderProductOptions(select, category) {
 
   products.forEach((product) => {
     const option = document.createElement("option");
-    option.value = product.id;
+    option.value = product.id || "";
     option.textContent = product.nom;
+    option.disabled = !product.id;
+    if (!product.id) {
+      option.textContent += " — identifiant indisponible";
+    }
     select.appendChild(option);
   });
 }
@@ -60,7 +62,7 @@ function createFormulaCard(formule) {
   const composition = normalizeComposition(formule.composition);
   const article = document.createElement("article");
   article.className = "formula-card";
-  article.dataset.formuleId = formule.id;
+  if (formule.id) article.dataset.formuleId = formule.id;
 
   if (formule.photo) {
     const img = document.createElement("img");
@@ -102,7 +104,7 @@ function createFormulaCard(formule) {
     row.className = "component-row";
     const label = document.createElement("label");
     const select = document.createElement("select");
-    const selectId = `component-${formule.id}-${categorie}`;
+    const selectId = `component-${formule.id || formule.nom}-${categorie}`;
     label.htmlFor = selectId;
     label.textContent = `${CATEGORY_LABELS[categorie]} × ${quantite}`;
     select.id = selectId;
@@ -142,6 +144,11 @@ function createFormulaCard(formule) {
   addButton.className = "btn btn-primary add-button";
   addButton.textContent = "Ajouter au panier";
   addButton.addEventListener("click", () => {
+    if (!formule.id) {
+      setStatus(`Impossible d'ajouter ${formule.nom || "cette formule"} : son identifiant n'est pas présent dans la projection publique.`, "error");
+      return;
+    }
+
     const selects = [...compositionEl.querySelectorAll("select")];
     const composants = [];
     for (const select of selects) {
@@ -151,8 +158,8 @@ function createFormulaCard(formule) {
         return;
       }
       const product = (productsByCategory.get(select.dataset.category) || []).find((item) => item.id === select.value);
-      if (!product) {
-        setStatus("Le produit sélectionné n'est plus disponible.", "error");
+      if (!product || !product.id) {
+        setStatus("Le produit sélectionné ne possède pas d'identifiant dans la projection publique.", "error");
         return;
       }
       composants.push({
@@ -176,22 +183,30 @@ async function loadCatalogue() {
   try {
     setStatus("Chargement du catalogue…");
 
-    const [formulesSnapshot, produitsSnapshot] = await Promise.all([
-      getDocs(query(collection(db, "formules"), where("actif", "==", true), orderBy("ordre", "asc"))),
-      getDocs(query(collection(db, "produits"), where("actif", "==", true)))
-    ]);
+    const response = await fetch("../data/catalogue-public.json", {
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      throw new Error(`Impossible de charger le catalogue public (${response.status}).`);
+    }
 
-    const products = produitsSnapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .filter((product) => Number(product.stockDisponible) > 0 && CATEGORY_LABELS[product.categorie]);
+    const data = await response.json();
+    if (!Array.isArray(data.formules) || !Array.isArray(data.produits)) {
+      throw new Error("Structure du catalogue public invalide.");
+    }
+
+    const products = data.produits
+      .filter((product) => product?.actif === true && product?.disponible === true && CATEGORY_LABELS[product?.categorie])
+      .sort((a, b) => Number(a.ordre) - Number(b.ordre));
 
     productsByCategory = new Map();
     for (const category of Object.keys(CATEGORY_LABELS)) {
       productsByCategory.set(category, products.filter((product) => product.categorie === category));
     }
 
-    const formules = formulesSnapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
+    const formules = data.formules
+      .filter((formule) => formule?.actif === true)
+      .sort((a, b) => Number(a.ordre) - Number(b.ordre))
       .filter((formule) => normalizeComposition(formule.composition).length > 0);
 
     catalogueEl.innerHTML = "";
@@ -205,7 +220,7 @@ async function loadCatalogue() {
   } catch (error) {
     console.error("Erreur de chargement du catalogue :", error);
     catalogueEl.innerHTML = "";
-    setStatus("Le catalogue ne peut pas être chargé pour le moment. Vérifiez les autorisations Firestore.", "error");
+    setStatus("Le catalogue ne peut pas être chargé pour le moment.", "error");
   }
 }
 
