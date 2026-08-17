@@ -1,7 +1,10 @@
-import { addToCart } from "./panier.js";
+import { addToCart, getCart, removeLine } from "./panier.js";
 
 const catalogueEl = document.querySelector("#catalogue");
 const statusEl = document.querySelector("#catalogue-status");
+const editOrderButton = document.querySelector("#edit-order-button");
+const editModeEl = document.querySelector("#order-edit-mode");
+const editLinesEl = document.querySelector("#edit-lines");
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 
 const CATEGORY_LABELS = {
@@ -11,6 +14,7 @@ const CATEGORY_LABELS = {
 };
 
 let productsByCategory = new Map();
+let editingLineId = null;
 
 function setStatus(message, type = "notice") {
   if (!statusEl) return;
@@ -26,7 +30,7 @@ function normalizeComposition(composition) {
     .map((item) => ({ categorie: item.categorie, quantite: Number(item.quantite) }));
 }
 
-function renderProductOptions(select, category) {
+function renderProductOptions(select, category, selectedProductId = "") {
   const products = productsByCategory.get(category) || [];
   select.innerHTML = "";
   if (!products.length) {
@@ -42,7 +46,7 @@ function renderProductOptions(select, category) {
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.textContent = `Choisir un ${category.toLowerCase()}`;
-  placeholder.selected = true;
+  placeholder.selected = !selectedProductId;
   placeholder.disabled = true;
   select.appendChild(placeholder);
 
@@ -51,11 +55,84 @@ function renderProductOptions(select, category) {
     option.value = product.id || "";
     option.textContent = product.nom;
     option.disabled = !product.id;
-    if (!product.id) {
-      option.textContent += " — identifiant indisponible";
-    }
+    if (!product.id) option.textContent += " — identifiant indisponible";
+    option.selected = product.id === selectedProductId;
     select.appendChild(option);
   });
+}
+
+function getComponentForCategory(line, category) {
+  return (line?.composants || []).find((item) => item.categorie === category);
+}
+
+function scrollToFormula(formuleId) {
+  const article = catalogueEl?.querySelector(`[data-formule-id="${CSS.escape(formuleId)}"]`);
+  article?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cancelEditing() {
+  editingLineId = null;
+  if (editModeEl) editModeEl.hidden = true;
+  setStatus("Modification annulée.");
+  document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.remove());
+}
+
+function renderEditLines() {
+  if (!editLinesEl || !editModeEl) return;
+
+  const cart = getCart();
+  editLinesEl.innerHTML = "";
+
+  if (!cart.lines.length) {
+    editModeEl.hidden = true;
+    return;
+  }
+
+  cart.lines.forEach((line, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "edit-line-button";
+    button.textContent = `${index + 1}. ${line.formuleNom} × ${line.quantite} — ${euro.format((Number(line.prixUnitaire) || 0) * line.quantite)}`;
+    button.addEventListener("click", () => startEditingLine(line));
+    editLinesEl.appendChild(button);
+  });
+
+  editModeEl.hidden = false;
+}
+
+function startEditingLine(line) {
+  editingLineId = line.lineId;
+  renderEditLines();
+  setStatus(`Modification de ${line.formuleNom} × ${line.quantite}. Les choix actuels sont préremplis.`, "success");
+  scrollToFormula(line.formuleId);
+
+  const article = catalogueEl?.querySelector(`[data-formule-id="${CSS.escape(line.formuleId)}"]`);
+  if (!article) return;
+
+  article.querySelectorAll("select[data-category]").forEach((select) => {
+    const component = getComponentForCategory(line, select.dataset.category);
+    if (component?.produitId) select.value = component.produitId;
+  });
+
+  const quantityOutput = article.querySelector("[data-quantity]");
+  if (quantityOutput) {
+    quantityOutput.value = line.quantite;
+    quantityOutput.textContent = line.quantite;
+  }
+
+  const addButton = article.querySelector("[data-add-formula]");
+  if (addButton) addButton.textContent = "Enregistrer les modifications";
+
+  let cancelButton = article.querySelector("[data-cancel-edit]");
+  if (!cancelButton) {
+    cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "cancel-edit";
+    cancelButton.dataset.cancelEdit = "true";
+    cancelButton.textContent = "Annuler";
+    cancelButton.addEventListener("click", cancelEditing);
+    addButton?.parentElement?.appendChild(cancelButton);
+  }
 }
 
 function createFormulaCard(formule) {
@@ -142,6 +219,7 @@ function createFormulaCard(formule) {
   const addButton = document.createElement("button");
   addButton.type = "button";
   addButton.className = "btn btn-primary add-button";
+  addButton.dataset.addFormula = "true";
   addButton.textContent = "Ajouter au panier";
   addButton.addEventListener("click", () => {
     if (!formule.id) {
@@ -170,8 +248,18 @@ function createFormulaCard(formule) {
       });
     }
 
-    addToCart({ formule, quantite: quantity, composants });
-    setStatus(`${formule.nom} × ${quantity} a été ajouté au panier.`, "success");
+    if (editingLineId) {
+      removeLine(editingLineId);
+      editingLineId = null;
+      addToCart({ formule, quantite, composants });
+      if (editModeEl) editModeEl.hidden = true;
+      document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.remove());
+      addButton.textContent = "Ajouter au panier";
+      setStatus(`${formule.nom} a été modifiée dans le panier.`, "success");
+    } else {
+      addToCart({ formule, quantite, composants });
+      setStatus(`${formule.nom} × ${quantity} a été ajouté au panier.`, "success");
+    }
   });
   body.appendChild(addButton);
 
@@ -183,17 +271,11 @@ async function loadCatalogue() {
   try {
     setStatus("Chargement du catalogue…");
 
-    const response = await fetch("../data/catalogue-public.json", {
-      cache: "no-store"
-    });
-    if (!response.ok) {
-      throw new Error(`Impossible de charger le catalogue public (${response.status}).`);
-    }
+    const response = await fetch("../data/catalogue-public.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Impossible de charger le catalogue public (${response.status}).`);
 
     const data = await response.json();
-    if (!Array.isArray(data.formules) || !Array.isArray(data.produits)) {
-      throw new Error("Structure du catalogue public invalide.");
-    }
+    if (!Array.isArray(data.formules) || !Array.isArray(data.produits)) throw new Error("Structure du catalogue public invalide.");
 
     const products = data.produits
       .filter((product) => product?.actif === true && product?.disponible === true && CATEGORY_LABELS[product?.categorie])
@@ -206,7 +288,8 @@ async function loadCatalogue() {
 
     const formules = data.formules
       .filter((formule) => formule?.actif === true)
-      .sort((a, b) => Number(a.ordre) - Number(b.ordre))
+      .sort((a, b) => Number(a.ordre) - Number(b.ordre)
+      )
       .filter((formule) => normalizeComposition(formule.composition).length > 0);
 
     catalogueEl.innerHTML = "";
@@ -222,6 +305,19 @@ async function loadCatalogue() {
     catalogueEl.innerHTML = "";
     setStatus("Le catalogue ne peut pas être chargé pour le moment.", "error");
   }
+}
+
+if (editOrderButton) {
+  editOrderButton.addEventListener("click", () => {
+    const cart = getCart();
+    if (!cart.lines.length) {
+      setStatus("Votre panier est vide.");
+      return;
+    }
+    renderEditLines();
+    editModeEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setStatus("Choisissez la ligne à modifier.", "success");
+  });
 }
 
 loadCatalogue();
