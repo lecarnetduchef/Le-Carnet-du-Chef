@@ -178,13 +178,13 @@
             <div id="summary-lines" class="checkout-summary"></div>
             <div id="summary-meta" class="summary-meta"></div>
             <div id="summary-total" class="summary-total"></div>
-            <p class="provisional-total">Les frais de livraison affichés ici sont provisoires : sans API de distance à cette étape, 2,50 € correspond au minimum. Le montant définitif sera recalculé côté serveur lors du futur paiement.</p>
+            <p class="provisional-total">Le montant affiché avant validation est indicatif. Le prix, les frais de livraison et le total définitifs sont recalculés côté serveur.</p>
             <p id="checkout-summary-error" class="notice error" role="alert" hidden></p>
             <div class="checkout-actions">
               <button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
-              <button type="button" id="final-validation-button" class="btn btn-primary" disabled>Valider ma commande</button>
+              <button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
             </div>
-            <p class="checkout-help">Le paiement en ligne et l'envoi définitif de la commande seront ajoutés dans l'étape suivante.</p>
+            <p class="checkout-help">Le paiement en ligne sera ajouté ultérieurement. Cette validation crée uniquement la commande en attente de paiement.</p>
           </div>
         </div>
       </div>
@@ -213,9 +213,11 @@
         "Villerest": "42300"
       };
       const MIN_DELIVERY_FEE = 2.5;
+      const CREATE_PAYMENT_URL = "https://europe-west9-carnet-du-chef.cloudfunctions.net/createPayment";
       const form = document.querySelector("#checkout-form");
       const reviewButton = document.querySelector("#checkout-review-button");
       const backButton = document.querySelector("#back-to-checkout-button");
+      const finalValidationButton = document.querySelector("#final-validation-button");
       const finalSummary = document.querySelector("#final-summary");
       const summaryLines = document.querySelector("#summary-lines");
       const summaryMeta = document.querySelector("#summary-meta");
@@ -231,8 +233,22 @@
       const postalInput = document.querySelector("#code-postal");
       const citySelect = document.querySelector("#ville");
       const checkoutSection = document.querySelector(".checkout-section");
+      let activeRequestId = null;
+      let submitting = false;
 
-      const getParisParts = (date = new Date()) => {
+      function generateRequestId() {
+        if (window.crypto?.randomUUID) {
+          return window.crypto.randomUUID().replace(/-/g, "");
+        }
+        const bytes = new Uint8Array(32);
+        window.crypto?.getRandomValues?.(bytes);
+        if (bytes.some((byte) => byte !== 0)) {
+          return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+        }
+        return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
+      }
+
+      function getParisParts(date = new Date()) {
         const parts = new Intl.DateTimeFormat("fr-FR", {
           timeZone: "Europe/Paris",
           year: "numeric",
@@ -250,7 +266,7 @@
           hour: Number(value("hour")),
           minute: Number(value("minute"))
         };
-      };
+      }
 
       const toDateValue = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const addDays = (parts, days) => {
@@ -351,7 +367,7 @@
         citySelect.required = isDelivery;
         deliveryFeeNotice.hidden = !isDelivery;
         if (isDelivery) {
-          deliveryFeeNotice.textContent = "Frais de livraison : 2,50 € minimum. Le montant définitif sera recalculé côté serveur selon la distance réelle.";
+          deliveryFeeNotice.textContent = "Frais de livraison : calculés exclusivement côté serveur selon la distance réelle.";
         } else {
           addressInput.value = "";
           postalInput.value = "";
@@ -472,12 +488,12 @@
 
         summaryTotal.innerHTML = "";
         const subtotalRow = document.createElement("div");
-        subtotalRow.innerHTML = `<span>Sous-total</span><span>${euro.format(subtotal)}</span>`;
+        subtotalRow.innerHTML = `<span>Sous-total indicatif</span><span>${euro.format(subtotal)}</span>`;
         const feeRow = document.createElement("div");
-        feeRow.innerHTML = `<span>Frais de livraison</span><span>${euro.format(deliveryFee)}</span>`;
+        feeRow.innerHTML = `<span>Frais de livraison indicatifs</span><span>${euro.format(deliveryFee)}</span>`;
         const totalRow = document.createElement("div");
         totalRow.className = "grand-total";
-        totalRow.innerHTML = `<span>Total provisoire</span><span>${euro.format(total)}</span>`;
+        totalRow.innerHTML = `<span>Total indicatif</span><span>${euro.format(total)}</span>`;
         summaryTotal.append(subtotalRow, feeRow, totalRow);
 
         if (form.precisions.value.trim() || form.allergies.value.trim()) {
@@ -485,6 +501,127 @@
           extra.className = "delivery-notice";
           extra.textContent = `Précisions : ${form.precisions.value.trim() || "Aucune"} · Allergies/intolérances : ${form.allergies.value.trim() || "Aucune"}`;
           summaryMeta.appendChild(extra);
+        }
+      }
+
+      function buildPaymentPayload() {
+        const cart = getCartSnapshot();
+        const mode = form.querySelector('input[name="modeReception"]:checked')?.value || "";
+        const slot = slotSelect.value || "";
+        const creneau = slot.startsWith("midi") ? "midi" : slot.startsWith("soir") ? "soir" : "";
+
+        return {
+          requestId: activeRequestId,
+          lignes: cart.lines.map((line) => ({
+            formuleId: String(line.formuleId || ""),
+            quantite: Number(line.quantite),
+            composants: (line.composants || []).map((component) => ({
+              produitId: String(component.produitId || ""),
+              categorie: String(component.categorie || "")
+            }))
+          })),
+          client: {
+            prenom: form.prenom.value.trim(),
+            nom: form.nom.value.trim(),
+            telephone: form.telephone.value.trim(),
+            email: form.email.value.trim()
+          },
+          modeReception: mode,
+          date: dateSelect.value,
+          creneau,
+          ...(mode === "livraison" ? {
+            adresse: addressInput.value.trim(),
+            codePostal: postalInput.value.trim(),
+            ville: citySelect.value.trim()
+          } : {}),
+          precisions: form.precisions.value.trim(),
+          allergies: form.allergies.value.trim()
+        };
+      }
+
+      function showServerError(error) {
+        const messages = {
+          INVALID_REQUEST_ID: "La demande de commande est invalide. Veuillez réessayer.",
+          INVALID_REQUEST_FINGERPRINT: "La demande de commande ne peut pas être sécurisée. Veuillez réessayer.",
+          REQUEST_ID_REUSED: "Cette demande est déjà associée à une autre intention de commande.",
+          PAYMENT_ATTEMPT_RESET_REQUIRED: "Cette tentative doit être réinitialisée avant de pouvoir être réutilisée.",
+          EMPTY_CART: "Le panier est vide.",
+          INVALID_FORMULA: "Une formule de votre panier n’est plus disponible.",
+          FORMULA_INACTIVE: "Une formule de votre panier n’est plus active.",
+          INVALID_PRODUCT: "Un produit de votre panier est introuvable.",
+          PRODUCT_INACTIVE: "Un produit de votre panier n’est plus actif.",
+          PRODUCT_UNAVAILABLE: "Un produit de votre panier n’est plus disponible.",
+          INSUFFICIENT_STOCK: "Le stock disponible ne permet plus de valider cette commande.",
+          INVALID_DATE: "La date choisie est invalide.",
+          DATE_OUT_OF_RANGE: "La date choisie n’est plus disponible.",
+          INVALID_SLOT: "Le créneau choisi est invalide.",
+          ORDER_CUTOFF_PASSED: "La limite de commande pour ce créneau est dépassée.",
+          GLOBAL_CLOSURE: "Les commandes sont actuellement fermées.",
+          EXCEPTIONAL_CLOSURE: "Les commandes sont temporairement fermées.",
+          LUNCH_CLOSURE: "Le service déjeuner est actuellement fermé.",
+          DINNER_CLOSURE: "Le service soir est actuellement fermé.",
+          INVALID_RECEPTION: "Le mode de réception choisi est invalide.",
+          INVALID_RECEPTION_SLOT: "Le créneau choisi est invalide pour ce mode de réception.",
+          DELIVERY_ERROR: "Les informations de livraison ne peuvent pas être validées.",
+          DELIVERY_DISTANCE_UNAVAILABLE: "La distance de livraison n’a pas pu être déterminée.",
+          INVALID_SERVER_PRICE: "Le prix serveur est invalide.",
+          INVALID_SERVER_STOCK: "Le stock serveur est indisponible.",
+          PAYMENT_ATTEMPT_NOT_FOUND: "La tentative de commande n’a pas pu être retrouvée.",
+          INVALID_CLIENT_DATA: "Les informations client sont invalides.",
+          INVALID_ORDER_DATA: "Les informations de commande sont invalides.",
+          INVALID_SERVER_PRICING: "Le calcul serveur de la commande est invalide."
+        };
+        return messages[error?.code] || "La commande n’a pas pu être validée. Veuillez réessayer.";
+      }
+
+      async function submitOrder() {
+        if (submitting) return;
+        summaryError.hidden = true;
+        const validationError = validateClientAndLogistics();
+        if (validationError) {
+          summaryError.textContent = validationError;
+          summaryError.hidden = false;
+          return;
+        }
+
+        if (!activeRequestId) activeRequestId = generateRequestId();
+        submitting = true;
+        finalValidationButton.disabled = true;
+        finalValidationButton.textContent = "Validation en cours…";
+
+        try {
+          const response = await fetch(CREATE_PAYMENT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(buildPaymentPayload())
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch {
+            data = null;
+          }
+
+          if (!response.ok || !data?.ok) {
+            const error = new Error("createPayment failed");
+            error.code = data?.code || "INTERNAL_ERROR";
+            throw error;
+          }
+
+          confirmation.hidden = false;
+          confirmation.textContent = `Commande confirmée — ${data.numeroCommande}. Total serveur : ${(Number(data.totalCentimes) / 100).toLocaleString("fr-FR", { style: "currency", currency: data.devise || "EUR" })}.`;
+          confirmation.setAttribute("role", "status");
+          finalValidationButton.hidden = true;
+          backButton.hidden = true;
+          summaryError.hidden = true;
+        } catch (error) {
+          summaryError.textContent = showServerError(error);
+          summaryError.hidden = false;
+          finalValidationButton.disabled = false;
+          finalValidationButton.textContent = "Valider ma commande";
+        } finally {
+          submitting = false;
         }
       }
 
@@ -496,21 +633,34 @@
           formError.hidden = false;
           return;
         }
+        activeRequestId = null;
+        finalValidationButton.hidden = false;
+        finalValidationButton.disabled = false;
+        finalValidationButton.textContent = "Valider ma commande";
         renderSummary();
         form.hidden = true;
         finalSummary.hidden = false;
         finalSummary.scrollIntoView({ behavior: "smooth", block: "start" });
       });
 
+      finalValidationButton.addEventListener("click", submitOrder);
+
       backButton.addEventListener("click", () => {
+        activeRequestId = null;
         summaryError.hidden = true;
         finalSummary.hidden = true;
         form.hidden = false;
         checkoutSection.scrollIntoView({ behavior: "smooth", block: "start" });
       });
 
-      modeInputs.forEach((input) => input.addEventListener("change", refreshDeliveryFields));
-      dateSelect.addEventListener("change", refreshSlots);
+      modeInputs.forEach((input) => input.addEventListener("change", () => {
+        activeRequestId = null;
+        refreshDeliveryFields();
+      }));
+      dateSelect.addEventListener("change", () => {
+        activeRequestId = null;
+        refreshSlots();
+      });
 
       refreshDates();
       refreshDeliveryFields();
