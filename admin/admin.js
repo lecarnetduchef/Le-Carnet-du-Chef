@@ -31,6 +31,7 @@ function cacheElements() {
     chefPresentationPreview: document.querySelector("#chef-presentation-preview"),
     closeOrdersButton: document.querySelector("#close-orders-btn"),
     openOrdersButton: document.querySelector("#open-orders-btn"),
+    automaticOrdersButton: document.querySelector("#automatic-orders-btn"),
     ordersStatus: document.querySelector("#orders-status"),
     ordersStateLabel: document.querySelector("#orders-state-label"),
     ordersStateBadge: document.querySelector("#orders-state-badge"),
@@ -87,6 +88,7 @@ function injectOrderControlIfNeeded() {
     </div>
     <div class="admin-command-status-row"><strong id="orders-state-label">Vérification de l’état…</strong><span class="muted">Contrôle global des commandes du site.</span></div>
     <div class="admin-form-actions admin-command-actions">
+      <button type="button" id="automatic-orders-btn" class="btn btn-secondary">🕐 Mode automatique</button>
       <button type="button" id="close-orders-btn" class="btn btn-danger">🔴 Fermer les commandes</button>
       <button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button>
     </div>
@@ -110,7 +112,6 @@ function initProductsParentNavigation() {
   submenu.setAttribute("role", "group");
   submenu.setAttribute("aria-label", "Produits / Menus");
 
-  const firstSubItem = subItems[0];
   parent.insertAdjacentElement("afterend", submenu);
   subItems.forEach((item) => {
     submenu.appendChild(item);
@@ -266,9 +267,9 @@ function initAuth() {
     els.closeOrdersButton.addEventListener("click", async () => {
       if (!auth.currentUser) return;
       try {
-        await setDoc(doc(db, "siteContent", "commandes"), { fermetureManuelleGlobale: true, updatedAt: serverTimestamp() }, { merge: true });
-        showOrderStatus("🔴 Commandes fermées.", false);
-        updateOrdersStateUI(true);
+        await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ferme", updatedAt: serverTimestamp() }, { merge: true });
+        showOrderStatus("🔴 Commandes forcées fermées.", false);
+        updateOrdersStateUI("ferme");
       } catch (error) {
         showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true);
       }
@@ -279,11 +280,24 @@ function initAuth() {
     els.openOrdersButton.addEventListener("click", async () => {
       if (!auth.currentUser) return;
       try {
-        await setDoc(doc(db, "siteContent", "commandes"), { fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true });
-        showOrderStatus("🟢 Commandes ouvertes.", false);
-        updateOrdersStateUI(false);
+        await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ouvert", updatedAt: serverTimestamp() }, { merge: true });
+        showOrderStatus("🟢 Commandes forcées ouvertes.", false);
+        updateOrdersStateUI("ouvert");
       } catch (error) {
         showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true);
+      }
+    });
+  }
+
+  if (els.automaticOrdersButton) {
+    els.automaticOrdersButton.addEventListener("click", async () => {
+      if (!auth.currentUser) return;
+      try {
+        await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: null, fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true });
+        showOrderStatus("🕐 Mode automatique rétabli.", false);
+        updateOrdersStateUI("aucun");
+      } catch (error) {
+        showOrderStatus(`Impossible de rétablir le mode automatique : ${error?.message || "erreur inconnue"}`, true);
       }
     });
   }
@@ -293,8 +307,9 @@ async function loadOrdersState() {
   if (!auth.currentUser || !els.ordersStateLabel || !els.ordersStateBadge) return;
   try {
     const snapshot = await getDoc(doc(db, "siteContent", "commandes"));
-    const closed = snapshot.exists() && snapshot.data()?.fermetureManuelleGlobale === true;
-    updateOrdersStateUI(closed);
+    const data = snapshot.exists() ? snapshot.data() : {};
+    const mode = data.modeManuel === "ouvert" || data.modeManuel === "ferme" ? data.modeManuel : "aucun";
+    updateOrdersStateUI(mode);
   } catch (error) {
     console.error("Impossible de lire l’état des commandes :", error);
     els.ordersStateLabel.textContent = "État indisponible";
@@ -303,11 +318,17 @@ async function loadOrdersState() {
   }
 }
 
-function updateOrdersStateUI(closed) {
+function updateOrdersStateUI(mode) {
   if (!els.ordersStateLabel || !els.ordersStateBadge) return;
-  els.ordersStateLabel.textContent = closed ? "🔴 Commandes fermées" : "🟢 Commandes ouvertes";
-  els.ordersStateBadge.textContent = closed ? "FERMÉES" : "OUVERTES";
-  els.ordersStateBadge.className = `admin-order-state ${closed ? "admin-order-state-closed" : "admin-order-state-open"}`;
+  const labels = {
+    ouvert: ["🟢 Commandes forcées ouvertes", "OUVERTES"],
+    ferme: ["🔴 Commandes forcées fermées", "FERMÉES"],
+    aucun: ["🕐 Commandes en mode automatique", "AUTOMATIQUE"]
+  };
+  const [label, badge] = labels[mode] || labels.aucun;
+  els.ordersStateLabel.textContent = label;
+  els.ordersStateBadge.textContent = badge;
+  els.ordersStateBadge.className = `admin-order-state ${mode === "ferme" ? "admin-order-state-closed" : mode === "ouvert" ? "admin-order-state-open" : "admin-order-state-unknown"}`;
 }
 
 function showOrderStatus(message, isError) {
