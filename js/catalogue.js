@@ -6,6 +6,7 @@ const editOrderButton = document.querySelector("#edit-order-button");
 const editModeEl = document.querySelector("#order-edit-mode");
 const editLinesEl = document.querySelector("#edit-lines");
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+const CART_STORAGE_KEY = "cdc-panier-v1";
 
 const CATEGORY_LABELS = {
   Plat: "Plat",
@@ -100,6 +101,33 @@ function renderEditLines() {
   });
 
   editModeEl.hidden = false;
+}
+
+function updateCartLinePreservingId(lineId, composants, quantite) {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    const cart = raw ? JSON.parse(raw) : null;
+    if (!cart || !Array.isArray(cart.lines)) return false;
+
+    const line = cart.lines.find((item) => item.lineId === lineId);
+    if (!line) return false;
+
+    // La ligne commerciale reste exactement la même formule.
+    // Seuls ses composants et sa quantité sont remplacés.
+    line.composants = composants.map((item) => ({
+      categorie: item.categorie,
+      produitId: item.produitId,
+      produitNom: item.produitNom,
+      quantiteParFormule: Number(item.quantiteParFormule) || 1
+    }));
+    line.quantite = Math.max(1, Number.parseInt(quantite, 10) || 1);
+
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    return true;
+  } catch (error) {
+    console.error("Erreur lors de la modification de la ligne du panier :", error);
+    return false;
+  }
 }
 
 function startEditingLine(line) {
@@ -249,20 +277,29 @@ function createFormulaCard(formule) {
     }
 
     if (editingLineId) {
-      removeLine(editingLineId);
-      addToCart({ formule, quantite, composants });
-      const savedMessage = `${formule.nom} × ${quantity} a été modifiée dans le panier.`;
+      const editedLineId = editingLineId;
+      const updated = updateCartLinePreservingId(editedLineId, composants, quantity);
+      if (!updated) {
+        setStatus("Impossible de modifier cette ligne du panier.", "error");
+        return;
+      }
+
       editingLineId = null;
       if (editModeEl) editModeEl.hidden = true;
       document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.remove());
       document.querySelectorAll("[data-add-formula]").forEach((button) => {
         button.textContent = "Ajouter au panier";
       });
-      setStatus(savedMessage, "success");
-    } else {
-      addToCart({ formule, quantite: quantity, composants });
-      setStatus(`${formule.nom} × ${quantity} a été ajouté au panier.`, "success");
+      setStatus(`${formule.nom} × ${quantity} a été modifiée dans le panier.`, "success");
+
+      // Recharge uniquement l'interface pour que panier.js relise le même panier.
+      // Aucun nouvel identifiant de ligne n'est créé et la formule reste la même.
+      window.location.reload();
+      return;
     }
+
+    addToCart({ formule, quantite: quantity, composants });
+    setStatus(`${formule.nom} × ${quantity} a été ajouté au panier.`, "success");
   });
   body.appendChild(addButton);
 
