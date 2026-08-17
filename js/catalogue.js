@@ -30,7 +30,7 @@ function normalizeComposition(composition) {
     .map((item) => ({ categorie: item.categorie, quantite: Number(item.quantite) }));
 }
 
-function renderProductOptions(select, category, selectedProductId = "") {
+function renderProductOptions(select, category) {
   const products = productsByCategory.get(category) || [];
   select.innerHTML = "";
   if (!products.length) {
@@ -46,7 +46,7 @@ function renderProductOptions(select, category, selectedProductId = "") {
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.textContent = `Choisir un ${category.toLowerCase()}`;
-  placeholder.selected = !selectedProductId;
+  placeholder.selected = true;
   placeholder.disabled = true;
   select.appendChild(placeholder);
 
@@ -56,7 +56,6 @@ function renderProductOptions(select, category, selectedProductId = "") {
     option.textContent = product.nom;
     option.disabled = !product.id;
     if (!product.id) option.textContent += " — identifiant indisponible";
-    option.selected = product.id === selectedProductId;
     select.appendChild(option);
   });
 }
@@ -75,6 +74,9 @@ function cancelEditing() {
   if (editModeEl) editModeEl.hidden = true;
   setStatus("Modification annulée.");
   document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.remove());
+  document.querySelectorAll("[data-add-formula]").forEach((button) => {
+    button.textContent = "Ajouter au panier";
+  });
 }
 
 function renderEditLines() {
@@ -111,28 +113,28 @@ function startEditingLine(line) {
 
   article.querySelectorAll("select[data-category]").forEach((select) => {
     const component = getComponentForCategory(line, select.dataset.category);
-    if (component?.produitId) select.value = component.produitId;
+    select.value = component?.produitId || "";
   });
 
-  const quantityOutput = article.querySelector("[data-quantity]");
-  if (quantityOutput) {
-    quantityOutput.value = line.quantite;
-    quantityOutput.textContent = line.quantite;
-  }
+  const setQuantity = article._setQuantity;
+  if (setQuantity) setQuantity(line.quantite);
+
+  document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.remove());
+  document.querySelectorAll("[data-add-formula]").forEach((button) => {
+    button.textContent = "Ajouter au panier";
+  });
 
   const addButton = article.querySelector("[data-add-formula]");
   if (addButton) addButton.textContent = "Enregistrer les modifications";
 
-  let cancelButton = article.querySelector("[data-cancel-edit]");
-  if (!cancelButton) {
-    cancelButton = document.createElement("button");
-    cancelButton.type = "button";
-    cancelButton.className = "cancel-edit";
-    cancelButton.dataset.cancelEdit = "true";
-    cancelButton.textContent = "Annuler";
-    cancelButton.addEventListener("click", cancelEditing);
-    addButton?.parentElement?.appendChild(cancelButton);
-  }
+  if (!addButton) return;
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.className = "cancel-edit";
+  cancelButton.dataset.cancelEdit = "true";
+  cancelButton.textContent = "Annuler";
+  cancelButton.addEventListener("click", cancelEditing);
+  addButton.parentElement.appendChild(cancelButton);
 }
 
 function createFormulaCard(formule) {
@@ -204,16 +206,14 @@ function createFormulaCard(formule) {
   `;
   let quantity = 1;
   const output = quantityControl.querySelector("[data-quantity]");
-  quantityControl.querySelector("[data-minus]").addEventListener("click", () => {
-    quantity = Math.max(1, quantity - 1);
+  const setQuantity = (value) => {
+    quantity = Math.max(1, Number.parseInt(value, 10) || 1);
     output.value = quantity;
     output.textContent = quantity;
-  });
-  quantityControl.querySelector("[data-plus]").addEventListener("click", () => {
-    quantity += 1;
-    output.value = quantity;
-    output.textContent = quantity;
-  });
+  };
+  article._setQuantity = setQuantity;
+  quantityControl.querySelector("[data-minus]").addEventListener("click", () => setQuantity(quantity - 1));
+  quantityControl.querySelector("[data-plus]").addEventListener("click", () => setQuantity(quantity + 1));
   body.appendChild(quantityControl);
 
   const addButton = document.createElement("button");
@@ -250,14 +250,17 @@ function createFormulaCard(formule) {
 
     if (editingLineId) {
       removeLine(editingLineId);
-      editingLineId = null;
       addToCart({ formule, quantite, composants });
+      const savedMessage = `${formule.nom} × ${quantity} a été modifiée dans le panier.`;
+      editingLineId = null;
       if (editModeEl) editModeEl.hidden = true;
       document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.remove());
-      addButton.textContent = "Ajouter au panier";
-      setStatus(`${formule.nom} a été modifiée dans le panier.`, "success");
+      document.querySelectorAll("[data-add-formula]").forEach((button) => {
+        button.textContent = "Ajouter au panier";
+      });
+      setStatus(savedMessage, "success");
     } else {
-      addToCart({ formule, quantite, composants });
+      addToCart({ formule, quantite: quantity, composants });
       setStatus(`${formule.nom} × ${quantity} a été ajouté au panier.`, "success");
     }
   });
@@ -288,8 +291,7 @@ async function loadCatalogue() {
 
     const formules = data.formules
       .filter((formule) => formule?.actif === true)
-      .sort((a, b) => Number(a.ordre) - Number(b.ordre)
-      )
+      .sort((a, b) => Number(a.ordre) - Number(b.ordre))
       .filter((formule) => normalizeComposition(formule.composition).length > 0);
 
     catalogueEl.innerHTML = "";
