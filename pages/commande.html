@@ -9,8 +9,35 @@
   <link rel="apple-touch-icon" href="../favicon/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .order-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:2rem;align-items:start}
+    .catalog-grid{display:grid;gap:1.25rem}
+    .formula-card,.cart-card,.checkout-card{background:#fff;border:1px solid rgba(49,76,64,.14);border-radius:18px;padding:1.5rem;box-shadow:0 10px 30px rgba(39,55,47,.08)}
+    .formula-card{display:grid;grid-template-columns:140px minmax(0,1fr);gap:1.25rem}
+    .formula-photo{width:140px;height:140px;border-radius:14px;object-fit:cover;background:#edf0ea}
+    .formula-photo-placeholder{width:140px;height:140px;border-radius:14px;background:linear-gradient(145deg,#314c40,#6f8b78);display:grid;place-items:center;color:#fff;font-family:Fraunces,serif;font-size:1rem;text-align:center;padding:.75rem;box-sizing:border-box}
+    .formula-photo-placeholder,.product-photo-placeholder{overflow:hidden}
+    .formula-head{display:flex;justify-content:space-between;gap:1rem;align-items:start}
+    .formula-head h2{margin:0}.formula-price{font-weight:700;white-space:nowrap}
+    .composition{display:grid;gap:.75rem;margin:1rem 0}
+    .component-row{display:grid;grid-template-columns:120px minmax(0,1fr) 84px;gap:.75rem;align-items:center}
+    .component-row label{font-weight:600}.component-row select,.quantity-control button,.quantity-control output{font:inherit}
+    .component-row select{width:100%;padding:.65rem .75rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff}
+    .product-photo-preview{width:84px;height:64px;border-radius:10px;overflow:hidden;background:#edf0ea;display:grid;place-items:center}
+    .product-photo{width:100%;height:100%;object-fit:cover;display:block}
+    .product-photo-placeholder{width:100%;height:100%;display:grid;place-items:center;text-align:center;padding:.35rem;box-sizing:border-box;color:#66706a;font-size:.7rem;background:#edf0ea}
+    .quantity-control{display:flex;align-items:center;gap:.6rem;margin-top:1rem}.quantity-control button{width:38px;height:38px;border:1px solid rgba(49,76,64,.25);border-radius:50%;background:#fff;cursor:pointer}.quantity-control output{min-width:2rem;text-align:center;font-weight:700}
+    .add-button{margin-top:1rem}.status{margin:0 0 1rem}.error{color:#8b2e2e}.success{color:#315f43}
+    .cart-card{position:sticky;top:1rem}.cart-lines{display:grid;gap:1rem;margin:1rem 0}.cart-line{border-top:1px solid rgba(49,76,64,.12);padding-top:1rem}.cart-line:first-child{border-top:0;padding-top:0}.cart-line-title{display:flex;justify-content:space-between;gap:.75rem;font-weight:700}.cart-components{margin:.45rem 0;color:#59635d;font-size:.9rem}.cart-actions{display:flex;align-items:center;gap:.5rem}.cart-actions button{border:0;background:transparent;cursor:pointer;padding:.2rem .35rem}.cart-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem}.empty{color:#66706a}.notice{padding:.9rem 1rem;border-radius:12px;background:#f4ead8;color:#314c40;margin-bottom:1rem}
+    .edit-order-button{width:100%;margin-top:1rem}.edit-mode{border:1px solid rgba(49,76,64,.14);border-radius:12px;padding:1rem;background:#f8faf7;margin-bottom:1rem}.edit-mode[hidden]{display:none}.edit-mode-title{margin:0 0 .75rem;font-weight:700}.edit-lines{display:grid;gap:.5rem}.edit-line-button{width:100%;text-align:left;border:1px solid rgba(49,76,64,.16);border-radius:10px;background:#fff;padding:.65rem .75rem;cursor:pointer}.edit-line-button:hover{border-color:rgba(49,76,64,.35)}.editing-badge{display:inline-block;margin-top:.75rem;font-size:.9rem;font-weight:600;color:#315f43}.cancel-edit{margin-left:.5rem;border:0;background:transparent;cursor:pointer;text-decoration:underline}
+    .checkout-section{padding-top:0}.checkout-card{max-width:920px;margin:0 auto}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.checkout-field{display:grid;gap:.4rem}.checkout-field-full{grid-column:1/-1}.checkout-field label,.checkout-legend{font-weight:600}.checkout-field input,.checkout-field select,.checkout-field textarea{width:100%;box-sizing:border-box;padding:.75rem .8rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff;font:inherit}.checkout-field textarea{min-height:100px;resize:vertical}.checkout-choice{display:flex;gap:1rem;flex-wrap:wrap}.checkout-choice label{display:flex;align-items:center;gap:.45rem;font-weight:500}.checkout-choice input{accent-color:#314c40}.delivery-fields{display:grid;grid-template-columns:1.5fr .7fr 1fr;gap:1rem}.delivery-fields[hidden]{display:none}.checkout-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem}.checkout-actions .btn:disabled{opacity:.55;cursor:not-allowed}.checkout-help{font-size:.9rem;color:#66706a}.checkout-summary{display:grid;gap:1rem}.summary-line{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.summary-line:last-child{border-bottom:0}.summary-components{margin:.35rem 0 0;color:#59635d;font-size:.92rem}.summary-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:grid;gap:.5rem}.summary-total div{display:flex;justify-content:space-between;gap:1rem}.summary-total .grand-total{font-size:1.15rem;font-weight:700}.summary-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.summary-meta div{padding:.75rem;border-radius:10px;background:#f8faf7}.summary-meta strong{display:block;margin-bottom:.25rem}.delivery-notice{padding:.8rem 1rem;border-radius:10px;background:#f8faf7;color:#59635d;font-size:.9rem}.provisional-total{color:#59635d;font-size:.9rem}.checkout-status{margin-top:1rem}
+    @media(max-width:900px){.order-layout{grid-template-columns:1fr}.cart-card{position:static}.checkout-grid{grid-template-columns:1fr}.summary-meta{grid-template-columns:1fr}}
+    @media(max-width:620px){.formula-card{grid-template-columns:1fr}.formula-photo,.formula-photo-placeholder{width:100%;height:220px}.component-row{grid-template-columns:1fr;gap:.35rem}.product-photo-preview{width:100%;height:120px}.delivery-fields{grid-template-columns:1fr}.checkout-actions{flex-direction:column}.checkout-actions .btn{width:100%}}
+    @media(max-width:620px){.order-layout,.catalog-grid,.formula-card,.cart-card,.checkout-card,.checkout-grid,.checkout-field,.delivery-fields,.summary-meta{min-width:0;max-width:100%;box-sizing:border-box}.formula-head,.cart-line-title,.summary-line{min-width:0}.formula-head>*,.cart-line-title>*{min-width:0}.cart-components,.summary-components,.checkout-help,.provisional-total{overflow-wrap:anywhere;word-break:break-word}.checkout-field input,.checkout-field select,.checkout-field textarea{min-width:0;max-width:100%}.delivery-fields>.checkout-field{min-width:0}.checkout-actions .btn{max-width:100%;box-sizing:border-box}}
+  </style>
 </head>
 <body>
   <a href="#contenu" class="visually-hidden-focusable">Aller au contenu</a>
@@ -66,12 +93,26 @@
           <p class="eyebrow">Validation</p>
           <h2>Informations de commande</h2>
           <p class="muted">Complétez vos informations pour préparer le récapitulatif final. Aucun paiement n'est lancé à cette étape.</p>
+
           <form id="checkout-form" novalidate>
             <div class="checkout-grid">
-              <div class="checkout-field"><label for="client-prenom">Prénom *</label><input id="client-prenom" name="prenom" type="text" autocomplete="given-name" required></div>
-              <div class="checkout-field"><label for="client-nom">Nom *</label><input id="client-nom" name="nom" type="text" autocomplete="family-name" required></div>
-              <div class="checkout-field"><label for="client-telephone">Téléphone *</label><input id="client-telephone" name="telephone" type="tel" autocomplete="tel" required></div>
-              <div class="checkout-field"><label for="client-email">Email *</label><input id="client-email" name="email" type="email" autocomplete="email" required></div>
+              <div class="checkout-field">
+                <label for="client-prenom">Prénom *</label>
+                <input id="client-prenom" name="prenom" type="text" autocomplete="given-name" required>
+              </div>
+              <div class="checkout-field">
+                <label for="client-nom">Nom *</label>
+                <input id="client-nom" name="nom" type="text" autocomplete="family-name" required>
+              </div>
+              <div class="checkout-field">
+                <label for="client-telephone">Téléphone *</label>
+                <input id="client-telephone" name="telephone" type="tel" autocomplete="tel" required>
+              </div>
+              <div class="checkout-field">
+                <label for="client-email">Email *</label>
+                <input id="client-email" name="email" type="email" autocomplete="email" required>
+              </div>
+
               <fieldset class="checkout-field checkout-field-full" style="border:0;padding:0;margin:0;">
                 <legend class="checkout-legend">Mode de réception *</legend>
                 <div class="checkout-choice">
@@ -79,20 +120,58 @@
                   <label><input type="radio" name="modeReception" value="livraison" required> Livraison</label>
                 </div>
               </fieldset>
-              <div class="checkout-field"><label for="date-souhaitee">Date souhaitée *</label><select id="date-souhaitee" name="dateSouhaitee" required></select></div>
-              <div class="checkout-field"><label for="creneau">Créneau *</label><select id="creneau" name="creneau" required disabled><option value="">Choisissez d'abord le mode de réception et la date</option></select></div>
-              <div id="delivery-fields" class="checkout-field checkout-field-full delivery-fields" hidden>
-                <div class="checkout-field"><label for="adresse">Adresse *</label><input id="adresse" name="adresse" type="text" autocomplete="street-address"></div>
-                <div class="checkout-field"><label for="code-postal">Code postal *</label><input id="code-postal" name="codePostal" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5"></div>
-                <div class="checkout-field"><label for="ville">Ville *</label><select id="ville" name="ville"><option value="">Choisir une commune</option><option>Roanne</option><option>Le Coteau</option><option>Riorges</option><option>Mably</option><option>Perreux</option><option>Villerest</option></select></div>
+
+              <div class="checkout-field">
+                <label for="date-souhaitee">Date souhaitée *</label>
+                <select id="date-souhaitee" name="dateSouhaitee" required></select>
               </div>
-              <div class="checkout-field checkout-field-full"><label for="precisions">Précisions / instructions</label><textarea id="precisions" name="precisions"></textarea></div>
-              <div class="checkout-field checkout-field-full"><label for="allergies">Allergies / intolérances</label><textarea id="allergies" name="allergies"></textarea></div>
+              <div class="checkout-field">
+                <label for="creneau">Créneau *</label>
+                <select id="creneau" name="creneau" required disabled>
+                  <option value="">Choisissez d'abord le mode de réception et la date</option>
+                </select>
+              </div>
+
+              <div id="delivery-fields" class="checkout-field checkout-field-full delivery-fields" hidden>
+                <div class="checkout-field">
+                  <label for="adresse">Adresse *</label>
+                  <input id="adresse" name="adresse" type="text" autocomplete="street-address">
+                </div>
+                <div class="checkout-field">
+                  <label for="code-postal">Code postal *</label>
+                  <input id="code-postal" name="codePostal" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5">
+                </div>
+                <div class="checkout-field">
+                  <label for="ville">Ville *</label>
+                  <select id="ville" name="ville">
+                    <option value="">Choisir une commune</option>
+                    <option>Roanne</option>
+                    <option>Le Coteau</option>
+                    <option>Riorges</option>
+                    <option>Mably</option>
+                    <option>Perreux</option>
+                    <option>Villerest</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="checkout-field checkout-field-full">
+                <label for="precisions">Précisions / instructions</label>
+                <textarea id="precisions" name="precisions"></textarea>
+              </div>
+              <div class="checkout-field checkout-field-full">
+                <label for="allergies">Allergies / intolérances</label>
+                <textarea id="allergies" name="allergies"></textarea>
+              </div>
             </div>
+
             <p id="delivery-fee-notice" class="delivery-notice" hidden></p>
             <p id="checkout-form-error" class="notice error" role="alert" hidden></p>
-            <div class="checkout-actions"><button type="button" id="checkout-review-button" class="btn btn-primary">Voir le récapitulatif</button></div>
+            <div class="checkout-actions">
+              <button type="button" id="checkout-review-button" class="btn btn-primary">Voir le récapitulatif</button>
+            </div>
           </form>
+
           <div id="final-summary" hidden>
             <p class="eyebrow">Récapitulatif final</p>
             <h2>Vérifiez votre commande</h2>
@@ -101,7 +180,10 @@
             <div id="summary-total" class="summary-total"></div>
             <p class="provisional-total">Le montant affiché avant validation est indicatif. Le prix, les frais de livraison et le total définitifs sont recalculés côté serveur.</p>
             <p id="checkout-summary-error" class="notice error" role="alert" hidden></p>
-            <div class="checkout-actions"><button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button><button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button></div>
+            <div class="checkout-actions">
+              <button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
+              <button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
+            </div>
             <p class="checkout-help">Le paiement en ligne sera ajouté ultérieurement. Cette validation crée uniquement la commande en attente de paiement.</p>
           </div>
         </div>
@@ -109,7 +191,11 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html">Politique de confidentialité</a></span></div></div></footer>
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html">Politique de confidentialité</a></span></div>
+    </div>
+  </footer>
 
   <script src="../js/config.js"></script>
   <script src="../js/script.js"></script>
@@ -118,7 +204,14 @@
   <script>
     (() => {
       const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
-      const ALLOWED_CITY_POSTCODES = { "Roanne": "42300", "Le Coteau": "42120", "Riorges": "42153", "Mably": "42300", "Perreux": "42120", "Villerest": "42300" };
+      const ALLOWED_CITY_POSTCODES = {
+        "Roanne": "42300",
+        "Le Coteau": "42120",
+        "Riorges": "42153",
+        "Mably": "42300",
+        "Perreux": "42120",
+        "Villerest": "42300"
+      };
       const MIN_DELIVERY_FEE = 2.5;
       const CREATE_PAYMENT_URL = "https://europe-west9-carnet-du-chef.cloudfunctions.net/createPayment";
       const form = document.querySelector("#checkout-form");
@@ -149,25 +242,55 @@
       let submitting = false;
 
       function generateRequestId() {
-        if (window.crypto?.randomUUID) return window.crypto.randomUUID().replace(/-/g, "");
+        if (window.crypto?.randomUUID) {
+          return window.crypto.randomUUID().replace(/-/g, "");
+        }
         const bytes = new Uint8Array(32);
         window.crypto?.getRandomValues?.(bytes);
-        if (bytes.some((byte) => byte !== 0)) return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+        if (bytes.some((byte) => byte !== 0)) {
+          return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+        }
         return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
       }
 
       const getParisParts = (date = new Date()) => {
-        const parts = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(date);
+        const parts = new Intl.DateTimeFormat("fr-FR", {
+          timeZone: "Europe/Paris",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        }).formatToParts(date);
         const value = (type) => parts.find((part) => part.type === type)?.value;
-        return { year: Number(value("year")), month: Number(value("month")), day: Number(value("day")), hour: Number(value("hour")), minute: Number(value("minute")) };
+        return {
+          year: Number(value("year")),
+          month: Number(value("month")),
+          day: Number(value("day")),
+          hour: Number(value("hour")),
+          minute: Number(value("minute"))
+        };
       };
+
       const toDateValue = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const addDays = (parts, days) => { const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days)); return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() }; };
+      const addDays = (parts, days) => {
+        const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+        return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+      };
       const formatDate = (dateValue) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${dateValue}T12:00:00+02:00`));
+
       const currentParis = getParisParts();
       const todayValue = toDateValue(currentParis.year, currentParis.month, currentParis.day);
-      function currentMinutesParis() { const parts = getParisParts(); return parts.hour * 60 + parts.minute; }
-      function commandConfig() { return window.CDC_CONFIG || (typeof CDC_CONFIG !== "undefined" ? CDC_CONFIG : { commandes: {}, horaires: {} }); }
+
+      function currentMinutesParis() {
+        const parts = getParisParts();
+        return parts.hour * 60 + parts.minute;
+      }
+
+      function commandConfig() {
+        return window.CDC_CONFIG || (typeof CDC_CONFIG !== "undefined" ? CDC_CONFIG : { commandes: {}, horaires: {} });
+      }
 
       function isGloballyClosed() {
         const c = commandConfig().commandes || {};
@@ -198,7 +321,10 @@
         return minutes < hour * 60 + minute;
       }
 
-      function serviceLabel(service) { return service === "midi" ? "Midi" : "Soir"; }
+      function serviceLabel(service) {
+        return service === "midi" ? "Midi" : "Soir";
+      }
+
       function refreshDates() {
         dateSelect.innerHTML = "";
         const base = getParisParts();
@@ -211,17 +337,27 @@
           dateSelect.appendChild(option);
         }
       }
+
       function refreshSlots() {
         const mode = form.querySelector('input[name="modeReception"]:checked')?.value;
         const dateValue = dateSelect.value;
         slotSelect.innerHTML = "";
         slotSelect.disabled = true;
-        if (!mode || !dateValue) { slotSelect.innerHTML = '<option value="">Choisissez d’abord le mode de réception et la date</option>'; return; }
+        if (!mode || !dateValue) {
+          slotSelect.innerHTML = '<option value="">Choisissez d’abord le mode de réception et la date</option>';
+          return;
+        }
+
         const today = dateValue === todayValue;
         const services = [];
         if (!today || canOrderToday("midi")) services.push("midi");
         if (!today || canOrderToday("soir")) services.push("soir");
-        if (!services.length) { slotSelect.innerHTML = '<option value="">Aucun créneau disponible pour cette date</option>'; return; }
+
+        if (!services.length) {
+          slotSelect.innerHTML = '<option value="">Aucun créneau disponible pour cette date</option>';
+          return;
+        }
+
         const horaires = commandConfig().horaires || {};
         services.forEach((service) => {
           const option = document.createElement("option");
@@ -233,6 +369,7 @@
         });
         slotSelect.disabled = false;
       }
+
       function refreshDeliveryFields() {
         const isDelivery = form.querySelector('input[name="modeReception"]:checked')?.value === "livraison";
         deliveryFields.hidden = !isDelivery;
@@ -240,11 +377,26 @@
         postalInput.required = isDelivery;
         citySelect.required = isDelivery;
         deliveryFeeNotice.hidden = !isDelivery;
-        if (isDelivery) deliveryFeeNotice.textContent = "Frais de livraison : calculés exclusivement côté serveur selon la distance réelle.";
-        else { addressInput.value = ""; postalInput.value = ""; citySelect.value = ""; }
+        if (isDelivery) {
+          deliveryFeeNotice.textContent = "Frais de livraison : calculés exclusivement côté serveur selon la distance réelle.";
+        } else {
+          addressInput.value = "";
+          postalInput.value = "";
+          citySelect.value = "";
+        }
         refreshSlots();
       }
-      function getCartSnapshot() { try { const raw = localStorage.getItem("cdc-panier-v1"); const cart = raw ? JSON.parse(raw) : { lines: [] }; return cart && Array.isArray(cart.lines) ? cart : { lines: [] }; } catch { return { lines: [] }; } }
+
+      function getCartSnapshot() {
+        try {
+          const raw = localStorage.getItem("cdc-panier-v1");
+          const cart = raw ? JSON.parse(raw) : { lines: [] };
+          return cart && Array.isArray(cart.lines) ? cart : { lines: [] };
+        } catch {
+          return { lines: [] };
+        }
+      }
+
       function validateCart(cart) {
         if (!cart.lines.length) return "Votre panier est vide. Ajoutez au moins une formule avant de continuer.";
         for (const line of cart.lines) {
@@ -258,24 +410,36 @@
         }
         return "";
       }
+
       function validateClientAndLogistics() {
         const cart = getCartSnapshot();
         const cartError = validateCart(cart);
         if (cartError) return cartError;
-        if (!form.checkValidity()) { const invalid = form.querySelector(":invalid"); invalid?.focus(); return "Vérifiez les champs obligatoires indiqués dans le formulaire."; }
+        if (!form.checkValidity()) {
+          const invalid = form.querySelector(":invalid");
+          invalid?.focus();
+          return "Vérifiez les champs obligatoires indiqués dans le formulaire.";
+        }
+
         const mode = form.querySelector('input[name="modeReception"]:checked')?.value;
         if (!mode) return "Choisissez un mode de réception.";
         if (isGloballyClosed()) return "Les commandes sont actuellement fermées.";
+
         const dateValue = dateSelect.value;
         if (!dateValue) return "Choisissez une date.";
         const base = getParisParts();
-        const allowedDates = Array.from({ length: 4 }, (_, index) => { const parts = addDays(base, index); return toDateValue(parts.year, parts.month, parts.day); });
+        const allowedDates = Array.from({ length: 4 }, (_, index) => {
+          const parts = addDays(base, index);
+          return toDateValue(parts.year, parts.month, parts.day);
+        });
         if (!allowedDates.includes(dateValue)) return "La date choisie n’est plus disponible. Sélectionnez J à J+3.";
+
         const slot = slotSelect.value;
         if (!slot) return "Choisissez un créneau.";
         const service = slot.startsWith("midi") ? "midi" : "soir";
         if (dateValue === todayValue && !canOrderToday(service)) return "Ce créneau n’est plus disponible aujourd’hui.";
         if (isServiceClosed(service)) return "Ce service est actuellement fermé.";
+
         if (mode === "livraison") {
           const city = citySelect.value;
           const postalCode = postalInput.value.trim();
@@ -286,6 +450,7 @@
         }
         return "";
       }
+
       function renderSummary() {
         const cart = getCartSnapshot();
         summaryLines.innerHTML = "";
@@ -308,61 +473,218 @@
           article.append(left, price);
           summaryLines.appendChild(article);
         });
+
         const mode = form.querySelector('input[name="modeReception"]:checked')?.value;
         const deliveryFee = mode === "livraison" ? MIN_DELIVERY_FEE : 0;
         const total = subtotal + deliveryFee;
-        const values = [["Client", `${form.prenom.value.trim()} ${form.nom.value.trim()}`],["Téléphone", form.telephone.value.trim()],["Email", form.email.value.trim()],["Réception", mode === "livraison" ? "Livraison" : "Retrait"],["Date", formatDate(dateSelect.value)],["Créneau", slotSelect.options[slotSelect.selectedIndex]?.textContent || ""]];
+        const values = [
+          ["Client", `${form.prenom.value.trim()} ${form.nom.value.trim()}`],
+          ["Téléphone", form.telephone.value.trim()],
+          ["Email", form.email.value.trim()],
+          ["Réception", mode === "livraison" ? "Livraison" : "Retrait"],
+          ["Date", formatDate(dateSelect.value)],
+          ["Créneau", slotSelect.options[slotSelect.selectedIndex]?.textContent || ""]
+        ];
         if (mode === "livraison") values.push(["Adresse", `${addressInput.value.trim()}, ${postalInput.value.trim()} ${citySelect.value}`]);
         summaryMeta.innerHTML = "";
-        values.forEach(([label, value]) => { const item = document.createElement("div"); const strong = document.createElement("strong"); strong.textContent = label; const text = document.createElement("span"); text.textContent = value; item.append(strong, text); summaryMeta.appendChild(item); });
+        values.forEach(([label, value]) => {
+          const item = document.createElement("div");
+          const strong = document.createElement("strong");
+          strong.textContent = label;
+          const text = document.createElement("span");
+          text.textContent = value;
+          item.append(strong, text);
+          summaryMeta.appendChild(item);
+        });
+
         summaryTotal.innerHTML = "";
-        const subtotalRow = document.createElement("div"); subtotalRow.innerHTML = `<span>Sous-total indicatif</span><span>${euro.format(subtotal)}</span>`;
-        const feeRow = document.createElement("div"); feeRow.innerHTML = `<span>Frais de livraison indicatifs</span><span>${euro.format(deliveryFee)}</span>`;
-        const totalRow = document.createElement("div"); totalRow.className = "grand-total"; totalRow.innerHTML = `<span>Total indicatif</span><span>${euro.format(total)}</span>`;
+        const subtotalRow = document.createElement("div");
+        subtotalRow.innerHTML = `<span>Sous-total indicatif</span><span>${euro.format(subtotal)}</span>`;
+        const feeRow = document.createElement("div");
+        feeRow.innerHTML = `<span>Frais de livraison indicatifs</span><span>${euro.format(deliveryFee)}</span>`;
+        const totalRow = document.createElement("div");
+        totalRow.className = "grand-total";
+        totalRow.innerHTML = `<span>Total indicatif</span><span>${euro.format(total)}</span>`;
         summaryTotal.append(subtotalRow, feeRow, totalRow);
-        if (form.precisions.value.trim() || form.allergies.value.trim()) { const extra = document.createElement("div"); extra.className = "delivery-notice"; extra.textContent = `Précisions : ${form.precisions.value.trim() || "Aucune"} · Allergies/intolérances : ${form.allergies.value.trim() || "Aucune"}`; summaryMeta.appendChild(extra); }
+
+        if (form.precisions.value.trim() || form.allergies.value.trim()) {
+          const extra = document.createElement("div");
+          extra.className = "delivery-notice";
+          extra.textContent = `Précisions : ${form.precisions.value.trim() || "Aucune"} · Allergies/intolérances : ${form.allergies.value.trim() || "Aucune"}`;
+          summaryMeta.appendChild(extra);
+        }
       }
+
       function buildPaymentPayload() {
         const cart = getCartSnapshot();
         const mode = form.querySelector('input[name="modeReception"]:checked')?.value || "";
         const slot = slotSelect.value || "";
         const creneau = slot.startsWith("midi") ? "midi" : slot.startsWith("soir") ? "soir" : "";
-        return { requestId: activeRequestId, lignes: cart.lines.map((line) => ({ formuleId: String(line.formuleId || ""), quantite: Number(line.quantite), composants: (line.composants || []).map((component) => ({ produitId: String(component.produitId || ""), categorie: String(component.categorie || "") })) })), client: { prenom: form.prenom.value.trim(), nom: form.nom.value.trim(), telephone: form.telephone.value.trim(), email: form.email.value.trim() }, modeReception: mode, date: dateSelect.value, creneau, ...(mode === "livraison" ? { adresse: addressInput.value.trim(), codePostal: postalInput.value.trim(), ville: citySelect.value.trim() } : {}), precisions: form.precisions.value.trim(), allergies: form.allergies.value.trim() };
+
+        return {
+          requestId: activeRequestId,
+          lignes: cart.lines.map((line) => ({
+            formuleId: String(line.formuleId || ""),
+            quantite: Number(line.quantite),
+            composants: (line.composants || []).map((component) => ({
+              produitId: String(component.produitId || ""),
+              categorie: String(component.categorie || "")
+            }))
+          })),
+          client: {
+            prenom: form.prenom.value.trim(),
+            nom: form.nom.value.trim(),
+            telephone: form.telephone.value.trim(),
+            email: form.email.value.trim()
+          },
+          modeReception: mode,
+          date: dateSelect.value,
+          creneau,
+          ...(mode === "livraison" ? {
+            adresse: addressInput.value.trim(),
+            codePostal: postalInput.value.trim(),
+            ville: citySelect.value.trim()
+          } : {}),
+          precisions: form.precisions.value.trim(),
+          allergies: form.allergies.value.trim()
+        };
       }
+
       function showServerError(error) {
-        const messages = { INVALID_REQUEST_ID: "La demande de commande est invalide. Veuillez réessayer.", INVALID_REQUEST_FINGERPRINT: "La demande de commande ne peut pas être sécurisée. Veuillez réessayer.", REQUEST_ID_REUSED: "Cette demande est déjà associée à une autre intention de commande.", PAYMENT_ATTEMPT_RESET_REQUIRED: "Cette tentative doit être réinitialisée avant de pouvoir être réutilisée.", EMPTY_CART: "Le panier est vide.", INVALID_FORMULA: "Une formule de votre panier n’est plus disponible.", FORMULA_INACTIVE: "Une formule de votre panier n’est plus active.", INVALID_PRODUCT: "Un produit de votre panier est introuvable.", PRODUCT_INACTIVE: "Un produit de votre panier n’est plus actif.", PRODUCT_UNAVAILABLE: "Un produit de votre panier n’est plus disponible.", INSUFFICIENT_STOCK: "Le stock disponible ne permet plus de valider cette commande.", INVALID_DATE: "La date choisie est invalide.", DATE_OUT_OF_RANGE: "La date choisie n’est plus disponible.", INVALID_SLOT: "Le créneau choisi est invalide.", ORDER_CUTOFF_PASSED: "La limite de commande pour ce créneau est dépassée.", GLOBAL_CLOSURE: "Les commandes sont actuellement fermées.", EXCEPTIONAL_CLOSURE: "Les commandes sont temporairement fermées.", LUNCH_CLOSURE: "Le service déjeuner est actuellement fermé.", DINNER_CLOSURE: "Le service soir est actuellement fermé.", INVALID_RECEPTION: "Le mode de réception choisi est invalide.", INVALID_RECEPTION_SLOT: "Le créneau choisi est invalide pour ce mode de réception.", DELIVERY_ERROR: "Les informations de livraison ne peuvent pas être validées.", DELIVERY_DISTANCE_UNAVAILABLE: "La distance de livraison n’a pas pu être déterminée.", INVALID_SERVER_PRICE: "Le prix serveur est invalide.", INVALID_SERVER_STOCK: "Le stock serveur est indisponible.", PAYMENT_ATTEMPT_NOT_FOUND: "La tentative de commande n’a pas pu être retrouvée.", INVALID_CLIENT_DATA: "Les informations client sont invalides.", INVALID_ORDER_DATA: "Les informations de commande sont invalides.", INVALID_SERVER_PRICING: "Le calcul serveur de la commande est invalide." };
+        const messages = {
+          INVALID_REQUEST_ID: "La demande de commande est invalide. Veuillez réessayer.",
+          INVALID_REQUEST_FINGERPRINT: "La demande de commande ne peut pas être sécurisée. Veuillez réessayer.",
+          REQUEST_ID_REUSED: "Cette demande est déjà associée à une autre intention de commande.",
+          PAYMENT_ATTEMPT_RESET_REQUIRED: "Cette tentative doit être réinitialisée avant de pouvoir être réutilisée.",
+          EMPTY_CART: "Le panier est vide.",
+          INVALID_FORMULA: "Une formule de votre panier n’est plus disponible.",
+          FORMULA_INACTIVE: "Une formule de votre panier n’est plus active.",
+          INVALID_PRODUCT: "Un produit de votre panier est introuvable.",
+          PRODUCT_INACTIVE: "Un produit de votre panier n’est plus actif.",
+          PRODUCT_UNAVAILABLE: "Un produit de votre panier n’est plus disponible.",
+          INSUFFICIENT_STOCK: "Le stock disponible ne permet plus de valider cette commande.",
+          INVALID_DATE: "La date choisie est invalide.",
+          DATE_OUT_OF_RANGE: "La date choisie n’est plus disponible.",
+          INVALID_SLOT: "Le créneau choisi est invalide.",
+          ORDER_CUTOFF_PASSED: "La limite de commande pour ce créneau est dépassée.",
+          GLOBAL_CLOSURE: "Les commandes sont actuellement fermées.",
+          EXCEPTIONAL_CLOSURE: "Les commandes sont temporairement fermées.",
+          LUNCH_CLOSURE: "Le service déjeuner est actuellement fermé.",
+          DINNER_CLOSURE: "Le service soir est actuellement fermé.",
+          INVALID_RECEPTION: "Le mode de réception choisi est invalide.",
+          INVALID_RECEPTION_SLOT: "Le créneau choisi est invalide pour ce mode de réception.",
+          DELIVERY_ERROR: "Les informations de livraison ne peuvent pas être validées.",
+          DELIVERY_DISTANCE_UNAVAILABLE: "La distance de livraison n’a pas pu être déterminée.",
+          INVALID_SERVER_PRICE: "Le prix serveur est invalide.",
+          INVALID_SERVER_STOCK: "Le stock serveur est indisponible.",
+          PAYMENT_ATTEMPT_NOT_FOUND: "La tentative de commande n’a pas pu être retrouvée.",
+          INVALID_CLIENT_DATA: "Les informations client sont invalides.",
+          INVALID_ORDER_DATA: "Les informations de commande sont invalides.",
+          INVALID_SERVER_PRICING: "Le calcul serveur de la commande est invalide."
+        };
         return messages[error?.code] || "La commande n’a pas pu être validée. Veuillez réessayer.";
       }
+
       async function submitOrder() {
         if (submitting) return;
         summaryError.hidden = true;
         const validationError = validateClientAndLogistics();
-        if (validationError) { summaryError.textContent = validationError; summaryError.hidden = false; return; }
+        if (validationError) {
+          summaryError.textContent = validationError;
+          summaryError.hidden = false;
+          return;
+        }
+
         if (!activeRequestId) activeRequestId = generateRequestId();
-        submitting = true; finalValidationButton.disabled = true; finalValidationButton.textContent = "Validation en cours…";
+        submitting = true;
+        finalValidationButton.disabled = true;
+        finalValidationButton.textContent = "Validation en cours…";
+
         try {
-          const response = await fetch(CREATE_PAYMENT_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildPaymentPayload()) });
-          let data = null; try { data = await response.json(); } catch { data = null; }
-          if (!response.ok || !data?.ok) { const error = new Error("createPayment failed"); error.code = data?.code || "INTERNAL_ERROR"; throw error; }
+          const response = await fetch(CREATE_PAYMENT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(buildPaymentPayload())
+          });
+
+          let data = null;
+          try {
+            data = await response.json();
+          } catch {
+            data = null;
+          }
+
+          if (!response.ok || !data?.ok) {
+            const error = new Error("createPayment failed");
+            error.code = data?.code || "INTERNAL_ERROR";
+            throw error;
+          }
+
           confirmation.hidden = false;
           confirmation.textContent = `Commande confirmée — ${data.numeroCommande}. Référence : ${data.commandeId}. Total serveur : ${(Number(data.totalCentimes) / 100).toLocaleString("fr-FR", { style: "currency", currency: data.devise || "EUR" })}.`;
-          finalValidationButton.hidden = true; backButton.hidden = true; summaryError.hidden = true;
-        } catch (error) { summaryError.textContent = showServerError(error); summaryError.hidden = false; finalValidationButton.disabled = false; finalValidationButton.textContent = "Valider ma commande"; } finally { submitting = false; }
+          finalValidationButton.hidden = true;
+          backButton.hidden = true;
+          summaryError.hidden = true;
+        } catch (error) {
+          summaryError.textContent = showServerError(error);
+          summaryError.hidden = false;
+          finalValidationButton.disabled = false;
+          finalValidationButton.textContent = "Valider ma commande";
+        } finally {
+          submitting = false;
+        }
       }
+
       reviewButton.addEventListener("click", () => {
         formError.hidden = true;
         const error = validateClientAndLogistics();
-        if (error) { formError.textContent = error; formError.hidden = false; return; }
-        activeRequestId = null; finalValidationButton.hidden = false; finalValidationButton.disabled = false; finalValidationButton.textContent = "Valider ma commande";
-        renderSummary(); form.hidden = true; finalSummary.hidden = false; finalSummary.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (error) {
+          formError.textContent = error;
+          formError.hidden = false;
+          return;
+        }
+        activeRequestId = null;
+        finalValidationButton.hidden = false;
+        finalValidationButton.disabled = false;
+        finalValidationButton.textContent = "Valider ma commande";
+        renderSummary();
+        form.hidden = true;
+        finalSummary.hidden = false;
+        finalSummary.scrollIntoView({ behavior: "smooth", block: "start" });
       });
+
       finalValidationButton.addEventListener("click", submitOrder);
-      backButton.addEventListener("click", () => { activeRequestId = null; summaryError.hidden = true; finalSummary.hidden = true; form.hidden = false; checkoutSection.scrollIntoView({ behavior: "smooth", block: "start" }); });
-      modeInputs.forEach((input) => input.addEventListener("change", () => { activeRequestId = null; refreshDeliveryFields(); }));
-      dateSelect.addEventListener("change", () => { activeRequestId = null; refreshSlots(); });
-      refreshDates(); refreshDeliveryFields(); refreshSlots();
-      if (!getCartSnapshot().lines.length) { reviewButton.disabled = true; formError.textContent = "Votre panier est vide. Ajoutez une formule pour continuer vers la validation."; formError.hidden = false; }
-      setTimeout(() => { refreshSlots(); }, 800);
+
+      backButton.addEventListener("click", () => {
+        activeRequestId = null;
+        summaryError.hidden = true;
+        finalSummary.hidden = true;
+        form.hidden = false;
+        checkoutSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      modeInputs.forEach((input) => input.addEventListener("change", () => {
+        activeRequestId = null;
+        refreshDeliveryFields();
+      }));
+      dateSelect.addEventListener("change", () => {
+        activeRequestId = null;
+        refreshSlots();
+      });
+
+      refreshDates();
+      refreshDeliveryFields();
+      refreshSlots();
+
+      if (!getCartSnapshot().lines.length) {
+        reviewButton.disabled = true;
+        formError.textContent = "Votre panier est vide. Ajoutez une formule pour continuer vers la validation.";
+        formError.hidden = false;
+      }
+
+      setTimeout(() => {
+        refreshSlots();
+      }, 800);
     })();
   </script>
 </body>
