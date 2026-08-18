@@ -1,554 +1,640 @@
+/**
+ * LE CARNET DU CHEF — Espace admin (catégorie MENUS)
+ * ----------------------------------------------------
+ * Authentification Firebase + gestion CRUD des collections Firestore
+ * "plats" et "menus". Catégories Boissons / Desserts / Photos / Prix :
+ * pas encore développées (à venir dans une prochaine étape).
+ */
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-
-const MENU_IDS = [1, 2, 3];
-const R2_URLS = {
-  1: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu1.pdf",
-  2: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu2.pdf",
-  3: "https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/menu3.pdf"
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+const els = {
+  configWarning: document.querySelector("#config-warning"),
+  loginScreen: document.querySelector("#login-screen"),
+  loginForm: document.querySelector("#login-form"),
+  loginError: document.querySelector("#login-error"),
+  dashboard: document.querySelector("#dashboard"),
+  logoutBtn: document.querySelector("#logout-btn"),
+  userEmail: document.querySelector("#user-email"),
+  platsList: document.querySelector("#plats-list"),
+  platForm: document.querySelector("#plat-form"),
+  platFormTitle: document.querySelector("#plat-form-title"),
+  platCancelEdit: document.querySelector("#plat-cancel-edit"),
+  menusList: document.querySelector("#menus-list"),
+  menuForm: document.querySelector("#menu-form"),
+  menuFormTitle: document.querySelector("#menu-form-title"),
+  menuCancelEdit: document.querySelector("#menu-cancel-edit"),
+  menuPlatsCheckboxes: document.querySelector("#menu-plats-checkboxes"),
+  requestsSection: document.querySelector("#requests-section"),
 };
-const CHEF_PRESENTATION_REF = doc(db, "siteContent", "chefPresentation");
-const pendingUrls = new Map();
-let els = {};
-let initialized = false;
 
-function cacheElements() {
-  els = {
-    configWarning: document.querySelector("#config-warning"),
-    loginScreen: document.querySelector("#login-screen"),
-    loginForm: document.querySelector("#login-form"),
-    loginError: document.querySelector("#login-error"),
-    dashboard: document.querySelector("#dashboard"),
-    logoutBtn: document.querySelector("#logout-btn"),
-    userEmail: document.querySelector("#user-email"),
-    menusList: document.querySelector("#menus-list"),
-    saveButton: document.querySelector("#save-pdfs-btn"),
-    saveStatus: document.querySelector("#save-status"),
-    chefPresentation: document.querySelector("#chef-presentation"),
-    saveChefPresentationButton: document.querySelector("#save-chef-presentation-btn"),
-    chefPresentationStatus: document.querySelector("#chef-presentation-status"),
-    chefPresentationPreview: document.querySelector("#chef-presentation-preview"),
-    closeOrdersButton: document.querySelector("#close-orders-btn"),
-    openOrdersButton: document.querySelector("#open-orders-btn"),
-    automaticOrdersButton: document.querySelector("#automatic-orders-btn"),
-    ordersStatus: document.querySelector("#orders-status"),
-    ordersStateLabel: document.querySelector("#orders-state-label"),
-    ordersStateBadge: document.querySelector("#orders-state-badge"),
-    statActiveProducts: document.querySelector("#stat-active-products"),
-    statOutProducts: document.querySelector("#stat-out-products"),
-    statStock: document.querySelector("#stat-stock"),
-    dashboardStatus: document.querySelector("#dashboard-status"),
-    stocksTableBody: document.querySelector("#stocks-table-body"),
-    stocksStatus: document.querySelector("#stocks-status"),
-    adminPageTitle: document.querySelector("#admin-page-title"),
-    sidebar: document.querySelector("#admin-sidebar"),
-    mobileMenu: document.querySelector("#admin-menu-toggle"),
-    dashboardSection: document.querySelector("#dashboard-section")
-  };
-}
+let platsCache = [];
+let editingPlatId = null;
+let editingMenuId = null;
+let demandesCache = [];
+let selectedDemandeId = null;
+let demandesInitialized = false;
 
-function start() {
-  if (initialized) return;
-  initialized = true;
-  cacheElements();
-  initNavigation();
-  initProductsParentNavigation();
-  injectOrderControlIfNeeded();
-
-  if (!FIREBASE_READY) {
-    els.configWarning.hidden = false;
-    els.loginScreen.hidden = true;
-    els.dashboard.hidden = true;
-    return;
-  }
-
+if (!FIREBASE_READY) {
+  els.configWarning.hidden = false;
+  els.loginScreen.hidden = true;
+} else {
   initAuth();
 }
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", start, { once: true });
-} else {
-  start();
-}
-
-function injectOrderControlIfNeeded() {
-  if (!els.dashboardSection || document.querySelector("#dashboard-order-control")) return;
-  const heading = els.dashboardSection.querySelector(".admin-section-heading");
-  if (!heading) return;
-
-  const panel = document.createElement("section");
-  panel.id = "dashboard-order-control";
-  panel.className = "admin-command-control";
-  panel.setAttribute("aria-labelledby", "orders-control-title");
-  panel.innerHTML = `
-    <div class="admin-command-control-head">
-      <div><p class="admin-eyebrow">ACTION PRIORITAIRE</p><h3 id="orders-control-title">ÉTAT DES COMMANDES</h3></div>
-      <span id="orders-state-badge" class="admin-order-state admin-order-state-unknown">Vérification…</span>
-    </div>
-    <div class="admin-command-status-row"><strong id="orders-state-label">Vérification de l’état…</strong><span class="muted">Contrôle global des commandes du site.</span></div>
-    <div class="admin-form-actions admin-command-actions">
-      <button type="button" id="automatic-orders-btn" class="btn btn-secondary">🕐 Mode automatique</button>
-      <button type="button" id="close-orders-btn" class="btn btn-danger">🔴 Fermer les commandes</button>
-      <button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button>
-    </div>
-    <div id="orders-status" class="admin-alert" hidden aria-live="polite"></div>
-  `;
-  heading.insertAdjacentElement("afterend", panel);
-  cacheElements();
-}
-
-function initProductsParentNavigation() {
-  const parent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item"))
-    .find((item) => item.querySelector("span")?.textContent?.trim() === "Produits / Menus");
-  const subItems = Array.from(document.querySelectorAll(".admin-nav-item[href$='.html']"))
-    .filter((item) => ["Formules", "Plats", "Boissons", "Desserts"].includes(item.querySelector("span")?.textContent?.trim()));
-  if (!parent || subItems.length !== 4) return;
-
-  const submenu = document.createElement("div");
-  submenu.id = "admin-products-submenu";
-  submenu.className = "admin-nav-submenu";
-  submenu.hidden = true;
-  submenu.setAttribute("role", "group");
-  submenu.setAttribute("aria-label", "Produits / Menus");
-
-  parent.insertAdjacentElement("afterend", submenu);
-  subItems.forEach((item) => {
-    submenu.appendChild(item);
-    item.classList.add("admin-nav-subitem");
-  });
-
-  const setOpen = (open) => {
-    submenu.hidden = !open;
-    parent.setAttribute("aria-expanded", String(open));
-    parent.setAttribute("aria-controls", submenu.id);
-  };
-
-  setOpen(false);
-  parent.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    const open = parent.getAttribute("aria-expanded") === "true";
-    setOpen(!open);
-    const productsSection = document.querySelector("#products-section");
-    if (productsSection) {
-      productsSection.hidden = true;
-      productsSection.classList.remove("active");
-    }
-  }, true);
-}
-
-function initNavigation() {
-  const items = document.querySelectorAll("[data-admin-target]");
-  const views = document.querySelectorAll("[data-admin-view]");
-
-  items.forEach((item) => {
-    item.addEventListener("click", () => {
-      const target = item.dataset.adminTarget;
-      if (target === "products-section") return;
-      if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return;
-
-      const productsSubmenu = document.querySelector("#admin-products-submenu");
-      if (productsSubmenu) productsSubmenu.hidden = true;
-      const productsParent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item"))
-        .find((nav) => nav.querySelector("span")?.textContent?.trim() === "Produits / Menus");
-      if (productsParent) productsParent.setAttribute("aria-expanded", "false");
-
-      views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); });
-      items.forEach((nav) => nav.classList.toggle("active", nav === item));
-      const title = item.querySelector("span")?.textContent?.trim() || "Administration";
-      if (els.adminPageTitle) els.adminPageTitle.textContent = title;
-      closeMobileNavigation();
-      if (target === "stocks-section") void renderStocks();
-      if (target === "dashboard-section") {
-        void loadDashboardStats();
-        void loadOrdersState();
-      }
-    });
-  });
-
-  if (els.mobileMenu && els.sidebar) {
-    els.mobileMenu.addEventListener("click", () => {
-      if (!auth.currentUser || els.dashboard.hidden) return;
-      const open = els.sidebar.classList.toggle("is-open");
-      els.mobileMenu.setAttribute("aria-expanded", String(open));
-    });
-  }
-}
-
-function closeMobileNavigation() {
-  if (!els.sidebar || !els.mobileMenu) return;
-  els.sidebar.classList.remove("is-open");
-  els.mobileMenu.setAttribute("aria-expanded", "false");
-}
-
-function resetAdminToLogin() {
-  if (els.dashboard) els.dashboard.hidden = true;
-  if (els.loginScreen) els.loginScreen.hidden = false;
-  pendingUrls.clear();
-  closeMobileNavigation();
-
-  const views = document.querySelectorAll("[data-admin-view]");
-  views.forEach((view) => {
-    view.hidden = true;
-    view.classList.remove("active");
-  });
-
-  if (els.dashboardSection) {
-    els.dashboardSection.hidden = false;
-    els.dashboardSection.classList.add("active");
-  }
-
-  const navItems = document.querySelectorAll("[data-admin-target]");
-  navItems.forEach((item) => item.classList.toggle("active", item.dataset.adminTarget === "dashboard-section"));
-  if (els.adminPageTitle) els.adminPageTitle.textContent = "Tableau de bord";
-  if (els.userEmail) els.userEmail.textContent = "";
-}
-
 function initAuth() {
-  onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, (user) => {
     if (user) {
       els.loginScreen.hidden = true;
       els.dashboard.hidden = false;
-      els.userEmail.textContent = user.email || "administrateur";
-      await loadChefPresentation();
-      await renderMenus();
-      await loadDashboardStats();
-      await renderStocks();
-      await loadOrdersState();
+      els.userEmail.textContent = user.email;
+      startListeners();
     } else {
-      resetAdminToLogin();
+      els.loginScreen.hidden = false;
+      els.dashboard.hidden = true;
     }
   });
 
-  els.loginForm.addEventListener("submit", async (e) => {
+  els.loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     els.loginError.hidden = true;
-    try {
-      await signInWithEmailAndPassword(auth, els.loginForm.email.value.trim(), els.loginForm.password.value);
-    } catch (err) {
+    const email = els.loginForm.email.value.trim();
+    const password = els.loginForm.password.value;
+
+    signInWithEmailAndPassword(auth, email, password).catch((err) => {
       els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code);
       els.loginError.hidden = false;
-    }
+    });
   });
 
-  if (els.logoutBtn) {
-    els.logoutBtn.addEventListener("click", async (event) => {
-      event.preventDefault();
-      els.logoutBtn.disabled = true;
-      try {
-        await signOut(auth);
-        resetAdminToLogin();
-      } catch (error) {
-        console.error("Erreur de déconnexion Firebase :", error);
-      } finally {
-        els.logoutBtn.disabled = false;
-      }
-    });
-  }
-
-  if (els.saveButton) {
-    els.saveButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      void saveAllMenus();
-    });
-  }
-
-  if (els.saveChefPresentationButton) {
-    els.saveChefPresentationButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      void saveChefPresentation();
-    });
-  }
-
-  if (els.chefPresentation) els.chefPresentation.addEventListener("input", updateChefPresentationPreview);
-
-  if (els.closeOrdersButton) {
-    els.closeOrdersButton.addEventListener("click", async () => {
-      if (!auth.currentUser) return;
-      try {
-        await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ferme", updatedAt: serverTimestamp() }, { merge: true });
-        showOrderStatus("🔴 Commandes forcées fermées.", false);
-        updateOrdersStateUI("ferme");
-      } catch (error) {
-        showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true);
-      }
-    });
-  }
-
-  if (els.openOrdersButton) {
-    els.openOrdersButton.addEventListener("click", async () => {
-      if (!auth.currentUser) return;
-      try {
-        await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ouvert", updatedAt: serverTimestamp() }, { merge: true });
-        showOrderStatus("🟢 Commandes forcées ouvertes.", false);
-        updateOrdersStateUI("ouvert");
-      } catch (error) {
-        showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true);
-      }
-    });
-  }
-
-  if (els.automaticOrdersButton) {
-    els.automaticOrdersButton.addEventListener("click", async () => {
-      if (!auth.currentUser) return;
-      try {
-        await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: null, fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true });
-        showOrderStatus("🕐 Mode automatique rétabli.", false);
-        updateOrdersStateUI("aucun");
-      } catch (error) {
-        showOrderStatus(`Impossible de rétablir le mode automatique : ${error?.message || "erreur inconnue"}`, true);
-      }
-    });
-  }
+  els.logoutBtn.addEventListener("click", () => signOut(auth));
 }
-
-async function loadOrdersState() {
-  if (!auth.currentUser || !els.ordersStateLabel || !els.ordersStateBadge) return;
-  try {
-    const snapshot = await getDoc(doc(db, "siteContent", "commandes"));
-    const data = snapshot.exists() ? snapshot.data() : {};
-    const mode = data.modeManuel === "ouvert" || data.modeManuel === "ferme" ? data.modeManuel : "aucun";
-    updateOrdersStateUI(mode);
-  } catch (error) {
-    console.error("Impossible de lire l’état des commandes :", error);
-    els.ordersStateLabel.textContent = "État indisponible";
-    els.ordersStateBadge.textContent = "Erreur de lecture";
-    els.ordersStateBadge.className = "admin-order-state admin-order-state-unknown";
-  }
-}
-
-function updateOrdersStateUI(mode) {
-  if (!els.ordersStateLabel || !els.ordersStateBadge) return;
-  const labels = {
-    ouvert: ["🟢 Commandes forcées ouvertes", "OUVERTES"],
-    ferme: ["🔴 Commandes forcées fermées", "FERMÉES"],
-    aucun: ["🕐 Commandes en mode automatique", "AUTOMATIQUE"]
-  };
-  const [label, badge] = labels[mode] || labels.aucun;
-  els.ordersStateLabel.textContent = label;
-  els.ordersStateBadge.textContent = badge;
-  els.ordersStateBadge.className = `admin-order-state ${mode === "ferme" ? "admin-order-state-closed" : mode === "ouvert" ? "admin-order-state-open" : "admin-order-state-unknown"}`;
-}
-
-function showOrderStatus(message, isError) {
-  if (!els.ordersStatus) return;
-  els.ordersStatus.textContent = message;
-  els.ordersStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
-  els.ordersStatus.hidden = false;
-}
-
 function traduireErreur(code) {
-  return {
+  const messages = {
     "auth/invalid-email": "adresse email invalide.",
     "auth/user-not-found": "aucun compte avec cet email.",
     "auth/wrong-password": "mot de passe incorrect.",
     "auth/invalid-credential": "identifiants incorrects.",
-    "auth/too-many-requests": "trop de tentatives, réessayez plus tard."
-  }[code] || "veuillez réessayer.";
+    "auth/too-many-requests": "trop de tentatives, réessayez plus tard.",
+  };
+
+  return messages[code] || "veuillez réessayer.";
 }
 
-async function loadChefPresentation() {
-  if (!els.chefPresentation) return;
-  const fallback = "[Texte à compléter : présentation personnelle du chef — parcours, expériences, ce qui l'anime au quotidien.]";
-  els.chefPresentation.value = fallback;
-  updateChefPresentationPreview();
-  setChefPresentationStatus("");
-  try {
-    const snap = await getDoc(CHEF_PRESENTATION_REF);
-    const texte = snap.exists() && typeof snap.data().texte === "string" ? snap.data().texte : "";
-    if (texte.trim()) {
-      els.chefPresentation.value = texte;
-      updateChefPresentationPreview();
-    }
-  } catch (error) {
-    console.error("Erreur de lecture Firestore de la présentation du chef :", error);
-    setChefPresentationStatus("Impossible de charger le texte enregistré. Le texte actuel est conservé.", true);
+let listenersStarted = false;
+function startListeners() {
+  if (listenersStarted) return;
+  listenersStarted = true;
+  if (els.platsList && els.menuPlatsCheckboxes) {
+    onSnapshot(
+      query(collection(db, "plats"), orderBy("nom")),
+      (snap) => {
+        platsCache = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        renderPlatsList();
+        renderMenuPlatsCheckboxes();
+      },
+      (error) => {
+        console.error("Firestore — lecture des plats impossible", error);
+        els.platsList.innerHTML =
+          "<p class='muted'>Impossible de charger les plats pour le moment.</p>";
+        els.menuPlatsCheckboxes.innerHTML =
+          "<p class='muted' style='margin:0;'>Impossible de charger les plats pour le moment.</p>";
+      }
+    );
   }
-}
-
-async function saveChefPresentation() {
-  if (!els.chefPresentation || !els.saveChefPresentationButton) return;
-  const texte = els.chefPresentation.value;
-  setChefPresentationStatus("Enregistrement en cours…");
-  els.saveChefPresentationButton.disabled = true;
-  try {
-    await setDoc(CHEF_PRESENTATION_REF, { texte, updatedAt: serverTimestamp() }, { merge: true });
-    setChefPresentationStatus("Présentation du chef enregistrée avec succès.");
-  } catch (error) {
-    console.error("Erreur Firestore lors de l'enregistrement de la présentation du chef :", error);
-    setChefPresentationStatus(`Erreur lors de l'enregistrement : ${error?.message || "opération impossible"}`, true);
-  } finally {
-    els.saveChefPresentationButton.disabled = false;
-  }
-}
-
-function updateChefPresentationPreview() {
-  if (!els.chefPresentationPreview || !els.chefPresentation) return;
-  els.chefPresentationPreview.textContent = els.chefPresentation.value;
-  els.chefPresentationPreview.hidden = !els.chefPresentation.value;
-}
-
-function setChefPresentationStatus(message, isError = false) {
-  if (!els.chefPresentationStatus) return;
-  els.chefPresentationStatus.textContent = message;
-  els.chefPresentationStatus.style.color = isError ? "#a33" : "";
-}
-
-async function getCurrentMenus() {
-  const snap = await getDocs(collection(db, "menuPdfs"));
-  const result = {};
-  snap.forEach((d) => { result[d.id] = d.data(); });
-  return result;
-}
-
-async function renderMenus() {
-  if (!els.menusList || !els.saveStatus) return;
-  els.menusList.innerHTML = "";
-  els.saveStatus.style.display = "none";
-  pendingUrls.clear();
-  let current = {};
-  try {
-    current = await getCurrentMenus();
-  } catch (error) {
-    console.error("Erreur de lecture Firestore menuPdfs :", error);
-    showSaveStatus(`Impossible de lire les PDF enregistrés dans Firestore : ${error?.message || "erreur inconnue"}`, true);
+  if (els.menusList) {
+    onSnapshot(
+      query(collection(db, "menus"), orderBy("nom")),
+      (snap) => {
+        const menus = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        renderMenusList(menus);
+      },
+      (error) => {
+        console.error("Firestore — lecture des menus impossible", error);
+        els.menusList.innerHTML =
+          "<p class='muted'>Impossible de charger les menus pour le moment.</p>";
+      }
+    );
   }
 
-  MENU_IDS.forEach((id) => {
-    const data = current[String(id)] || {};
-    const expectedFile = `menu${id}.pdf`;
-    const currentUrl = data.url || R2_URLS[id];
-    const present = Boolean(data.url);
-    const row = document.createElement("article");
-    row.className = "admin-row";
+  startDemandesListener();
+}
+
+function renderPlatsList() {
+  if (!els.platsList) return;
+  els.platsList.innerHTML = "";
+  if (!platsCache.length) {
+    els.platsList.innerHTML = "<p class='muted'>Aucun plat pour le moment.</p>";
+    return;
+  }
+
+  platsCache.forEach((plat) => {
+    const row = document.createElement("div");
+    row.className =
+      "admin-row" + (plat.disponible === false ? " admin-row-off" : "");
     row.innerHTML = `
-      <div class="admin-row-main" style="display:block;">
-        <strong>MENU ${id}</strong>
-        <span class="muted" style="display:block;margin-top:.25rem;">Fichier attendu : <strong>${expectedFile}</strong></span>
-        <span style="display:inline-block;margin-top:.5rem;" class="${present ? "admin-status-success" : "admin-status-muted"}">${present ? "URL R2 enregistrée" : "URL R2 non enregistrée"}</span>
-        <span class="muted" style="display:block;margin-top:.5rem;word-break:break-all;">URL actuelle : <strong>${escapeHtml(currentUrl)}</strong></span>
-        <a href="${escapeAttr(currentUrl)}" target="_blank" rel="noopener" class="muted" style="display:block;margin-top:.5rem;">Ouvrir le PDF actuel</a>
+      <div class="admin-row-main">
+        <strong>${escapeHtml(plat.nom)}</strong>
+        <span class="muted">${escapeHtml(plat.prix || "")}</span>
+        ${plat.disponible === false ? '<span class="admin-tag">Désactivé</span>' : ""}
       </div>
-      <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
-        <button type="button" class="btn btn-secondary" data-r2-replace="${id}">Remplacer le PDF dans Cloudflare R2</button>
+      <div class="admin-row-actions">
+        <button type="button" data-action="toggle" data-id="${plat.id}">${plat.disponible === false ? "Activer" : "Désactiver"}</button>
+        <button type="button" data-action="edit" data-id="${plat.id}">Modifier</button>
+        <button type="button" data-action="delete" data-id="${plat.id}" class="admin-danger">Supprimer</button>
       </div>
-      <p id="menu-status-${id}" class="muted" style="margin:.75rem 0 0;" aria-live="polite"></p>
     `;
+    els.platsList.appendChild(row);
+  });
+
+  els.platsList.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      handlePlatAction(btn.dataset.action, btn.dataset.id)
+    );
+  });
+}
+
+function handlePlatAction(action, id) {
+  const plat = platsCache.find((p) => p.id === id);
+  if (!plat) return;
+  if (action === "edit") {
+    editingPlatId = id;
+    els.platForm.nom.value = plat.nom || "";
+    els.platForm.description.value = plat.description || "";
+    els.platForm.prix.value = plat.prix || "";
+    els.platForm.image.value = plat.image || "";
+    els.platForm.disponible.checked = plat.disponible !== false;
+    els.platFormTitle.textContent = "Modifier le plat";
+    els.platCancelEdit.hidden = false;
+    els.platForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (action === "toggle") {
+    updateDoc(doc(db, "plats", id), {
+      disponible: plat.disponible === false,
+    }).catch((error) => {
+      console.error("Firestore — mise à jour du plat impossible", error);
+    });
+  }
+
+  if (action === "delete") {
+    if (confirm(`Supprimer définitivement « ${plat.nom} » ?`)) {
+      deleteDoc(doc(db, "plats", id)).catch((error) => {
+        console.error("Firestore — suppression du plat impossible", error);
+      });
+    }
+  }
+}
+
+if (els.platCancelEdit) {
+  els.platCancelEdit.addEventListener("click", resetPlatForm);
+}
+
+function resetPlatForm() {
+  editingPlatId = null;
+  els.platForm.reset();
+  els.platForm.disponible.checked = true;
+  els.platFormTitle.textContent = "Ajouter un plat";
+  els.platCancelEdit.hidden = true;
+}
+
+if (els.platForm) els.platForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const data = {
+    nom: els.platForm.nom.value.trim(),
+    description: els.platForm.description.value.trim(),
+    prix: els.platForm.prix.value.trim(),
+    image: els.platForm.image.value.trim(),
+    disponible: els.platForm.disponible.checked,
+  };
+
+  if (!data.nom) return;
+
+  try {
+    if (editingPlatId) {
+      await updateDoc(doc(db, "plats", editingPlatId), data);
+    } else {
+      await addDoc(collection(db, "plats"), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+    }
+    resetPlatForm();
+  } catch (error) {
+    console.error("Firestore — enregistrement du plat impossible", error);
+  }
+});
+
+function renderMenuPlatsCheckboxes(selectedIds = []) {
+  if (!els.menuPlatsCheckboxes) return;
+  els.menuPlatsCheckboxes.innerHTML = "";
+
+  if (!platsCache.length) {
+    els.menuPlatsCheckboxes.innerHTML =
+      "<p class='muted' style='margin:0;'>Ajoutez d'abord des plats ci-dessus.</p>";
+    return;
+  }
+  platsCache.forEach((plat) => {
+    const label = document.createElement("label");
+    label.className = "admin-checkbox";
+
+    label.innerHTML = `
+      <input type="checkbox" value="${plat.id}" ${selectedIds.includes(plat.id) ? "checked" : ""}>
+      ${escapeHtml(plat.nom)}
+    `;
+
+    els.menuPlatsCheckboxes.appendChild(label);
+  });
+}
+
+function renderMenusList(menus) {
+  if (!els.menusList) return;
+  els.menusList.innerHTML = "";
+  if (!menus.length) {
+    els.menusList.innerHTML = "<p class='muted'>Aucun menu pour le moment.</p>";
+    return;
+  }
+
+  menus.forEach((menu) => {
+    const nbPlats = (menu.platsIds || []).length;
+    const periode =
+      menu.dateDebut || menu.dateFin
+        ? `Du ${menu.dateDebut || "…"} au ${menu.dateFin || "…"}`
+        : "Toujours disponible";
+
+    const row = document.createElement("div");
+    row.className =
+      "admin-row" + (menu.disponible === false ? " admin-row-off" : "");
+    row.innerHTML = `
+      <div class="admin-row-main">
+        <strong>${escapeHtml(menu.nom)}</strong>
+        <span class="muted">${escapeHtml(menu.prix || "")} · ${nbPlats} plat(s) · ${escapeHtml(periode)}</span>
+        ${menu.disponible === false ? '<span class="admin-tag">Désactivé</span>' : ""}
+      </div>
+      <div class="admin-row-actions">
+        <button type="button" data-action="toggle" data-id="${menu.id}">${menu.disponible === false ? "Activer" : "Désactiver"}</button>
+        <button type="button" data-action="edit" data-id="${menu.id}">Modifier</button>
+        <button type="button" data-action="delete" data-id="${menu.id}" class="admin-danger">Supprimer</button>
+      </div>
+    `;
+    row.dataset.menu = JSON.stringify(menu);
     els.menusList.appendChild(row);
   });
 
-  els.menusList.querySelectorAll("[data-r2-replace]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const id = Number(button.dataset.r2Replace);
-      const statusEl = document.querySelector(`#menu-status-${id}`);
-      statusEl.textContent = `Le fichier menu${id}.pdf doit être remplacé directement dans Cloudflare R2. L’ADMIN ne téléverse plus de fichier. L’URL publique utilisée par le site est : ${R2_URLS[id]}`;
+  els.menusList.querySelectorAll("button").forEach((btn) => {
+    const row = btn.closest(".admin-row");
+    const menu = JSON.parse(row.dataset.menu);
+
+    btn.addEventListener("click", () =>
+      handleMenuAction(btn.dataset.action, menu)
+    );
+  });
+}
+function handleMenuAction(action, menu) {
+  if (action === "edit") {
+    editingMenuId = menu.id;
+    els.menuForm.nom.value = menu.nom || "";
+    els.menuForm.description.value = menu.description || "";
+    els.menuForm.prix.value = menu.prix || "";
+    els.menuForm.dateDebut.value = menu.dateDebut || "";
+    els.menuForm.dateFin.value = menu.dateFin || "";
+    els.menuForm.disponible.checked = menu.disponible !== false;
+    renderMenuPlatsCheckboxes(menu.platsIds || []);
+    els.menuFormTitle.textContent = "Modifier le menu";
+    els.menuCancelEdit.hidden = false;
+    els.menuForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (action === "toggle") {
+    updateDoc(doc(db, "menus", menu.id), {
+      disponible: menu.disponible === false,
+    }).catch((error) => {
+      console.error("Firestore — mise à jour du menu impossible", error);
     });
+  }
+
+  if (action === "delete") {
+    if (confirm(`Supprimer définitivement « ${menu.nom} » ?`)) {
+      deleteDoc(doc(db, "menus", menu.id)).catch((error) => {
+        console.error("Firestore — suppression du menu impossible", error);
+      });
+    }
+  }
+}
+
+if (els.menuCancelEdit) {
+  els.menuCancelEdit.addEventListener("click", resetMenuForm);
+}
+
+function resetMenuForm() {
+  editingMenuId = null;
+  els.menuForm.reset();
+  els.menuForm.disponible.checked = true;
+  els.menuFormTitle.textContent = "Ajouter un menu";
+  els.menuCancelEdit.hidden = true;
+  renderMenuPlatsCheckboxes();
+}
+
+if (els.menuForm) els.menuForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const platsIds = Array.from(
+    els.menuPlatsCheckboxes.querySelectorAll("input[type=checkbox]:checked")
+  ).map((cb) => cb.value);
+
+  const data = {
+    nom: els.menuForm.nom.value.trim(),
+    description: els.menuForm.description.value.trim(),
+    prix: els.menuForm.prix.value.trim(),
+    dateDebut: els.menuForm.dateDebut.value || "",
+    dateFin: els.menuForm.dateFin.value || "",
+    disponible: els.menuForm.disponible.checked,
+    platsIds,
+  };
+
+  if (!data.nom) return;
+  try {
+    if (editingMenuId) {
+      await updateDoc(doc(db, "menus", editingMenuId), data);
+    } else {
+      await addDoc(collection(db, "menus"), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    resetMenuForm();
+  } catch (error) {
+    console.error("Firestore — enregistrement du menu impossible", error);
+  }
+});
+
+function startDemandesListener() {
+  if (!els.requestsSection) return;
+  initDemandesSection();
+
+  onSnapshot(
+    collection(db, "demandes"),
+    (snap) => {
+      demandesCache = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => timestampValue(b.createdAt) - timestampValue(a.createdAt));
+      renderDemandesList();
+      updateDemandesSummary();
+    },
+    (error) => {
+      console.error("Firestore — lecture des demandes impossible", error);
+      const status = els.requestsSection.querySelector("[data-demandes-status]");
+      if (status) {
+        status.hidden = false;
+        status.textContent = "Impossible de charger les demandes pour le moment.";
+      }
+    },
+  );
+}
+
+function initDemandesSection() {
+  if (demandesInitialized) return;
+  demandesInitialized = true;
+  els.requestsSection.innerHTML = `
+    <div class="admin-section-heading">
+      <div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div>
+      <span class="admin-orders-total"><strong data-demandes-count>0</strong> demande(s)</span>
+    </div>
+    <div class="admin-order-filters" role="toolbar" aria-label="Filtres des demandes">
+      <button type="button" class="admin-filter-btn active" data-demande-filter="all">Toutes</button>
+      <button type="button" class="admin-filter-btn" data-demande-filter="traiteur">Traiteur</button>
+      <button type="button" class="admin-filter-btn" data-demande-filter="chef_domicile">Chef à domicile</button>
+      <button type="button" class="admin-filter-btn" data-demande-filter="nouvelle">Nouvelles</button>
+    </div>
+    <div class="admin-alert" data-demandes-status hidden aria-live="polite"></div>
+    <div id="demandes-list" class="admin-orders-list" aria-live="polite"></div>
+    <section class="admin-section admin-order-detail" data-demande-detail hidden aria-labelledby="demande-detail-title">
+      <div class="admin-section-heading compact">
+        <div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div>
+        <button type="button" class="btn btn-secondary" data-demande-close>Fermer</button>
+      </div>
+      <div data-demande-detail-content></div>
+      <div class="admin-order-status-editor">
+        <label for="demande-detail-status">Statut de la demande</label>
+        <div class="admin-form-actions">
+          <select id="demande-detail-status">
+            <option value="nouvelle">Nouvelle</option>
+            <option value="contactee">Contactée</option>
+            <option value="devis_envoye">Devis envoyé</option>
+            <option value="acceptee">Acceptée</option>
+            <option value="refusee">Refusée</option>
+            <option value="terminee">Terminée</option>
+            <option value="annulee">Annulée</option>
+          </select>
+          <button type="button" class="btn btn-primary" data-demande-save>Enregistrer le statut</button>
+          <span class="muted" data-demande-save-message aria-live="polite"></span>
+        </div>
+      </div>
+    </section>
+  `;
+
+  els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      renderDemandesList(button.dataset.demandeFilter);
+    });
+  });
+
+  els.requestsSection.querySelector("[data-demande-close]").addEventListener("click", () => {
+    selectedDemandeId = null;
+    els.requestsSection.querySelector("[data-demande-detail]").hidden = true;
+  });
+
+  els.requestsSection.querySelector("[data-demande-save]").addEventListener("click", saveDemandeStatus);
+}
+
+function renderDemandesList(filter = getActiveDemandeFilter()) {
+  const list = els.requestsSection.querySelector("#demandes-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  const filtered = demandesCache.filter((demande) => {
+    if (filter === "all") return true;
+    if (filter === "nouvelle") return demande.statut === "nouvelle";
+    return demande.type === filter;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Les demandes reçues apparaîtront ici.</p></div>`;
+    return;
+  }
+
+  filtered.forEach((demande) => {
+    const row = document.createElement("div");
+    row.className = "admin-row";
+    const client = demande.client || {};
+    const label = demande.type === "chef_domicile" ? "Chef à domicile" : "Traiteur";
+    const date = demande.dateEvenement || demande.dateSouhaitee || "Date non précisée";
+    const statusLabel = formatDemandeStatus(demande.statut);
+    row.innerHTML = `
+      <div class="admin-row-main">
+        <strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong>
+        <span class="muted">${escapeHtml(label)} · ${escapeHtml(date)} · ${escapeHtml(client.email || "")}</span>
+        <span class="admin-tag">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="admin-row-actions">
+        <button type="button" data-demande-open="${demande.id}">Voir</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll("[data-demande-open]").forEach((button) => {
+    button.addEventListener("click", () => showDemandeDetail(button.dataset.demandeOpen));
   });
 }
 
-async function saveAllMenus() {
-  showSaveStatus("Sauvegarde en cours…", false);
-  els.saveButton.disabled = true;
-  try {
-    for (const id of MENU_IDS) {
-      const url = pendingUrls.get(id) || R2_URLS[id];
-      await setDoc(doc(db, "menuPdfs", String(id)), { id, url, fileName: `menu${id}.pdf`, updatedAt: serverTimestamp() }, { merge: true });
-    }
-    pendingUrls.clear();
-    showSaveStatus("PDF sauvegardés avec succès", false);
-    await renderMenusKeepingSuccess();
-  } catch (error) {
-    console.error("Erreur Firestore pendant la sauvegarde des URLs R2 :", error);
-    showSaveStatus(`Erreur lors de la sauvegarde des URLs R2 : ${error?.message || "opération impossible"}`, true);
-  } finally {
-    els.saveButton.disabled = false;
+function showDemandeDetail(id) {
+  const demande = demandesCache.find((item) => item.id === id);
+  if (!demande) return;
+  selectedDemandeId = id;
+  const detail = els.requestsSection.querySelector("[data-demande-detail]");
+  const content = els.requestsSection.querySelector("[data-demande-detail-content]");
+  const select = els.requestsSection.querySelector("#demande-detail-status");
+  const label = demande.type === "chef_domicile" ? "Chef à domicile" : "Traiteur";
+
+  content.innerHTML = buildDemandeDetailHtml(demande);
+  select.value = demande.statut || "nouvelle";
+  els.requestsSection.querySelector("#demande-detail-title").textContent = `${label} — ${demande.client?.prenom || ""} ${demande.client?.nom || ""}`.trim();
+  els.requestsSection.querySelector("[data-demande-save-message]").textContent = "";
+  detail.hidden = false;
+  detail.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function buildDemandeDetailHtml(demande) {
+  const sections = [];
+  sections.push(["Type", demande.type === "chef_domicile" ? "Chef à domicile" : "Traiteur"]);
+  sections.push(["Statut", formatDemandeStatus(demande.statut)]);
+  sections.push(["Créée le", formatTimestamp(demande.createdAt)]);
+
+  const client = demande.client || {};
+  sections.push(["Prénom", client.prenom]);
+  sections.push(["Nom", client.nom]);
+  sections.push(["Téléphone", client.telephone]);
+  sections.push(["E-mail", client.email]);
+
+  if (demande.projet) {
+    sections.push(["Type de prestation", demande.projet.typePrestation]);
+    sections.push(["Projet", demande.projet.description]);
   }
-}
 
-async function renderMenusKeepingSuccess() {
-  await renderMenus();
-  showSaveStatus("PDF sauvegardés avec succès", false);
-}
-
-function showSaveStatus(message, isError) {
-  if (!els.saveStatus) return;
-  els.saveStatus.textContent = message;
-  els.saveStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
-  els.saveStatus.style.display = "block";
-}
-
-async function loadDashboardStats() {
-  if (!els.statActiveProducts || !auth.currentUser) return;
-  try {
-    const snapshot = await getDocs(collection(db, "produits"));
-    const products = snapshot.docs.map((item) => item.data());
-    const active = products.filter((product) => product.actif !== false);
-    const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0);
-    const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0);
-    els.statActiveProducts.textContent = String(active.length);
-    els.statOutProducts.textContent = String(out.length);
-    els.statStock.textContent = String(available);
-    if (els.dashboardStatus) els.dashboardStatus.hidden = true;
-  } catch (error) {
-    console.error("Impossible de charger les indicateurs produits :", error);
-    els.statActiveProducts.textContent = "—";
-    els.statOutProducts.textContent = "—";
-    els.statStock.textContent = "—";
-    if (els.dashboardStatus) {
-      els.dashboardStatus.textContent = "Les indicateurs produits ne sont pas disponibles actuellement.";
-      els.dashboardStatus.hidden = false;
-    }
+  sections.push(["Date", demande.dateEvenement || demande.dateSouhaitee]);
+  if (demande.heure) sections.push(["Heure", demande.heure]);
+  if (demande.heureDebut) sections.push(["Heure de début", demande.heureDebut]);
+  if (demande.heureFin) sections.push(["Heure de fin", demande.heureFin]);
+  if (demande.duree) sections.push(["Durée", demande.duree]);
+  sections.push(["Nombre de personnes", demande.nombrePersonnes]);
+  if (demande.service) sections.push(["Service", demande.service]);
+  if (demande.demande) sections.push(["Demande", demande.demande]);
+  if (demande.preferencesMenu) sections.push(["Préférences / menu", demande.preferencesMenu]);
+  if (demande.repas) {
+    sections.push(["Repas souhaité", demande.repas.description]);
+    sections.push(["Services", formatArray(demande.repas.services)]);
+    sections.push(["Ordre / composition", demande.repas.ordreComposition]);
   }
+  if (demande.preferences) {
+    sections.push(["Aliments à privilégier", demande.preferences.alimentsPrioriser]);
+    sections.push(["Aliments à éviter", demande.preferences.alimentsEviter]);
+    sections.push(["Allergies / contraintes", demande.preferences.allergies]);
+  }
+  if (demande.budget) sections.push(["Budget", demande.budget]);
+  if (demande.contraintesAlimentaires) sections.push(["Contraintes alimentaires", demande.contraintesAlimentaires]);
+  if (demande.precisionsContraintes) sections.push(["Précisions contraintes", demande.precisionsContraintes]);
+  if (demande.lieu) {
+    sections.push(["Adresse", demande.lieu.adresse]);
+    sections.push(["Code postal", demande.lieu.codePostal]);
+    sections.push(["Ville", demande.lieu.ville]);
+  }
+  if (demande.cuisine) {
+    sections.push(["Équipements", formatArray(demande.cuisine.equipements)]);
+    sections.push(["Informations cuisine", demande.cuisine.informations]);
+  }
+  if (demande.besoinsParticuliers) sections.push(["Installation / matériel", demande.besoinsParticuliers]);
+  if (demande.informationsComplementaires) sections.push(["Informations complémentaires", demande.informationsComplementaires]);
+
+  return `<div class="admin-form-grid">${sections
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([label, value]) => `<div class="form-field"><strong>${escapeHtml(label)}</strong><div class="muted" style="white-space:pre-wrap;margin-top:.35rem;">${escapeHtml(String(value))}</div></div>`)
+    .join("")}</div>`;
 }
 
-async function renderStocks() {
-  if (!els.stocksTableBody || !auth.currentUser) return;
-  els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>";
+async function saveDemandeStatus() {
+  if (!selectedDemandeId) return;
+  const select = els.requestsSection.querySelector("#demande-detail-status");
+  const message = els.requestsSection.querySelector("[data-demande-save-message]");
   try {
-    const snapshot = await getDocs(collection(db, "produits"));
-    const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
-    if (!products.length) {
-      els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>";
-      return;
-    }
-    els.stocksTableBody.innerHTML = "";
-    products.forEach((product) => {
-      const row = document.createElement("tr");
-      const values = [
-        product.nom || "Produit sans nom",
-        Number(product.stockInitial || 0),
-        Number(product.stockDisponible || 0),
-        Number(product.stockReserve || 0),
-        Number(product.stockVendu || 0),
-        product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"
-      ];
-      values.forEach((value) => {
-        const cell = document.createElement("td");
-        cell.textContent = String(value);
-        row.appendChild(cell);
-      });
-      els.stocksTableBody.appendChild(row);
+    await updateDoc(doc(db, "demandes", selectedDemandeId), {
+      statut: select.value,
+      updatedAt: serverTimestamp(),
     });
+    message.textContent = "Statut enregistré.";
   } catch (error) {
-    console.error("Impossible de charger les stocks :", error);
-    els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>";
-    if (els.stocksStatus) {
-      els.stocksStatus.textContent = `Erreur de lecture des stocks : ${error?.message || "erreur inconnue"}`;
-      els.stocksStatus.className = "admin-alert admin-alert-error";
-      els.stocksStatus.hidden = false;
-    }
+    console.error("Firestore — mise à jour du statut de la demande impossible", error);
+    message.textContent = "Impossible d'enregistrer le statut.";
   }
 }
 
-function escapeHtml(value) {
-  const element = document.createElement("div");
-  element.textContent = value ?? "";
-  return element.innerHTML;
+function updateDemandesSummary() {
+  const count = els.requestsSection.querySelector("[data-demandes-count]");
+  if (count) count.textContent = demandesCache.length;
 }
 
-function escapeAttr(value) {
-  return String(value ?? "").replace(/&/g,"&amp;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function getActiveDemandeFilter() {
+  return els.requestsSection.querySelector("[data-demande-filter].active")?.dataset.demandeFilter || "all";
 }
 
-window.saveAllMenus = saveAllMenus;
+function formatDemandeStatus(status) {
+  const labels = {
+    nouvelle: "Nouvelle",
+    contactee: "Contactée",
+    devis_envoye: "Devis envoyé",
+    acceptee: "Acceptée",
+    refusee: "Refusée",
+    terminee: "Terminée",
+    annulee: "Annulée",
+  };
+  return labels[status] || status || "Nouvelle";
+}
+
+function timestampValue(timestamp) {
+  if (!timestamp) return 0;
+  if (typeof timestamp.toMillis === "function") return timestamp.toMillis();
+  if (typeof timestamp.seconds === "number") return timestamp.seconds * 1000;
+  return 0;
+}
+
+function formatTimestamp(timestamp) {
+  const millis = timestampValue(timestamp);
+  if (!millis) return "";
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(millis));
+}
+
+function formatArray(value) {
+  return Array.isArray(value) ? value.join(", ") : value || "";
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
