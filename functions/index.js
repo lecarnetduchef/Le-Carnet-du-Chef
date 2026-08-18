@@ -51,7 +51,7 @@ function projectCatalogueItem(item, { product = false } = {}) {
     prix: item?.prix,
     ordre: item?.ordre,
     actif: item?.actif,
-    disponible: item?.disponible,
+    stockDisponible: item?.stockDisponible,
     description: item?.description,
     photo: item?.photo,
     composition: item?.composition,

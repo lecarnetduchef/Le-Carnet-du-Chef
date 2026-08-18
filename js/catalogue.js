@@ -434,7 +434,7 @@ async function loadCatalogue() {
     if (!Array.isArray(data.formules) || !Array.isArray(data.produits)) throw new Error("Structure du catalogue public invalide.");
 
     const products = data.produits
-      .filter((product) => product?.actif === true && product?.disponible === true && CATEGORY_LABELS[product?.categorie])
+      .filter((product) => product?.actif === true && Number(product?.stockDisponible) > 0 && CATEGORY_LABELS[product?.categorie])
       .sort((a, b) => Number(a.ordre) - Number(b.ordre));
 
     productsByCategory = new Map();
