@@ -180,9 +180,16 @@
           </section>
 
           <section id="requests-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div></div>
-            <div class="admin-subnav-grid"><article class="admin-mini-card"><strong>Traiteur</strong><span>À venir</span></article><article class="admin-mini-card"><strong>Chef à domicile</strong><span>À venir</span></article><article class="admin-mini-card"><strong>Conseil culinaire</strong><span>À venir</span></article><article class="admin-mini-card"><strong>Autres demandes</strong><span>À venir</span></article></div>
-            <div class="admin-empty-state compact"><p>Les demandes intégrées au site seront centralisées ici lorsque cette phase sera développée.</p><span class="admin-coming">À VENIR</span></div>
+            <div class="admin-section-heading">
+              <div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div>
+              <div class="admin-orders-header-actions"><span class="admin-orders-total"><strong id="demandes-count">0</strong> demande(s)</span><button id="demandes-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button></div>
+            </div>
+            <div class="admin-order-filters" role="toolbar" aria-label="Filtres des demandes"><button type="button" class="admin-filter-btn active" data-demande-filter="all">Toutes</button><button type="button" class="admin-filter-btn" data-demande-filter="nouvelle">Nouvelles</button><button type="button" class="admin-filter-btn" data-demande-filter="en_cours">En cours</button><button type="button" class="admin-filter-btn" data-demande-filter="traitee">Traitées</button><button type="button" class="admin-filter-btn" data-demande-filter="annulee">Annulées</button></div>
+            <div id="demandes-loading" class="admin-empty-state compact" hidden aria-live="polite"><span class="admin-empty-icon">✉</span><h3>Chargement des demandes</h3><p>Récupération des demandes enregistrées.</p></div>
+            <div id="demandes-error" class="admin-alert admin-alert-error" hidden aria-live="assertive"></div>
+            <div id="demandes-list" class="admin-orders-list" aria-live="polite"></div>
+            <div id="demandes-empty" class="admin-empty-state compact" hidden><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Aucune demande ne correspond au filtre sélectionné.</p></div>
+            <section id="demande-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="demande-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div><button id="demande-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="demande-detail-content"></div><div class="admin-order-status-editor"><label for="demande-detail-status">Statut de la demande</label><div class="admin-form-actions"><select id="demande-detail-status"><option value="nouvelle">Nouvelle</option><option value="en_cours">En cours</option><option value="traitee">Traitée</option><option value="annulee">Annulée</option></select><button id="demande-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button><span id="demande-detail-message" class="muted" aria-live="polite"></span></div></div></section>
           </section>
 
           <section id="quotes-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMMERCIAL</p><h2>Devis</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▤</span><h3>Gestion des devis</h3><p>Création, suivi et acceptation des devis : cette fonction sera connectée lors d’une phase ultérieure.</p><span class="admin-coming">À VENIR</span></div></section>
