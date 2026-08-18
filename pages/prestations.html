@@ -13,6 +13,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .demande-form-wrap { max-width: 900px; margin: 0 auto; }
+    .demande-form fieldset { border: 0; padding: 0; margin: 0 0 2rem; }
+    .demande-form legend { font-family: Fraunces, serif; font-size: 1.45rem; font-weight: 600; margin-bottom: 1rem; }
+    .demande-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .demande-form .form-field-full { grid-column: 1 / -1; }
+    .demande-form label { display: block; font-weight: 600; margin-bottom: .4rem; }
+    .demande-form input, .demande-form select, .demande-form textarea { width: 100%; box-sizing: border-box; padding: .8rem .9rem; border: 1px solid rgba(35,52,42,.22); border-radius: 8px; background: #fff; font: inherit; }
+    .demande-form textarea { resize: vertical; min-height: 110px; }
+    .demande-form .choice-list { display: grid; gap: .55rem; }
+    .demande-form .choice { display: flex; align-items: center; gap: .55rem; font-weight: 400; }
+    .demande-form .choice input { width: auto; }
+    .demande-form .consent { display: flex; align-items: flex-start; gap: .65rem; font-weight: 400; }
+    .demande-form .consent input { width: auto; margin-top: .25rem; }
+    .demande-form .honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+    .demande-form-status { margin: 1rem 0; padding: .9rem 1rem; border-radius: 8px; background: rgba(35,52,42,.08); }
+    .demande-form-status[data-state="success"] { background: rgba(54,117,76,.12); }
+    .demande-form-status[data-state="error"] { background: rgba(150,45,45,.1); }
+    @media (max-width: 700px) { .demande-form-grid { grid-template-columns: 1fr; } .demande-form .form-field-full { grid-column: auto; } }
+  </style>
 </head>
 <body>
 
@@ -29,7 +49,7 @@
         <a href="apropos.html">À propos</a>
         <a href="contact.html">Contact</a>
         <div class="nav-cta">
-          <a class="btn btn-secondary" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
+          <a class="btn btn-secondary" href="traiteur.html#demande-traiteur">Demander un devis</a>
           <a class="btn btn-primary" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
         </div>
       </nav>
@@ -61,14 +81,14 @@
           <div class="card-icon" aria-hidden="true">🥂</div>
           <h2>Traiteur</h2>
           <p class="muted">Pour vos réceptions privées, repas d'entreprise, associations, clubs sportifs et événements — une prestation sur mesure, du buffet au cocktail. <span data-cdc-text="zones.traiteur">[ZONE — traiteur]</span>.</p>
-          <a class="btn btn-primary" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
+          <a class="btn btn-primary" href="traiteur.html#demande-traiteur">Demander un devis</a>
         </article>
 
         <article class="notebook-card reveal">
           <div class="card-icon" aria-hidden="true">👨‍🍳</div>
           <h2>Chef à domicile</h2>
           <p class="muted">Le chef se déplace directement chez vous pour préparer un repas sur mesure, dans une ambiance conviviale et personnalisée. Même zone d'intervention que le traiteur.</p>
-          <a class="btn btn-primary" data-cdc-link="liens.chefADomicile" href="#" target="_blank" rel="noopener">Demander un devis</a>
+          <a class="btn btn-primary" href="#demande-chef">Demander un devis</a>
         </article>
       </div>
     </section>
@@ -100,11 +120,81 @@
       </div>
     </section>
 
+    <section id="demande-chef" class="section">
+      <div class="container demande-form-wrap">
+        <div class="section-head center">
+          <p class="eyebrow">Chef à domicile</p>
+          <h2>Imaginez votre repas chez vous</h2>
+          <p class="muted">Remplissez ce formulaire directement sur le site. Il s'agit d'une demande de prestation, sans engagement.</p>
+        </div>
+
+        <form class="demande-form" data-demande-form="chef_domicile">
+          <fieldset>
+            <legend>Votre projet</legend>
+            <div class="demande-form-grid">
+              <div class="form-field"><label for="chef-type">Type de prestation *</label><select id="chef-type" name="typePrestation" required><option value="">Sélectionner</option><option>Repas privé</option><option>Repas en famille</option><option>Anniversaire</option><option>Repas romantique</option><option>Événement particulier</option><option>Autre</option></select></div>
+              <div class="form-field"><label for="chef-date">Date souhaitée *</label><input id="chef-date" name="dateSouhaitee" type="date" required></div>
+              <div class="form-field"><label for="chef-debut">Heure de début *</label><input id="chef-debut" name="heureDebut" type="time" required></div>
+              <div class="form-field"><label for="chef-fin">Heure de fin *</label><input id="chef-fin" name="heureFin" type="time" required></div>
+              <div class="form-field"><label for="chef-personnes">Nombre de personnes *</label><input id="chef-personnes" name="nombrePersonnes" type="number" min="1" max="10000" required></div>
+              <div class="form-field form-field-full"><label for="chef-projet">Description du projet *</label><textarea id="chef-projet" name="descriptionProjet" required></textarea></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Le repas</legend>
+            <div class="demande-form-grid">
+              <div class="form-field form-field-full"><label for="chef-repas">Description du repas souhaité *</label><textarea id="chef-repas" name="descriptionRepas" required></textarea></div>
+              <div class="form-field form-field-full"><label>Services souhaités</label><div class="choice-list"><label class="choice"><input type="checkbox" name="services" value="Apéritif"> Apéritif</label><label class="choice"><input type="checkbox" name="services" value="Entrée"> Entrée</label><label class="choice"><input type="checkbox" name="services" value="Plat"> Plat</label><label class="choice"><input type="checkbox" name="services" value="Dessert"> Dessert</label><label class="choice"><input type="checkbox" name="services" value="Autre"> Autre</label></div></div>
+              <div class="form-field form-field-full"><label for="chef-composition">Préférence concernant l'ordre ou la composition</label><textarea id="chef-composition" name="ordreComposition"></textarea></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Préférences alimentaires</legend>
+            <div class="demande-form-grid">
+              <div class="form-field"><label for="chef-prioriser">Aliments à privilégier</label><textarea id="chef-prioriser" name="alimentsPrioriser"></textarea></div>
+              <div class="form-field"><label for="chef-eviter">Aliments à éviter</label><textarea id="chef-eviter" name="alimentsEviter"></textarea></div>
+              <div class="form-field form-field-full"><label for="chef-allergies">Allergies, intolérances ou contraintes alimentaires</label><textarea id="chef-allergies" name="allergies"></textarea></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Lieu et cuisine</legend>
+            <div class="demande-form-grid">
+              <div class="form-field form-field-full"><label for="chef-adresse">Adresse *</label><input id="chef-adresse" name="adresse" type="text" required></div>
+              <div class="form-field"><label for="chef-cp">Code postal *</label><input id="chef-cp" name="codePostal" type="text" inputmode="numeric" required></div>
+              <div class="form-field"><label for="chef-ville">Ville *</label><input id="chef-ville" name="ville" type="text" required></div>
+              <div class="form-field form-field-full"><label>Équipements disponibles</label><div class="choice-list"><label class="choice"><input type="checkbox" name="equipements" value="Four"> Four</label><label class="choice"><input type="checkbox" name="equipements" value="Plaques"> Plaques</label><label class="choice"><input type="checkbox" name="equipements" value="Micro-ondes"> Micro-ondes</label><label class="choice"><input type="checkbox" name="equipements" value="Réfrigérateur"> Réfrigérateur</label><label class="choice"><input type="checkbox" name="equipements" value="Congélateur"> Congélateur</label><label class="choice"><input type="checkbox" name="equipements" value="Lave-vaisselle"> Lave-vaisselle</label><label class="choice"><input type="checkbox" name="equipements" value="Autre"> Autre</label><label class="choice"><input type="checkbox" name="equipements" value="Je ne sais pas"> Je ne sais pas</label></div></div>
+              <div class="form-field form-field-full"><label for="chef-cuisine">Informations complémentaires sur la cuisine</label><textarea id="chef-cuisine" name="infosCuisine"></textarea></div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Budget et coordonnées</legend>
+            <div class="demande-form-grid">
+              <div class="form-field"><label for="chef-budget">Budget indicatif *</label><input id="chef-budget" name="budget" type="text" required></div>
+              <div class="form-field"><label for="chef-prenom">Prénom *</label><input id="chef-prenom" name="prenom" type="text" autocomplete="given-name" required></div>
+              <div class="form-field"><label for="chef-nom">Nom *</label><input id="chef-nom" name="nom" type="text" autocomplete="family-name" required></div>
+              <div class="form-field"><label for="chef-tel">Téléphone *</label><input id="chef-tel" name="telephone" type="tel" autocomplete="tel" required></div>
+              <div class="form-field"><label for="chef-email">E-mail *</label><input id="chef-email" name="email" type="email" autocomplete="email" required></div>
+              <div class="form-field form-field-full"><label for="chef-complement">Informations complémentaires</label><textarea id="chef-complement" name="infosComplementaires"></textarea></div>
+            </div>
+          </fieldset>
+
+          <div class="honeypot" aria-hidden="true"><label>Site web<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
+          <div class="form-field"><label class="consent"><input name="confirmation" type="checkbox" required> <span>Je confirme avoir vérifié les informations saisies. Il s'agit d'une demande de prestation, sans engagement. *</span></label></div>
+          <div data-demande-status class="demande-form-status" hidden aria-live="polite"></div>
+          <div class="actions"><button type="submit" class="btn btn-primary">Envoyer ma demande</button></div>
+        </form>
+      </div>
+    </section>
+
     <section class="cta-band">
       <div class="container">
         <h2>Une prestation en tête ?</h2>
         <div class="actions">
-          <a class="btn btn-gold" data-cdc-link="liens.devis" href="#" target="_blank" rel="noopener">Demander un devis</a>
+          <a class="btn btn-gold" href="#demande-chef">Demander un devis</a>
           <a class="btn btn-secondary" style="color:#fff; border-color:#fff;" href="contact.html">Nous contacter</a>
         </div>
       </div>
@@ -146,5 +236,6 @@
 
   <script src="../js/config.js"></script>
   <script src="../js/script.js"></script>
+  <script src="../js/demandes.js"></script>
 </body>
 </html>
