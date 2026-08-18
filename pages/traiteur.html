@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traiteur & Chef à domicile — Le Carnet du Chef</title>
-  <meta name="description" content="Prestations traiteur du Carnet du Chef pour particuliers, entreprises, associations et événements, ainsi que le service de chef à domicile.">
+  <title>Demande de devis Traiteur — Le Carnet du Chef</title>
+  <meta name="description" content="Demande de devis Traiteur du Carnet du Chef.">
   <link rel="canonical" href="https://lecarnetduchef.fr/pages/traiteur.html">
   <link rel="icon" href="../favicon/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="../favicon/apple-touch-icon.png">
@@ -14,241 +14,33 @@
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .demande-form-wrap { max-width: 900px; margin: 0 auto; }
-    .demande-form fieldset { border: 0; padding: 0; margin: 0 0 2rem; }
-    .demande-form legend { font-family: Fraunces, serif; font-size: 1.45rem; font-weight: 600; margin-bottom: 1rem; }
-    .demande-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-    .demande-form .form-field-full { grid-column: 1 / -1; }
-    .demande-form label { display: block; font-weight: 600; margin-bottom: .4rem; }
-    .demande-form input, .demande-form select, .demande-form textarea { width: 100%; box-sizing: border-box; padding: .8rem .9rem; border: 1px solid rgba(35,52,42,.22); border-radius: 8px; background: #fff; font: inherit; }
-    .demande-form textarea { resize: vertical; min-height: 110px; }
-    .demande-form .choice-list { display: grid; gap: .55rem; }
-    .demande-form .choice { display: flex; align-items: center; gap: .55rem; font-weight: 400; }
-    .demande-form .choice input { width: auto; }
-    .demande-form .consent { display: flex; align-items: flex-start; gap: .65rem; font-weight: 400; }
-    .demande-form .consent input { width: auto; margin-top: .25rem; }
-    .demande-form .honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
-    .demande-form-status { margin: 1rem 0; padding: .9rem 1rem; border-radius: 8px; background: rgba(35,52,42,.08); }
-    .demande-form-status[data-state="success"] { background: rgba(54,117,76,.12); }
-    .demande-form-status[data-state="error"] { background: rgba(150,45,45,.1); }
-    @media (max-width: 700px) { .demande-form-grid { grid-template-columns: 1fr; } .demande-form .form-field-full { grid-column: auto; } }
+    .demande-form-wrap{max-width:900px;margin:0 auto}.demande-form fieldset{border:0;padding:0;margin:0 0 2rem}.demande-form legend{font-family:Fraunces,serif;font-size:1.45rem;font-weight:600;margin-bottom:1rem}.demande-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.demande-form .form-field-full{grid-column:1/-1}.demande-form label{display:block;font-weight:600;margin-bottom:.4rem}.demande-form input,.demande-form select,.demande-form textarea{width:100%;box-sizing:border-box;padding:.8rem .9rem;border:1px solid rgba(35,52,42,.22);border-radius:8px;background:#fff;font:inherit}.demande-form textarea{resize:vertical;min-height:110px}.demande-form .consent{display:flex;align-items:flex-start;gap:.65rem;font-weight:400}.demande-form .consent input{width:auto;margin-top:.25rem}.demande-form .honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}.demande-form-status{margin:1rem 0;padding:.9rem 1rem;border-radius:8px;background:rgba(35,52,42,.08)}.demande-form-status[data-state=success]{background:rgba(54,117,76,.12)}.demande-form-status[data-state=error]{background:rgba(150,45,45,.1)}@media(max-width:700px){.demande-form-grid{grid-template-columns:1fr}.demande-form .form-field-full{grid-column:auto}}
   </style>
 </head>
 <body>
-
-  <a href="#contenu" class="visually-hidden-focusable">Aller au contenu</a>
-
-  <header class="site-header">
-    <div class="container">
-      <a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a>
-      <nav class="nav-links" id="nav-links">
-        <a href="../index.html">Accueil</a>
-        <a href="prestations.html">Prestations</a>
-        <a href="menus.html">Menus</a>
-        <a href="traiteur.html" aria-current="page">Traiteur</a>
-        <a href="apropos.html">À propos</a>
-        <a href="contact.html">Contact</a>
-        <div class="nav-cta">
-          <a class="btn btn-secondary" href="#demande-traiteur">Demander un devis</a>
-          <a class="btn btn-primary" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a>
-        </div>
-      </nav>
-      <button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links">
-        <span></span>
-      </button>
-    </div>
-  </header>
-
-  <main id="contenu">
-    <section class="page-hero">
-      <div class="container">
-        <p class="eyebrow">Traiteur & Chef à domicile</p>
-        <h1>Une prestation sur mesure, pour chaque occasion</h1>
-        <p class="muted">Anniversaire, repas d'entreprise, événement associatif ou dîner privé à domicile — chaque demande de devis fait l'objet d'une réponse personnalisée.</p>
-        <p class="muted" style="margin-top:var(--space-2);"><strong>Zone d'intervention :</strong> <span data-cdc-text="zones.traiteur">[ZONE — traiteur / chef à domicile]</span>. Les éventuels frais de déplacement sont étudiés selon la distance.</p>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container about-grid">
-        <div class="reveal">
-          <p class="eyebrow">Traiteur</p>
-          <h2>Pour vos réceptions et événements</h2>
-          <p class="muted">Le Carnet du Chef intervient pour les particuliers, entreprises, associations, clubs sportifs et événements : buffets, cocktails, repas assis ou formules personnalisées.</p>
-          <ul>
-            <li>Anniversaires et événements privés</li>
-            <li>Repas d'entreprise et réunions</li>
-            <li>Événements associatifs et sportifs</li>
-            <li>Buffets et cocktails</li>
-          </ul>
-          <p class="muted" style="font-size:var(--fs-sm);">Un menu pensé avec vous, pour un événement qui vous ressemble.</p>
-          <a class="btn btn-primary" href="#demande-traiteur">Demander un devis</a>
-        </div>
-        <div class="photo-placeholder reveal" data-cdc-bg="images.traiteurBuffet">[PHOTO ÉVÉNEMENT / TRAITEUR — À REMPLACER]</div>
-      </div>
-    </section>
-
-    <section class="section section-alt">
-      <div class="container about-grid">
-        <div class="photo-placeholder reveal" data-cdc-bg="images.traiteurChef">[PHOTO CHEF EN CUISINE — À REMPLACER]</div>
-        <div class="reveal">
-          <p class="eyebrow">Chef à domicile</p>
-          <h2>Le chef cuisine directement chez vous</h2>
-          <p class="muted">Pour un dîner en petit comité ou une occasion particulière, le chef se déplace à votre domicile pour préparer un repas sur mesure, du choix du menu jusqu'au service.</p>
-          <p class="muted" style="font-size:var(--fs-sm);">Une expérience conviviale à savourer chez vous, sans rien avoir à préparer.</p>
-          <a class="btn btn-primary" href="prestations.html#demande-chef">Demander un devis</a>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <div class="section-head center">
-          <p class="eyebrow">Associations &amp; clubs sportifs</p>
-          <h2>Une prestation adaptée à vos événements</h2>
-        </div>
-        <div class="grid grid-3">
-          <div class="notebook-card reveal">
-            <h3>Repas d'après-match</h3>
-            <p class="muted">Buffet ou repas assis pour joueurs, encadrants et supporters après une rencontre.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>Assemblées &amp; réunions</h3>
-            <p class="muted">Buffet ou cocktail pour une assemblée générale, une réunion de bureau ou une soirée des bénévoles.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>Tournois &amp; manifestations</h3>
-            <p class="muted">Formules pensées pour des groupes, adaptables selon le nombre de participants et le budget de l'association.</p>
-          </div>
-        </div>
-        <p class="muted" style="text-align:center; max-width:640px; margin:var(--space-3) auto 0;">Précisez le nombre de personnes et votre budget indicatif dans le formulaire de devis — chaque demande associative ou sportive reçoit une proposition adaptée.</p>
-      </div>
-    </section>
-
-    <section class="section section-alt">
-      <div class="container">
-        <div class="section-head center">
-          <p class="eyebrow">Comment ça marche ?</p>
-          <h2>Votre devis en 3 étapes</h2>
-        </div>
-        <div class="grid grid-3">
-          <div class="notebook-card reveal">
-            <h3>1. Vous remplissez le formulaire</h3>
-            <p class="muted">Type d'événement, date, nombre de personnes, budget indicatif.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>2. Nous étudions votre demande</h3>
-            <p class="muted">Le Carnet du Chef vous recontacte pour affiner les détails de la prestation.</p>
-          </div>
-          <div class="notebook-card reveal">
-            <h3>3. Vous recevez votre devis</h3>
-            <p class="muted">Une proposition personnalisée, adaptée à votre événement et à votre budget.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="demande-traiteur" class="section">
-      <div class="container demande-form-wrap">
-        <div class="section-head center">
-          <p class="eyebrow">Demande de devis</p>
-          <h2>Parlez-nous de votre événement</h2>
-          <p class="muted">Remplissez ce formulaire directement sur le site. Il s'agit d'une demande de devis, sans engagement.</p>
-        </div>
-
-        <form class="demande-form" data-demande-form="traiteur">
-          <fieldset>
-            <legend>Votre projet</legend>
-            <div class="demande-form-grid">
-              <div class="form-field"><label for="traiteur-type">Type de prestation *</label><select id="traiteur-type" name="typePrestation" required><option value="">Sélectionner</option><option>Repas / prestation traiteur</option><option>Buffet</option><option>Cocktail</option><option>Événement professionnel</option><option>Événement particulier</option><option>Autre</option></select></div>
-              <div class="form-field"><label for="traiteur-date">Date de l'événement *</label><input id="traiteur-date" name="dateEvenement" type="date" required></div>
-              <div class="form-field"><label for="traiteur-heure">Heure *</label><input id="traiteur-heure" name="heure" type="time" required></div>
-              <div class="form-field"><label for="traiteur-duree">Durée</label><input id="traiteur-duree" name="duree" type="text" placeholder="Ex. 3 heures"></div>
-              <div class="form-field"><label for="traiteur-personnes">Nombre de personnes *</label><input id="traiteur-personnes" name="nombrePersonnes" type="number" min="1" max="10000" required></div>
-              <div class="form-field"><label for="traiteur-service">Type de service *</label><select id="traiteur-service" name="service" required><option value="">Sélectionner</option><option>Préparation et livraison</option><option>Préparation avec retrait</option><option>Prestation sur place</option><option>Buffet livré et installé</option><option>Autre</option></select></div>
-              <div class="form-field form-field-full"><label for="traiteur-projet">Description du projet *</label><textarea id="traiteur-projet" name="descriptionProjet" required></textarea></div>
-              <div class="form-field form-field-full"><label for="traiteur-demande">Plats, menus ou type de cuisine souhaité *</label><textarea id="traiteur-demande" name="demande" required></textarea></div>
-              <div class="form-field form-field-full"><label for="traiteur-preferences">Préférences ou idées de menu</label><textarea id="traiteur-preferences" name="preferencesMenu"></textarea></div>
-              <div class="form-field"><label for="traiteur-budget">Budget indicatif</label><input id="traiteur-budget" name="budget" type="text" placeholder="Par personne ou pour l'ensemble"></div>
-              <div class="form-field"><label for="traiteur-contraintes">Contraintes alimentaires</label><select id="traiteur-contraintes" name="contraintes"><option>Aucune</option><option>Allergies</option><option>Intolérances</option><option>Régime particulier</option><option>Autre</option></select></div>
-              <div class="form-field form-field-full"><label for="traiteur-precisions">Précisions sur les contraintes alimentaires</label><textarea id="traiteur-precisions" name="precisionsContraintes"></textarea></div>
-              <div class="form-field form-field-full"><label for="traiteur-besoins">Besoins concernant l'installation, le matériel ou le déroulement</label><textarea id="traiteur-besoins" name="besoinsParticuliers"></textarea></div>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Lieu de l'événement</legend>
-            <div class="demande-form-grid">
-              <div class="form-field form-field-full"><label for="traiteur-adresse">Adresse *</label><input id="traiteur-adresse" name="adresse" type="text" required></div>
-              <div class="form-field"><label for="traiteur-cp">Code postal *</label><input id="traiteur-cp" name="codePostal" type="text" inputmode="numeric" required></div>
-              <div class="form-field"><label for="traiteur-ville">Ville *</label><input id="traiteur-ville" name="ville" type="text" required></div>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Vos coordonnées</legend>
-            <div class="demande-form-grid">
-              <div class="form-field"><label for="traiteur-prenom">Prénom *</label><input id="traiteur-prenom" name="prenom" type="text" autocomplete="given-name" required></div>
-              <div class="form-field"><label for="traiteur-nom">Nom *</label><input id="traiteur-nom" name="nom" type="text" autocomplete="family-name" required></div>
-              <div class="form-field"><label for="traiteur-tel">Téléphone *</label><input id="traiteur-tel" name="telephone" type="tel" autocomplete="tel" required></div>
-              <div class="form-field"><label for="traiteur-email">E-mail *</label><input id="traiteur-email" name="email" type="email" autocomplete="email" required></div>
-              <div class="form-field form-field-full"><label for="traiteur-complement">Informations complémentaires</label><textarea id="traiteur-complement" name="informationsComplementaires"></textarea></div>
-            </div>
-          </fieldset>
-
-          <div class="honeypot" aria-hidden="true"><label>Site web<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
-          <div class="form-field"><label class="consent"><input name="confirmation" type="checkbox" required> <span>Je confirme avoir vérifié les informations saisies. Il s'agit d'une demande de devis, sans engagement. *</span></label></div>
-          <div data-demande-status class="demande-form-status" hidden aria-live="polite"></div>
-          <div class="actions"><button type="submit" class="btn btn-primary">Envoyer ma demande</button></div>
-        </form>
-      </div>
-    </section>
-
-    <section class="cta-band">
-      <div class="container">
-        <h2>Prêt à organiser votre événement ?</h2>
-        <div class="actions">
-          <a class="btn btn-gold" href="#demande-traiteur">Demander un devis</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a>
-          <p class="muted" style="color:rgba(255,255,255,0.7); margin-top:1rem;">Cuisine préparée avec soin — plats à emporter, traiteur et chef à domicile.</p>
-        </div>
-        <div>
-          <h4>Navigation</h4>
-          <ul class="footer-links">
-            <li><a href="prestations.html">Prestations</a></li>
-            <li><a href="menus.html">Menus</a></li>
-            <li><a href="traiteur.html">Traiteur</a></li>
-            <li><a href="apropos.html">À propos</a></li>
-            <li><a href="contact.html">Contact</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Suivez-nous</h4>
-          <ul class="footer-links">
-            <li><a data-cdc-link="liens.tiktok" href="#" target="_blank" rel="noopener">TikTok</a></li>
-            <li><a data-cdc-link="liens.snapchat" href="#" target="_blank" rel="noopener">Snapchat</a></li>
-            <li><a data-cdc-link="liens.instagram" href="#" target="_blank" rel="noopener">Instagram</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Le Carnet du Chef — Tous droits réservés.</span>
-        <span><a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html">Politique de confidentialité</a></span>
-      </div>
-    </div>
-  </footer>
-
-  <script src="../js/config.js"></script>
-  <script src="../js/script.js"></script>
-  <script src="../js/demandes.js"></script>
-</body>
-</html>
+<a href="#contenu" class="visually-hidden-focusable">Aller au contenu</a>
+<header class="site-header"><div class="container"><a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a><nav class="nav-links" id="nav-links"><a href="../index.html">Accueil</a><a href="prestations.html">Prestations</a><a href="menus.html">Menus</a><a href="traiteur.html" aria-current="page">Traiteur</a><a href="apropos.html">À propos</a><a href="contact.html">Contact</a><div class="nav-cta"><a class="btn btn-secondary" href="../index.html">Accueil</a><a class="btn btn-primary" data-cdc-link="liens.commandeGenerale" data-cdc-order-button href="#" target="_blank" rel="noopener">Commander</a></div></nav><button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links"><span></span></button></div></header>
+<main id="contenu"><section class="page-hero"><div class="container"><p class="eyebrow">Traiteur</p><h1>Demande de devis Traiteur</h1><p class="muted">Décrivez votre événement directement sur le site. Votre demande est sans engagement.</p></div></section>
+<section class="section"><div class="container demande-form-wrap"><form class="demande-form" data-demande-form="traiteur">
+<fieldset><legend>Votre projet</legend><div class="demande-form-grid">
+<div class="form-field"><label for="traiteur-type">Type de prestation *</label><select id="traiteur-type" name="typePrestation" required><option value="">Sélectionner</option><option>Repas / prestation traiteur</option><option>Buffet</option><option>Cocktail</option><option>Événement professionnel</option><option>Événement particulier</option><option>Autre</option></select></div>
+<div class="form-field"><label for="traiteur-date">Date de l'événement *</label><input id="traiteur-date" name="dateEvenement" type="date" required></div>
+<div class="form-field"><label for="traiteur-heure">Heure *</label><input id="traiteur-heure" name="heure" type="time" required></div>
+<div class="form-field"><label for="traiteur-duree">Durée</label><input id="traiteur-duree" name="duree" type="text" placeholder="Ex. 3 heures"></div>
+<div class="form-field"><label for="traiteur-personnes">Nombre de personnes *</label><input id="traiteur-personnes" name="nombrePersonnes" type="number" min="1" max="10000" required></div>
+<div class="form-field"><label for="traiteur-service">Type de service *</label><select id="traiteur-service" name="service" required><option value="">Sélectionner</option><option>Préparation et livraison</option><option>Préparation avec retrait</option><option>Prestation sur place</option><option>Buffet livré et installé</option><option>Autre</option></select></div>
+<div class="form-field form-field-full"><label for="traiteur-projet">Description du projet *</label><textarea id="traiteur-projet" name="descriptionProjet" required></textarea></div>
+<div class="form-field form-field-full"><label for="traiteur-demande">Plats, menus ou type de cuisine souhaité *</label><textarea id="traiteur-demande" name="demande" required></textarea></div>
+<div class="form-field form-field-full"><label for="traiteur-preferences">Préférences ou idées de menu</label><textarea id="traiteur-preferences" name="preferencesMenu"></textarea></div>
+<div class="form-field"><label for="traiteur-budget">Budget indicatif</label><input id="traiteur-budget" name="budget" type="text" placeholder="Par personne ou pour l'ensemble"></div>
+<div class="form-field"><label for="traiteur-contraintes">Contraintes alimentaires</label><select id="traiteur-contraintes" name="contraintes"><option>Aucune</option><option>Allergies</option><option>Intolérances</option><option>Régime particulier</option><option>Autre</option></select></div>
+<div class="form-field form-field-full"><label for="traiteur-precisions">Précisions sur les contraintes alimentaires</label><textarea id="traiteur-precisions" name="precisionsContraintes"></textarea></div>
+<div class="form-field form-field-full"><label for="traiteur-besoins">Besoins concernant l'installation, le matériel ou le déroulement</label><textarea id="traiteur-besoins" name="besoinsParticuliers"></textarea></div>
+</div></fieldset>
+<fieldset><legend>Lieu de l'événement</legend><div class="demande-form-grid"><div class="form-field form-field-full"><label for="traiteur-adresse">Adresse *</label><input id="traiteur-adresse" name="adresse" type="text" required></div><div class="form-field"><label for="traiteur-cp">Code postal *</label><input id="traiteur-cp" name="codePostal" type="text" inputmode="numeric" required></div><div class="form-field"><label for="traiteur-ville">Ville *</label><input id="traiteur-ville" name="ville" type="text" required></div></div></fieldset>
+<fieldset><legend>Vos coordonnées</legend><div class="demande-form-grid"><div class="form-field"><label for="traiteur-prenom">Prénom *</label><input id="traiteur-prenom" name="prenom" type="text" autocomplete="given-name" required></div><div class="form-field"><label for="traiteur-nom">Nom *</label><input id="traiteur-nom" name="nom" type="text" autocomplete="family-name" required></div><div class="form-field"><label for="traiteur-tel">Téléphone *</label><input id="traiteur-tel" name="telephone" type="tel" autocomplete="tel" required></div><div class="form-field"><label for="traiteur-email">E-mail *</label><input id="traiteur-email" name="email" type="email" autocomplete="email" required></div><div class="form-field form-field-full"><label for="traiteur-complement">Informations complémentaires</label><textarea id="traiteur-complement" name="informationsComplementaires"></textarea></div></div></fieldset>
+<div class="honeypot" aria-hidden="true"><label>Site web<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div><div class="form-field"><label class="consent"><input name="confirmation" type="checkbox" required><span>Je confirme avoir vérifié les informations saisies. Il s'agit d'une demande de devis, sans engagement. *</span></label></div><div data-demande-status class="demande-form-status" hidden aria-live="polite"></div><div class="actions"><button type="submit" class="btn btn-primary">Envoyer ma demande</button></div>
+</form></div></section></main>
+<footer class="site-footer"><div class="container"><div class="footer-grid"><div><a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a><p class="muted" style="color:rgba(255,255,255,0.7);margin-top:1rem;">Cuisine préparée avec soin — plats à emporter, traiteur et chef à domicile.</p></div><div><h4>Navigation</h4><ul class="footer-links"><li><a href="prestations.html">Prestations</a></li><li><a href="menus.html">Menus</a></li><li><a href="traiteur.html">Traiteur</a></li><li><a href="apropos.html">À propos</a></li><li><a href="contact.html">Contact</a></li></ul></div></div><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="mentions-legales.html">Politique de confidentialité</a></span></div></div></footer>
+<script src="../js/config.js"></script><script src="../js/script.js"></script><script src="../js/demandes.js"></script>
+</body></html>
