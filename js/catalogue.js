@@ -8,6 +8,10 @@ const editLinesEl = document.querySelector("#edit-lines");
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 const CART_STORAGE_KEY = "cdc-panier-v1";
 
+const FIREBASE_FUNCTIONS_REGION = "europe-west9";
+const FIREBASE_PROJECT_ID = "carnet-du-chef";
+const GET_CATALOGUE_URL = `https://${FIREBASE_FUNCTIONS_REGION}-${FIREBASE_PROJECT_ID}.cloudfunctions.net/getCatalogue`;
+
 const CATEGORY_LABELS = {
   Plat: "Plat",
   Boisson: "Boisson",
@@ -423,7 +427,7 @@ async function loadCatalogue() {
   try {
     setStatus("Chargement du catalogue…");
 
-    const response = await fetch("../data/catalogue-public.json", { cache: "no-store" });
+    const response = await fetch(GET_CATALOGUE_URL, { cache: "no-store" });
     if (!response.ok) throw new Error(`Impossible de charger le catalogue public (${response.status}).`);
 
     const data = await response.json();
