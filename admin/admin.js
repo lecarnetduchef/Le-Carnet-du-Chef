@@ -41,7 +41,38 @@ async function saveAllMenus() { showSaveStatus("Sauvegarde en cours…", false);
 async function renderMenusKeepingSuccess() { await renderMenus(); showSaveStatus("PDF sauvegardés avec succès", false); }
 function showSaveStatus(message, isError) { if (!els.saveStatus) return; els.saveStatus.textContent = message; els.saveStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; els.saveStatus.style.display = "block"; }
 
-async function loadDashboardStats() { if (!els.statActiveProducts || !auth.currentUser) return; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => item.data()); const active = products.filter((product) => product.actif !== false); const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0); const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0); els.statActiveProducts.textContent = String(active.length); els.statOutProducts.textContent = String(out.length); els.statStock.textContent = String(available); const ds = await getDocs(collection(db, "demandes")); const demandes = ds.docs.map((x) => x.data()); if (els.statDemandes) els.statDemandes.textContent = String(demandes.length); if (els.statDevis) els.statDevis.textContent = String(demandes.filter((x) => x.type === "traiteur" || x.type === "chef_domicile").length); if (els.dashboardStatus) els.dashboardStatus.hidden = true; } catch (error) { console.error("Impossible de charger les indicateurs produits :", error); els.statActiveProducts.textContent = "—"; els.statOutProducts.textContent = "—"; els.statStock.textContent = "—"; } }
+async function loadDashboardStats() {
+  if (!els.statActiveProducts || !auth.currentUser) return;
+
+  try {
+    const snapshot = await getDocs(collection(db, "produits"));
+    const products = snapshot.docs.map((item) => item.data());
+    const active = products.filter((product) => product.actif !== false);
+    const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0);
+    const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0);
+
+    els.statActiveProducts.textContent = String(active.length);
+    els.statOutProducts.textContent = String(out.length);
+    els.statStock.textContent = String(available);
+    if (els.dashboardStatus) els.dashboardStatus.hidden = true;
+  } catch (error) {
+    console.error("Impossible de charger les indicateurs produits :", error);
+    els.statActiveProducts.textContent = "—";
+    els.statOutProducts.textContent = "—";
+    els.statStock.textContent = "—";
+  }
+
+  try {
+    const ds = await getDocs(collection(db, "demandes"));
+    const demandes = ds.docs.map((x) => x.data());
+    if (els.statDemandes) els.statDemandes.textContent = String(demandes.length);
+    if (els.statDevis) els.statDevis.textContent = String(demandes.filter((x) => x.type === "traiteur" || x.type === "chef_domicile").length);
+  } catch (error) {
+    console.error("Impossible de charger les demandes :", error);
+    if (els.statDemandes) els.statDemandes.textContent = "—";
+    if (els.statDevis) els.statDevis.textContent = "—";
+  }
+}
 async function renderStocks() { if (!els.stocksTableBody || !auth.currentUser) return; els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>"; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0)); if (!products.length) { els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>"; return; } els.stocksTableBody.innerHTML = ""; products.forEach((product) => { const row = document.createElement("tr"); const values = [product.nom || "Produit sans nom", Number(product.stockInitial || 0), Number(product.stockDisponible || 0), Number(product.stockReserve || 0), Number(product.stockVendu || 0), product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"]; values.forEach((value) => { const cell = document.createElement("td"); cell.textContent = String(value); row.appendChild(cell); }); els.stocksTableBody.appendChild(row); }); } catch (error) { console.error("Impossible de charger les stocks :", error); els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>"; } }
 
 function startDemandes() { if (!els.requestsSection || demandesInitialized) return; demandesInitialized = true; const heading = els.requestsSection.querySelector(".admin-section-heading"); if (!heading) return; heading.insertAdjacentHTML("beforeend", '<span class="admin-orders-total"><strong data-demandes-count>0</strong> demande(s)</span>'); const filters = document.createElement("div"); filters.className = "admin-order-filters"; filters.innerHTML = '<button class="admin-filter-btn active" data-demande-filter="all">Toutes</button><button class="admin-filter-btn" data-demande-filter="traiteur">Traiteur</button><button class="admin-filter-btn" data-demande-filter="chef_domicile">Chef à domicile</button><button class="admin-filter-btn" data-demande-filter="nouvelle">Nouvelles</button>'; const list = document.createElement("div"); list.id = "demandes-list"; list.className = "admin-orders-list"; const detail = document.createElement("section"); detail.className = "admin-section admin-order-detail"; detail.hidden = true; detail.innerHTML = '<div class="admin-section-heading compact"><h3 data-title>Demande</h3><button class="btn btn-secondary" type="button" data-close>Fermer</button></div><div data-content></div><div class="admin-form-actions"><select data-status><option value="nouvelle">Nouvelle</option><option value="contactee">Contactée</option><option value="devis_envoye">Devis envoyé</option><option value="acceptee">Acceptée</option><option value="refusee">Refusée</option><option value="terminee">Terminée</option><option value="annulee">Annulée</option></select><button class="btn btn-primary" type="button" data-save>Enregistrer le statut</button><span data-message></span></div>'; els.requestsSection.append(filters, list, detail); filters.addEventListener("click", (e) => { const b = e.target.closest("[data-demande-filter]"); if (!b) return; filters.querySelectorAll(".admin-filter-btn").forEach((x) => x.classList.toggle("active", x === b)); renderDemandes(b.dataset.demandeFilter); }); detail.querySelector("[data-close]").onclick = () => { detail.hidden = true; }; detail.querySelector("[data-save]").onclick = saveDemandeStatus; loadDemandes(); }
