@@ -7,6 +7,7 @@ if (!admin.apps.length) {
 
 const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { createPayment, CreatePaymentError } = require("./createPayment");
+const { submitDemande } = require("./demandes");
 
 // Expose createPayment as a 2nd gen HTTP function in europe-west9.
 // The payment flow itself remains free of Revolut integration at this stage.
@@ -106,4 +107,5 @@ module.exports = {
   getCommandesConfig,
   createPayment: createPaymentHttp,
   getCatalogue,
+  submitDemande,
 };
