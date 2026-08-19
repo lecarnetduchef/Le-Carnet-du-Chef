@@ -150,7 +150,7 @@ function buildOrderData({
     },
     livraison,
     paiement: {
-      provider: "revolut",
+      provider: "stripe",
       statut: PAYMENT_STATUS,
       orderId: null,
       transactionId: null,
@@ -160,7 +160,7 @@ function buildOrderData({
   };
 }
 
-async function createPendingOrder({
+async function createPendingPaymentAttempt({
   requestId,
   pricing,
   client,
@@ -175,9 +175,6 @@ async function createPendingOrder({
 }) {
   const validRequestId = validateRequestId(requestId);
   const attemptRef = db.collection("paymentAttempts").doc(validRequestId);
-  const commandeRef = db.collection("commandes").doc();
-  const commandeId = commandeRef.id;
-  const numeroCommande = `CDC-${commandeId.slice(0, 8).toUpperCase()}`;
 
   return db.runTransaction(async (transaction) => {
     const attemptSnapshot = await transaction.get(attemptRef);
@@ -186,15 +183,12 @@ async function createPendingOrder({
     }
 
     const attempt = attemptSnapshot.data();
-    if (attempt.commandeId) {
-      const existingRef = db.collection("commandes").doc(String(attempt.commandeId));
-      const existingSnapshot = await transaction.get(existingRef);
-      if (!existingSnapshot.exists) {
-        fail("La tentative référence une commande inexistante.", "ORDER_REFERENCE_INVALID");
-      }
-      return { idempotent: true, commandeId: existingSnapshot.id, ...existingSnapshot.data() };
+    if (attempt.status === "paid" && attempt.commandeId) {
+      return { idempotent: true, ...attempt };
     }
 
+    const commandeId = attempt.commandeId || db.collection("commandes").doc().id;
+    const numeroCommande = attempt.numeroCommande || `CDC-${commandeId.slice(0, 8).toUpperCase()}`;
     const orderData = buildOrderData({
       commandeId,
       numeroCommande,
@@ -211,14 +205,22 @@ async function createPendingOrder({
       allergies,
     });
 
-    transaction.create(commandeRef, orderData);
     transaction.update(attemptRef, {
+      status: "awaiting_payment",
       commandeId,
       numeroCommande,
+      orderData,
+      totalCentimes: orderData.montants.totalCentimes,
+      devise: orderData.montants.devise,
       updatedAt: Timestamp.now(),
     });
 
-    return { idempotent: false, ...orderData };
+    return {
+      idempotent: attempt.status === "awaiting_payment",
+      commandeId,
+      numeroCommande,
+      ...orderData,
+    };
   });
 }
 
@@ -228,5 +230,5 @@ module.exports = {
   PAYMENT_STATUS,
   OrderCreationError,
   buildOrderData,
-  createPendingOrder,
+  createPendingPaymentAttempt,
 };
