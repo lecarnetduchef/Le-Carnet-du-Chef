@@ -249,7 +249,7 @@
               <button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
               <button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
             </div>
-            <p class="checkout-help">Le paiement en ligne sera ajouté ultérieurement. Cette validation crée uniquement la commande en attente de paiement.</p>
+            <p class="checkout-help">Le paiement en ligne sera ajouté ultérieurement. La validation enregistre votre commande. Pour un retrait, l’adresse exacte du point de retrait vous sera communiquée après validation.</p>
           </div>
         </div>
       </div>
@@ -277,7 +277,7 @@
         "Perreux": "42120",
         "Villerest": "42300"
       };
-      const MIN_DELIVERY_FEE = 2.5;
+      const MIN_DELIVERY_FEE = 1.5;
       const CREATE_PAYMENT_URL = "https://europe-west9-carnet-du-chef.cloudfunctions.net/createPayment";
       const form = document.querySelector("#checkout-form");
       const reviewButton = document.querySelector("#checkout-review-button");
@@ -305,6 +305,28 @@
       finalSummary.prepend(confirmation);
       let activeRequestId = null;
       let submitting = false;
+
+      function refreshCheckoutFromCart() {
+        try {
+          const cart = getCartSnapshot();
+
+          if (!cart.lines.length) {
+            finalSummary.hidden = true;
+            summaryError.hidden = true;
+          }
+
+          if (typeof renderSummary === "function" && !finalSummary.hidden) {
+            renderSummary();
+          }
+        } catch (error) {
+          console.error("Erreur de synchronisation du panier :", error);
+        }
+      }
+
+      window.addEventListener("cdc-cart-updated", refreshCheckoutFromCart);
+      window.addEventListener("storage", (event) => {
+        if (event.key === "cdc-panier-v1") refreshCheckoutFromCart();
+      });
 
       function generateRequestId() {
         if (window.crypto?.randomUUID) {
@@ -415,6 +437,10 @@
 
         const today = dateValue === todayValue;
         const services = [];
+
+        // Aujourd'hui : un service passé ne doit JAMAIS apparaître.
+        // Déjeuner : commande jusqu'à 11h30.
+        // Soir : commande jusqu'à 20h00.
         if (!today || canOrderToday("midi")) services.push("midi");
         if (!today || canOrderToday("soir")) services.push("soir");
 
@@ -443,7 +469,7 @@
         citySelect.required = isDelivery;
         deliveryFeeNotice.hidden = !isDelivery;
         if (isDelivery) {
-          deliveryFeeNotice.textContent = "Frais de livraison : calculés exclusivement côté serveur selon la distance réelle.";
+          deliveryFeeNotice.textContent = "Frais de livraison : 1,50 € jusqu’à 5 km, puis 2,00 € au-delà de 5 km. Le montant applicable est confirmé lors de la validation de la commande.";
         } else {
           addressInput.value = "";
           postalInput.value = "";
@@ -501,9 +527,23 @@
 
         const slot = slotSelect.value;
         if (!slot) return "Choisissez un créneau.";
+
         const service = slot.startsWith("midi") ? "midi" : "soir";
-        if (dateValue === todayValue && !canOrderToday(service)) return "Ce créneau n’est plus disponible aujourd’hui.";
-        if (isServiceClosed(service)) return "Ce service est actuellement fermé.";
+
+        // Double sécurité côté navigateur :
+        // le créneau est recontrôlé au moment exact de la validation.
+        if (dateValue === todayValue && !canOrderToday(service)) {
+          refreshSlots();
+          return service === "midi"
+            ? "Le service déjeuner est terminé : les commandes pour midi sont fermées après 11h30."
+            : "Le service du soir est terminé : les commandes pour ce soir sont fermées après 20h00.";
+        }
+
+        if (isServiceClosed(service)) {
+          return service === "midi"
+            ? "Le service déjeuner est actuellement fermé."
+            : "Le service du soir est actuellement fermé.";
+        }
 
         if (mode === "livraison") {
           const city = citySelect.value;
@@ -546,11 +586,22 @@
           ["Client", `${form.prenom.value.trim()} ${form.nom.value.trim()}`],
           ["Téléphone", form.telephone.value.trim()],
           ["Email", form.email.value.trim()],
-          ["Réception", mode === "livraison" ? "Livraison" : "Retrait"],
+          ["Réception", mode === "livraison" ? "🚗 Livraison" : "📍 Retrait"],
           ["Date", formatDate(dateSelect.value)],
           ["Créneau", slotSelect.options[slotSelect.selectedIndex]?.textContent || ""]
         ];
-        if (mode === "livraison") values.push(["Adresse", `${addressInput.value.trim()}, ${postalInput.value.trim()} ${citySelect.value}`]);
+
+        if (mode === "livraison") {
+          values.push([
+            "Adresse de livraison",
+            `${addressInput.value.trim()}, ${postalInput.value.trim()} ${citySelect.value}`
+          ]);
+        } else {
+          values.push([
+            "Retrait",
+            "L’adresse exacte du point de retrait vous sera communiquée après validation de votre commande."
+          ]);
+        }
         summaryMeta.innerHTML = "";
         values.forEach(([label, value]) => {
           const item = document.createElement("div");
@@ -686,7 +737,26 @@
           }
 
           confirmation.hidden = false;
-          confirmation.textContent = `Commande confirmée — ${data.numeroCommande}. Référence : ${data.commandeId}. Total serveur : ${(Number(data.totalCentimes) / 100).toLocaleString("fr-FR", { style: "currency", currency: data.devise || "EUR" })}.`;
+
+          const selectedMode = form.querySelector('input[name="modeReception"]:checked')?.value;
+          const totalServeur = (Number(data.totalCentimes) / 100).toLocaleString("fr-FR", {
+            style: "currency",
+            currency: data.devise || "EUR"
+          });
+
+          confirmation.textContent =
+            `Commande confirmée — ${data.numeroCommande}. Référence : ${data.commandeId}. Total : ${totalServeur}. ` +
+            (selectedMode === "retrait"
+              ? "L’adresse exacte du point de retrait vous sera communiquée après validation de votre commande."
+              : "Votre commande sera livrée à l’adresse indiquée.");
+
+          // La commande a été confirmée par le serveur :
+          // le panier local peut maintenant être supprimé.
+          localStorage.removeItem("cdc-panier-v1");
+          window.dispatchEvent(new CustomEvent("cdc-cart-updated", {
+            detail: { lines: [] }
+          }));
+
           finalValidationButton.hidden = true;
           backButton.hidden = true;
           summaryError.hidden = true;

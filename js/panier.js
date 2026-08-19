@@ -50,6 +50,7 @@ export function addToCart({ formule, quantite, composants }) {
   }
 
   saveCart();
+  window.dispatchEvent(new CustomEvent('cdc-cart-updated', { detail: getCart() }));
 }
 
 export function updateLineQuantity(lineId, quantity) {
@@ -62,11 +63,13 @@ export function updateLineQuantity(lineId, quantity) {
   }
   line.quantite = next;
   saveCart();
+  window.dispatchEvent(new CustomEvent('cdc-cart-updated', { detail: getCart() }));
 }
 
 export function removeLine(lineId) {
   cart.lines = cart.lines.filter((line) => line.lineId !== lineId);
   saveCart();
+  window.dispatchEvent(new CustomEvent('cdc-cart-updated', { detail: getCart() }));
 }
 
 export function getCart() {
@@ -120,3 +123,12 @@ function renderCart() {
 }
 
 document.addEventListener("DOMContentLoaded", renderCart);
+
+
+window.addEventListener("storage", (event) => {
+  if (event.key === "cdc-panier-v1") renderCart();
+});
+
+window.addEventListener("cdc-cart-updated", () => {
+  renderCart();
+});
