@@ -8,7 +8,7 @@ const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { validateCartIntent, validateScheduleIntent, ValidationError } = require("./validation");
 const { calculateValidatedOrder, PricingError } = require("./pricing");
 const { getDeliveryDistance } = require("./delivery");
-const { createPendingOrder, OrderCreationError } = require("./order");
+const { createPendingPaymentAttempt, OrderCreationError } = require("./order");
 
 class CreatePaymentError extends Error {
   constructor(message, code = "CREATE_PAYMENT_FAILED") {
@@ -37,10 +37,6 @@ function safeBusinessError(error, stage) {
   return new CreatePaymentError("Une erreur interne est survenue.", "INTERNAL_ERROR");
 }
 
-/**
- * Server-side createPayment orchestration without any Revolut integration.
- * This module is intentionally not registered as a Cloud Function endpoint yet.
- */
 async function createPayment(request) {
   let stage = "request";
 
@@ -52,7 +48,7 @@ async function createPayment(request) {
 
     stage = "idempotency";
     const requestFingerprint = buildRequestFingerprint(input);
-    await getOrCreatePaymentAttempt(requestId, requestFingerprint);
+    const attempt = await getOrCreatePaymentAttempt(requestId, requestFingerprint);
 
     stage = "cart";
     const validatedCart = await validateCartIntent(
@@ -88,8 +84,8 @@ async function createPayment(request) {
       distanceKm,
     });
 
-    stage = "order";
-    const order = await createPendingOrder({
+    stage = "paymentAttempt";
+    const paymentAttempt = await createPendingPaymentAttempt({
       requestId,
       pricing,
       client: input.client,
@@ -106,12 +102,12 @@ async function createPayment(request) {
     return {
       ok: true,
       requestId,
-      commandeId: String(order.commandeId),
-      numeroCommande: String(order.numeroCommande),
-      totalCentimes: order.montants.totalCentimes,
-      devise: order.montants.devise,
-      checkoutUrl: order.paiement.checkoutUrl,
-      idempotent: order.idempotent === true,
+      commandeId: String(paymentAttempt.commandeId),
+      numeroCommande: String(paymentAttempt.numeroCommande),
+      totalCentimes: paymentAttempt.montants.totalCentimes,
+      devise: paymentAttempt.montants.devise,
+      checkoutUrl: paymentAttempt.paiement.checkoutUrl,
+      idempotent: attempt.existing === true || paymentAttempt.idempotent === true,
     };
   } catch (error) {
     if (error instanceof CreatePaymentError) {
