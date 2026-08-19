@@ -14,9 +14,9 @@
  */
 const CDC_CONFIG = {
   liens: {
-    commandeGenerale: "https://docs.google.com/forms/d/e/1FAIpQLSfzAvNBp4AbSv8FHYKQxVvTN5SObc8liacqYNWXEsNjdODmfw/viewform?usp=sharing&ouid=104084973576295107098",
-    devis: "https://docs.google.com/forms/d/e/1FAIpQLScckuJFwZCike211EetV9F55qY-2lax_hsb_zUhw5VkHDlBtw/viewform?usp=sharing&ouid=104084973576295107098",
-    chefADomicile: "https://docs.google.com/forms/d/e/1FAIpQLSeTi-MdmwWGRWKpOID6qO1mRWVGw20zeAqZtgskUvVnbxEzWQ/viewform?usp=sharing&ouid=104084973576295107098",
+    commandeGenerale: "pages/commande.html",
+    devis: "pages/demande-devis-traiteur.html",
+    chefADomicile: "pages/demande-chef-domicile.html",
     instagram: "https://www.instagram.com/lecarnetduchef?igsh=bDFmdmRhZGtta2xk&utm_source=qr",
     tiktok: "https://www.tiktok.com/@le.carnet.du.chef?_r=1&_t=ZN-98ka4XRpEn8",
     snapchat: "https://snapchat.com/t/lYsC8ek7",
