@@ -108,9 +108,14 @@ function renderDemandes() {
   if (els.demandesEmpty) els.demandesEmpty.hidden = true;
   rows.forEach((demande) => {
     const client = demande.client && typeof demande.client === "object" ? demande.client : {};
+    const profil = client.particulierProfessionnel === "professionnel"
+      ? "Professionnel"
+      : client.particulierProfessionnel === "particulier"
+        ? "Particulier"
+        : "Non renseigné";
     const row = document.createElement("article");
     row.className = "admin-order-row";
-    row.innerHTML = `<div class="admin-order-main"><div class="admin-order-title-line"><strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong><span class="admin-order-status">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span></div><div class="admin-order-meta"><span>${escapeHtml(getDemandeTypeLabel(demande.type))}</span><span>Événement : ${escapeHtml(getDemandeEventDate(demande) || "Non renseignée")}</span><span>${escapeHtml(demande.nombrePersonnes ? `${demande.nombrePersonnes} personne(s)` : "Personnes : non renseigné")}</span><span>Reçue : ${escapeHtml(formatDate(demande.createdAt))}</span></div></div><div class="admin-order-view"><button type="button" class="btn btn-secondary" data-demande-open="${escapeAttr(demande.id)}">Voir le détail</button></div>`;
+    row.innerHTML = `<div class="admin-order-main"><div class="admin-order-title-line"><strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong><span class="admin-order-status">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span></div><div class="admin-order-meta"><span>${escapeHtml(getDemandeTypeLabel(demande.type))}</span><span>${escapeHtml(profil)}</span><span>Événement : ${escapeHtml(getDemandeEventDate(demande) || "Non renseignée")}</span><span>${escapeHtml(demande.nombrePersonnes ? `${demande.nombrePersonnes} personne(s)` : "Personnes : non renseigné")}</span><span>Reçue : ${escapeHtml(formatDate(demande.createdAt))}</span></div></div><div class="admin-order-view"><button type="button" class="btn btn-secondary" data-demande-open="${escapeAttr(demande.id)}">Voir le détail</button></div>`;
     row.querySelector("[data-demande-open]").addEventListener("click", () => renderDemandeDetail(demande.id));
     els.demandesList.appendChild(row);
   });
