@@ -100,65 +100,7 @@
         </div>
       </div>
     </section>
-
-    <section id="demande-traiteur" class="section">
-      <div class="container demande-form-wrap">
-        <div class="section-head center">
-          <p class="eyebrow">Demande de devis</p>
-          <h2>Parlez-nous de votre événement</h2>
-          <p class="muted">Remplissez ce formulaire directement sur le site. Il s'agit d'une demande de devis, sans engagement.</p>
-        </div>
-
-        <form class="demande-form" data-demande-form="traiteur">
-          <fieldset>
-            <legend>Votre projet</legend>
-            <div class="demande-form-grid">
-              <div class="form-field"><label for="traiteur-type">Type de prestation *</label><select id="traiteur-type" name="typePrestation" required><option value="">Sélectionner</option><option>Repas / prestation traiteur</option><option>Buffet</option><option>Cocktail</option><option>Événement professionnel</option><option>Événement particulier</option><option>Autre</option></select></div>
-              <div class="form-field"><label for="traiteur-date">Date de l'événement *</label><input id="traiteur-date" name="dateEvenement" type="date" required></div>
-              <div class="form-field"><label for="traiteur-heure">Heure *</label><input id="traiteur-heure" name="heure" type="time" required></div>
-              <div class="form-field"><label for="traiteur-duree">Durée</label><input id="traiteur-duree" name="duree" type="text" placeholder="Ex. 3 heures"></div>
-              <div class="form-field"><label for="traiteur-personnes">Nombre de personnes *</label><input id="traiteur-personnes" name="nombrePersonnes" type="number" min="1" max="10000" required></div>
-              <div class="form-field"><label for="traiteur-service">Type de service *</label><select id="traiteur-service" name="service" required><option value="">Sélectionner</option><option>Préparation et livraison</option><option>Préparation avec retrait</option><option>Prestation sur place</option><option>Buffet livré et installé</option><option>Autre</option></select></div>
-              <div class="form-field form-field-full"><label for="traiteur-projet">Description du projet *</label><textarea id="traiteur-projet" name="descriptionProjet" required></textarea></div>
-              <div class="form-field form-field-full"><label for="traiteur-demande">Plats, menus ou type de cuisine souhaité *</label><textarea id="traiteur-demande" name="demande" required></textarea></div>
-              <div class="form-field form-field-full"><label for="traiteur-preferences">Préférences ou idées de menu</label><textarea id="traiteur-preferences" name="preferencesMenu"></textarea></div>
-              <div class="form-field"><label for="traiteur-budget">Budget indicatif</label><input id="traiteur-budget" name="budget" type="text" placeholder="Par personne ou pour l'ensemble"></div>
-              <div class="form-field"><label for="traiteur-contraintes">Contraintes alimentaires</label><select id="traiteur-contraintes" name="contraintes"><option>Aucune</option><option>Allergies</option><option>Intolérances</option><option>Régime particulier</option><option>Autre</option></select></div>
-              <div class="form-field form-field-full"><label for="traiteur-precisions">Précisions sur les contraintes alimentaires</label><textarea id="traiteur-precisions" name="precisionsContraintes"></textarea></div>
-              <div class="form-field form-field-full"><label for="traiteur-besoins">Besoins concernant l'installation, le matériel ou le déroulement</label><textarea id="traiteur-besoins" name="besoinsParticuliers"></textarea></div>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Lieu de l'événement</legend>
-            <div class="demande-form-grid">
-              <div class="form-field form-field-full"><label for="traiteur-adresse">Adresse *</label><input id="traiteur-adresse" name="adresse" type="text" required></div>
-              <div class="form-field"><label for="traiteur-cp">Code postal *</label><input id="traiteur-cp" name="codePostal" type="text" inputmode="numeric" required></div>
-              <div class="form-field"><label for="traiteur-ville">Ville *</label><input id="traiteur-ville" name="ville" type="text" required></div>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>Vos coordonnées</legend>
-            <div class="demande-form-grid">
-              <div class="form-field"><label for="traiteur-prenom">Prénom *</label><input id="traiteur-prenom" name="prenom" type="text" autocomplete="given-name" required></div>
-              <div class="form-field"><label for="traiteur-nom">Nom *</label><input id="traiteur-nom" name="nom" type="text" autocomplete="family-name" required></div>
-              <div class="form-field"><label for="traiteur-tel">Téléphone *</label><input id="traiteur-tel" name="telephone" type="tel" autocomplete="tel" required></div>
-              <div class="form-field"><label for="traiteur-email">E-mail *</label><input id="traiteur-email" name="email" type="email" autocomplete="email" required></div>
-              <div class="form-field"><label for="traiteur-particulier-professionnel">Vous êtes *</label><select id="traiteur-particulier-professionnel" name="particulierProfessionnel" required><option value="">Sélectionner</option><option value="particulier">Particulier</option><option value="professionnel">Entreprise / Professionnel</option></select></div>
-              <div class="form-field form-field-full"><label for="traiteur-complement">Informations complémentaires</label><textarea id="traiteur-complement" name="informationsComplementaires"></textarea></div>
-            </div>
-          </fieldset>
-
-          <div class="honeypot" aria-hidden="true"><label>Site web<input name="website" type="text" tabindex="-1" autocomplete="off"></label></div>
-          <div class="form-field"><label class="consent"><input name="confirmation" type="checkbox" required> <span>Je confirme avoir vérifié les informations saisies. Il s'agit d'une demande de devis, sans engagement. *</span></label></div>
-          <div data-demande-status class="demande-form-status" hidden aria-live="polite"></div>
-          <div class="actions"><button type="submit" class="btn btn-primary">Envoyer ma demande</button></div>
-        </form>
-      </div>
-    </section>
-
-    <section class="cta-band">
+<section class="cta-band">
       <div class="container">
         <h2>Prêt à organiser votre événement ?</h2>
         <div class="actions"><a class="btn btn-gold" href="demande-devis-traiteur.html">Demander un devis</a></div>
