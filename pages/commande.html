@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Commander — Le Carnet du Chef</title>
-  <meta name="description" content="Composez vos formules et préparez votre panier avec Le Carnet du Chef.">
+  <title>Commander — Catalogue & panier | Le Carnet du Chef</title>
+  <meta name="description" content="Découvrez les plats disponibles et composez votre commande directement depuis le catalogue du Carnet du Chef.">
   <link rel="icon" href="../favicon/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="../favicon/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,6 +34,27 @@
     .cart-card{position:sticky;top:1rem}.cart-lines{display:grid;gap:1rem;margin:1rem 0}.cart-line{border-top:1px solid rgba(49,76,64,.12);padding-top:1rem}.cart-line:first-child{border-top:0;padding-top:0}.cart-line-title{display:flex;justify-content:space-between;gap:.75rem;font-weight:700}.cart-components{margin:.45rem 0;color:#59635d;font-size:.9rem}.cart-actions{display:flex;align-items:center;gap:.5rem}.cart-actions button{border:0;background:transparent;cursor:pointer;padding:.2rem .35rem}.cart-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem}.empty{color:#66706a}.notice{padding:.9rem 1rem;border-radius:12px;background:#f4ead8;color:#314c40;margin-bottom:1rem}
     .edit-order-button{width:100%;margin-top:1rem}.edit-mode{border:1px solid rgba(49,76,64,.14);border-radius:12px;padding:1rem;background:#f8faf7;margin-bottom:1rem}.edit-mode[hidden]{display:none}.edit-mode-title{margin:0 0 .75rem;font-weight:700}.edit-lines{display:grid;gap:.5rem}.edit-line-button{width:100%;text-align:left;border:1px solid rgba(49,76,64,.16);border-radius:10px;background:#fff;padding:.65rem .75rem;cursor:pointer}.edit-line-button:hover{border-color:rgba(49,76,64,.35)}.editing-badge{display:inline-block;margin-top:.75rem;font-size:.9rem;font-weight:600;color:#315f43}.cancel-edit{margin-left:.5rem;border:0;background:transparent;cursor:pointer;text-decoration:underline}
     .checkout-section{padding-top:0}.checkout-card{max-width:920px;margin:0 auto}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.checkout-field{display:grid;gap:.4rem}.checkout-field-full{grid-column:1/-1}.checkout-field label,.checkout-legend{font-weight:600}.checkout-field input,.checkout-field select,.checkout-field textarea{width:100%;box-sizing:border-box;padding:.75rem .8rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff;font:inherit}.checkout-field textarea{min-height:100px;resize:vertical}.checkout-choice{display:flex;gap:1rem;flex-wrap:wrap}.checkout-choice label{display:flex;align-items:center;gap:.45rem;font-weight:500}.checkout-choice input{accent-color:#314c40}.delivery-fields{display:grid;grid-template-columns:1.5fr .7fr 1fr;gap:1rem}.delivery-fields[hidden]{display:none}.checkout-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem}.checkout-actions .btn:disabled{opacity:.55;cursor:not-allowed}.checkout-help{font-size:.9rem;color:#66706a}.checkout-summary{display:grid;gap:1rem}.summary-line{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.summary-line:last-child{border-bottom:0}.summary-components{margin:.35rem 0 0;color:#59635d;font-size:.92rem}.summary-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:grid;gap:.5rem}.summary-total div{display:flex;justify-content:space-between;gap:1rem}.summary-total .grand-total{font-size:1.15rem;font-weight:700}.summary-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.summary-meta div{padding:.75rem;border-radius:10px;background:#f8faf7}.summary-meta strong{display:block;margin-bottom:.25rem}.delivery-notice{padding:.8rem 1rem;border-radius:10px;background:#f8faf7;color:#59635d;font-size:.9rem}.provisional-total{color:#59635d;font-size:.9rem}.checkout-status{margin-top:1rem}
+
+    .info-offres{padding-top:0}
+    .info-offres-header{text-align:center;max-width:760px;margin:0 auto 1.75rem}
+    .info-offres-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+    .info-offre-card{background:#fff;border:1px solid rgba(49,76,64,.14);border-radius:16px;padding:1.25rem;box-shadow:0 8px 24px rgba(39,55,47,.06)}
+    .info-offre-icon{font-size:1.7rem;margin-bottom:.65rem}
+    .info-offre-card h3{margin:.1rem 0 .5rem;font-size:1.05rem}
+    .info-offre-card p{margin:0;color:#59635d;font-size:.92rem;line-height:1.55}
+    .info-offre-card strong{color:#314c40}
+    .catalogue-header{display:flex;justify-content:space-between;align-items:end;gap:1rem;margin-bottom:1rem}
+    .catalogue-header h2{margin:0}
+    .catalogue-header p{margin:.35rem 0 0}
+    .cart-card h2{margin:.15rem 0 0}
+    @media(max-width:1000px){
+      .info-offres-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:620px){
+      .info-offres-grid{grid-template-columns:1fr}
+      .catalogue-header{display:block}
+    }
+
     @media(max-width:900px){.order-layout{grid-template-columns:1fr}.cart-card{position:static}.checkout-grid{grid-template-columns:1fr}.summary-meta{grid-template-columns:1fr}}
     @media(max-width:620px){.formula-card{grid-template-columns:1fr}.formula-photo,.formula-photo-placeholder{width:100%;height:220px}.component-row{grid-template-columns:1fr;gap:.35rem}.product-photo-preview{width:100%;height:120px}.delivery-fields{grid-template-columns:1fr}.checkout-actions{flex-direction:column}.checkout-actions .btn{width:100%}}
     @media(max-width:620px){.order-layout,.catalog-grid,.formula-card,.cart-card,.checkout-card,.checkout-grid,.checkout-field,.delivery-fields,.summary-meta{min-width:0;max-width:100%;box-sizing:border-box}.formula-head,.cart-line-title,.summary-line{min-width:0}.formula-head>*,.cart-line-title>*{min-width:0}.cart-components,.summary-components,.checkout-help,.provisional-total{overflow-wrap:anywhere;word-break:break-word}.checkout-field input,.checkout-field select,.checkout-field textarea{min-width:0;max-width:100%}.delivery-fields>.checkout-field{min-width:0}.checkout-actions .btn{max-width:100%;box-sizing:border-box}}
@@ -47,7 +68,7 @@
       <nav class="nav-links" id="nav-links">
         <a href="../index.html">Accueil</a>
         <a href="prestations.html">Prestations</a>
-        <a href="menus.html">Menus</a>
+        <a href="commande.html">Commander</a>
         <a href="traiteur.html">Traiteur</a>
         <a href="apropos.html">À propos</a>
         <a href="contact.html">Contact</a>
@@ -60,14 +81,58 @@
     <section class="page-hero">
       <div class="container" style="max-width:860px;">
         <p class="eyebrow">Commander</p>
-        <h1>Composez votre commande</h1>
-        <p class="muted">Choisissez une formule, sélectionnez ses composants, indiquez la quantité puis ajoutez-la à votre panier.</p>
+        <h1>Découvrez notre catalogue</h1>
+        <p class="muted">Découvrez les plats disponibles, composez votre commande directement depuis notre catalogue et ajoutez vos choix à votre panier.</p>
+      </div>
+    </section>
+
+
+    <section class="section info-offres">
+      <div class="container">
+        <div class="info-offres-header">
+          <p class="eyebrow">Informations & offres</p>
+          <h2>Tout savoir avant de commander</h2>
+          <p class="muted">Retrouvez ici les informations essentielles pour préparer votre commande simplement.</p>
+        </div>
+
+        <div class="info-offres-grid">
+          <article class="info-offre-card">
+            <div class="info-offre-icon" aria-hidden="true">🛒</div>
+            <h3>Comment commander ?</h3>
+            <p>Choisissez vos produits dans le catalogue, ajoutez-les à votre panier, renseignez vos informations puis vérifiez votre récapitulatif avant validation.</p>
+          </article>
+
+          <article class="info-offre-card">
+            <div class="info-offre-icon" aria-hidden="true">📍</div>
+            <h3>Retrait</h3>
+            <p>Choisissez le <strong>retrait</strong> lors de votre commande puis sélectionnez le créneau disponible qui vous convient.</p>
+          </article>
+
+          <article class="info-offre-card">
+            <div class="info-offre-icon" aria-hidden="true">🚗</div>
+            <h3>Livraison</h3>
+            <p>La livraison est proposée dans les communes disponibles lors de la commande. Les frais sont indiqués selon les règles de livraison applicables.</p>
+          </article>
+
+          <article class="info-offre-card">
+            <div class="info-offre-icon" aria-hidden="true">✨</div>
+            <h3>Offres & nouveautés</h3>
+            <p>Retrouvez prochainement ici les <strong>nouveautés, offres et informations commerciales</strong> du Carnet du Chef.</p>
+          </article>
+        </div>
       </div>
     </section>
 
     <section class="section" style="padding-top:0;">
       <div class="container order-layout">
         <div>
+          <div class="catalogue-header">
+            <div>
+              <p class="eyebrow">Catalogue</p>
+              <h2>Nos formules disponibles</h2>
+              <p class="muted">Composez votre commande et ajoutez vos choix au panier.</p>
+            </div>
+          </div>
           <div id="catalogue-status" class="notice status" aria-live="polite">Chargement du catalogue…</div>
           <div id="order-edit-mode" class="edit-mode" hidden aria-live="polite">
             <p class="edit-mode-title">Choisissez la ligne à modifier</p>
