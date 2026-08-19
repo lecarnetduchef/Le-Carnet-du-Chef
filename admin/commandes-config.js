@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/fi
 
 const COMMANDES_REF = doc(db, "siteContent", "commandes");
 const DEFAULTS = {
+  modeManuel: "auto",
   limiteDejeuner: "11:30",
   limiteDiner: "20:00",
   fermetureManuelleGlobale: false,
@@ -21,9 +22,10 @@ function ensureUI() {
   section.hidden = true;
   section.innerHTML = `
     <div class="admin-section-heading compact"><div><p class="admin-eyebrow">SOURCE SERVEUR</p><h3>Horaires et fermetures des commandes</h3></div></div>
-    <div class="admin-alert"><strong>Paramètres utilisés plus tard par la validation serveur.</strong><p>Ces valeurs sont enregistrées dans <code>siteContent/commandes</code>. Les paramètres existants sont conservés.</p></div>
+    <div class="admin-alert"><strong>Ces paramètres sont appliqués côté serveur avant tout accès au paiement.</strong><p>Une fermeture n'annule jamais les commandes déjà payées.</p></div>
     <form id="commandes-config-form">
       <div class="admin-form-grid">
+        <div class="form-field admin-field-full"><label for="commandes-mode-manuel">État des commandes</label><select id="commandes-mode-manuel"><option value="auto">Automatique — respecter les horaires</option><option value="ouvert">Ouvert manuellement</option><option value="ferme">Fermé manuellement</option></select></div>
         <div class="form-field"><label for="commandes-limite-dejeuner">Limite déjeuner</label><input id="commandes-limite-dejeuner" type="time" required></div>
         <div class="form-field"><label for="commandes-limite-diner">Limite dîner</label><input id="commandes-limite-diner" type="time" required></div>
       </div>
@@ -47,6 +49,7 @@ function elements() {
   return {
     section: document.querySelector("#commandes-config-section"),
     form: document.querySelector("#commandes-config-form"),
+    modeManuel: document.querySelector("#commandes-mode-manuel"),
     limiteDejeuner: document.querySelector("#commandes-limite-dejeuner"),
     limiteDiner: document.querySelector("#commandes-limite-diner"),
     fermetureGlobale: document.querySelector("#commandes-fermeture-globale"),
@@ -79,6 +82,7 @@ function setExceptionnelleVisibility() {
 function applyData(data = {}) {
   const e = elements();
   const exceptionnelle = { ...DEFAULTS.fermetureExceptionnelle, ...(data.fermetureExceptionnelle && typeof data.fermetureExceptionnelle === "object" ? data.fermetureExceptionnelle : {}) };
+  e.modeManuel.value = ["auto", "ouvert", "ferme"].includes(data.modeManuel) ? data.modeManuel : DEFAULTS.modeManuel;
   e.limiteDejeuner.value = typeof data.limiteDejeuner === "string" ? data.limiteDejeuner : DEFAULTS.limiteDejeuner;
   e.limiteDiner.value = typeof data.limiteDiner === "string" ? data.limiteDiner : DEFAULTS.limiteDiner;
   e.fermetureGlobale.checked = data.fermetureManuelleGlobale === true;
@@ -109,10 +113,12 @@ async function save(event) {
   event.preventDefault();
   const e = elements();
   if (!auth.currentUser || !e.form) return;
+  const modeManuel = e.modeManuel.value;
   const limiteDejeuner = e.limiteDejeuner.value;
   const limiteDiner = e.limiteDiner.value;
   const dateDebut = e.dateDebut.value || null;
   const dateFin = e.dateFin.value || null;
+  if (!["auto", "ouvert", "ferme"].includes(modeManuel)) return showStatus("État des commandes invalide.", true);
   if (!/^\d{2}:\d{2}$/.test(limiteDejeuner) || !/^\d{2}:\d{2}$/.test(limiteDiner)) return showStatus("Les limites horaires doivent être au format HH:MM.", true);
   if (dateDebut && dateFin && dateFin < dateDebut) return showStatus("La date de fin doit être postérieure ou égale à la date de début.", true);
   e.saveButton.disabled = true;
@@ -122,6 +128,7 @@ async function save(event) {
     const existing = snapshot.exists() ? snapshot.data() : {};
     const oldExceptionnelle = existing.fermetureExceptionnelle && typeof existing.fermetureExceptionnelle === "object" ? existing.fermetureExceptionnelle : {};
     await setDoc(COMMANDES_REF, {
+      modeManuel,
       limiteDejeuner,
       limiteDiner,
       fermetureManuelleGlobale: e.fermetureGlobale.checked,
