@@ -102,7 +102,14 @@ async function loadDemandes() {
 
 function renderDemandes() {
   if (!els.demandesList) return;
-  const rows = demandesCache.filter((demande) => demandesFilter === "all" || normalizeDemandeStatus(demande.statut) === demandesFilter);
+  const rows = demandesCache.filter((demande) => {
+    if (demandesFilter === "all") return true;
+    if (demandesFilter === "particulier" || demandesFilter === "professionnel") {
+      const client = demande.client && typeof demande.client === "object" ? demande.client : {};
+      return client.particulierProfessionnel === demandesFilter;
+    }
+    return normalizeDemandeStatus(demande.statut) === demandesFilter;
+  });
   els.demandesList.innerHTML = "";
   if (!rows.length) { if (els.demandesEmpty) els.demandesEmpty.hidden = false; return; }
   if (els.demandesEmpty) els.demandesEmpty.hidden = true;
