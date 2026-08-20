@@ -37,6 +37,21 @@ function minutes(value, label) {
   if (h > 23 || m > 59) fail(`${label} est invalide.`, "INVALID_COMMAND_CONFIG");
   return h * 60 + m;
 }
+function isDateBetween(date, start, end) {
+  return Boolean(start && end && date >= start && date <= end);
+}
+function isScheduledClosureActive(config, requestedDate, now) {
+  const scheduled = config?.fermetureProgrammee;
+  if (scheduled?.active !== true) return false;
+  const start = dateOnly(scheduled.dateDebut), end = dateOnly(scheduled.dateFin);
+  if (!start || !end || requestedDate < start || requestedDate > end) return false;
+  const today = parisDate(now);
+  if (requestedDate !== end || today !== end) return true;
+  const reopen = text(scheduled.heureReouverture);
+  if (!reopen) return true;
+  const current = parisParts(now).hour * 60 + parisParts(now).minute;
+  return current < minutes(reopen, "heureReouverture");
+}
 
 function composition(formule) {
   if (!Array.isArray(formule.composition) || !formule.composition.length) fail(`Composition invalide pour ${formule.id}.`, "INVALID_FORMULA_COMPOSITION");
@@ -54,25 +69,21 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
   const lines = Array.isArray(input?.lignes) ? input.lignes : [];
   if (!lines.length) fail("Le panier est vide.", "EMPTY_CART");
   if (lines.length > MAX_LINES) fail(`Maximum ${MAX_LINES} lignes.`, "TOO_MANY_LINES");
-
   const [formules, produits] = await Promise.all([getFormules(), getProduits()]);
   const formulas = new Map(formules.map(x => [x.id, x]));
   const products = new Map(produits.map(x => [x.id, x]));
   const demanded = new Map();
   const validated = [];
-
   lines.forEach((line, i) => {
     const formuleId = text(line?.formuleId), formule = formulas.get(formuleId);
     if (!formule) fail(`Ligne ${i + 1}: formule inconnue.`, "INVALID_FORMULA");
     if (formule.actif !== true) fail(`Ligne ${i + 1}: formule inactive.`, "FORMULA_INACTIVE");
     const quantity = Number(line?.quantite);
     if (!Number.isInteger(quantity) || quantity <= 0 || quantity > MAX_QUANTITY) fail(`Ligne ${i + 1}: quantité invalide.`, "INVALID_QUANTITY");
-
     const required = composition(formule);
     const components = Array.isArray(line?.composants) ? line.composants : [];
     if (components.length !== required.size) fail(`Ligne ${i + 1}: composants incomplets.`, "INVALID_COMPONENTS");
     const seen = new Set(), cleanComponents = [];
-
     for (const raw of components) {
       const produitId = text(raw?.produitId), category = text(raw?.categorie);
       if (!produitId || !CATEGORIES.has(category) || seen.has(category)) fail(`Ligne ${i + 1}: composant invalide.`, "INVALID_COMPONENT");
@@ -93,13 +104,11 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
     if (!Number.isFinite(price) || price < 0) fail(`Ligne ${i + 1}: prix serveur invalide.`, "INVALID_SERVER_PRICE");
     validated.push({ lineIndex: i, formuleId: formule.id, formuleNom: String(formule.nom || ""), prixUnitaire: price, quantite: quantity, composants: cleanComponents });
   });
-
   for (const [productId, need] of demanded) {
     const product = products.get(productId), available = Number(product.stockDisponible);
     if (!Number.isInteger(available) || available < 0) fail(`Stock serveur invalide pour ${product.nom || productId}.`, "INVALID_SERVER_STOCK");
     if (need > available) fail(`Stock insuffisant pour ${product.nom || productId}.`, "INSUFFICIENT_STOCK");
   }
-
   return { lignes: validated, limites: { maxLignes: MAX_LINES, maxQuantiteParLigne: MAX_QUANTITY } };
 }
 
@@ -109,33 +118,25 @@ function validateScheduleIntent(input, config, now = new Date()) {
   if (!RECEPTIONS.has(modeReception)) fail("Mode de réception invalide.", "INVALID_RECEPTION");
   if (!SLOTS.has(creneau)) fail("Créneau invalide.", "INVALID_SLOT");
   if (!Number.isFinite(dateMs(date))) fail("Date invalide.", "INVALID_DATE");
-
   const slotKey = `${modeReception}|${creneau}`;
-  const commercialSlots = new Set([
-    "retrait|midi",
-    "livraison|midi",
-    "retrait|soir",
-    "livraison|soir",
-  ]);
-  if (!commercialSlots.has(slotKey)) fail("Couple mode de réception / créneau invalide.", "INVALID_RECEPTION_SLOT");
-
+  if (!["retrait|midi", "livraison|midi", "retrait|soir", "livraison|soir"].includes(slotKey)) fail("Couple mode de réception / créneau invalide.", "INVALID_RECEPTION_SLOT");
   const today = parisDate(now), todayMs = dateMs(today), requestedMs = dateMs(date);
   if (requestedMs < todayMs || requestedMs > todayMs + 3 * 86400000) fail("La date doit être comprise entre J et J+3.", "DATE_OUT_OF_RANGE");
 
   const modeManuel = config.modeManuel;
   if (modeManuel === "ferme") fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
   if (modeManuel === "ouvert") return { date, modeReception, creneau, timeZone: TIME_ZONE };
-
   if (config.fermetureManuelleGlobale === true) fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
+  if (config.serviceSuspendu?.active === true) fail(config.serviceSuspendu.motif || "Service momentanément suspendu.", "SERVICE_SUSPENDED");
+  if (isScheduledClosureActive(config, date, now)) fail(config.fermetureProgrammee?.motif || "Fermeture programmée active.", "SCHEDULED_CLOSURE");
 
   const exceptional = config.fermetureExceptionnelle;
   if (exceptional?.active === true) {
     const start = dateOnly(exceptional.dateDebut), end = dateOnly(exceptional.dateFin);
-    if (!start || !end || (date >= start && date <= end)) fail("Fermeture exceptionnelle active.", "EXCEPTIONAL_CLOSURE");
+    if (!start || !end || isDateBetween(date, start, end)) fail(exceptional.motif || "Fermeture exceptionnelle active.", "EXCEPTIONAL_CLOSURE");
   }
   if (creneau === "midi" && config.fermetureManuelleDejeuner === true) fail("Service déjeuner fermé.", "LUNCH_CLOSURE");
   if (creneau === "soir" && config.fermetureManuelleDiner === true) fail("Service soir fermé.", "DINNER_CLOSURE");
-
   if (date === today) {
     const p = parisParts(now), current = p.hour * 60 + p.minute;
     const cutoff = minutes(creneau === "midi" ? config.limiteDejeuner : config.limiteDiner, creneau === "midi" ? "limiteDejeuner" : "limiteDiner");
