@@ -223,6 +223,74 @@ async function createPendingPaymentAttempt({
   });
 }
 
+/**
+ * Finalise une tentative uniquement après confirmation serveur du paiement.
+ * Cette fonction est destinée au futur callback/webhook de paiement : elle
+ * n'est pas exposée au navigateur et ne fait confiance à aucun montant client.
+ * L'opération est transactionnelle et idempotente.
+ */
+async function finalizePaidOrder({ requestId, transactionId, paidAt = null }) {
+  const validRequestId = validateRequestId(requestId);
+  const cleanTransactionId = requiredText(transactionId, "Référence de transaction");
+  const attemptRef = db.collection("paymentAttempts").doc(validRequestId);
+
+  return db.runTransaction(async (transaction) => {
+    const attemptSnapshot = await transaction.get(attemptRef);
+    if (!attemptSnapshot.exists) {
+      fail("Tentative de paiement introuvable.", "PAYMENT_ATTEMPT_NOT_FOUND");
+    }
+
+    const attempt = attemptSnapshot.data();
+
+    if (attempt.status === "paid" && attempt.commandeId) {
+      const existingOrderRef = db.collection("commandes").doc(String(attempt.commandeId));
+      const existingOrderSnapshot = await transaction.get(existingOrderRef);
+      return {
+        idempotent: true,
+        commandeId: String(attempt.commandeId),
+        numeroCommande: String(attempt.numeroCommande || ""),
+        commandeExiste: existingOrderSnapshot.exists,
+      };
+    }
+
+    if (attempt.status !== "awaiting_payment" || !attempt.orderData || !attempt.commandeId) {
+      fail("La tentative de paiement n'est pas prête à être finalisée.", "PAYMENT_ATTEMPT_NOT_READY");
+    }
+
+    const commandeId = String(attempt.commandeId);
+    const orderRef = db.collection("commandes").doc(commandeId);
+    const orderSnapshot = await transaction.get(orderRef);
+
+    if (!orderSnapshot.exists) {
+      const orderData = {
+        ...attempt.orderData,
+        statut: "confirmee",
+        paiement: {
+          ...(attempt.orderData.paiement || {}),
+          statut: "paye",
+          transactionId: cleanTransactionId,
+          paidAt: paidAt || Timestamp.now(),
+        },
+      };
+      transaction.create(orderRef, orderData);
+    }
+
+    transaction.update(attemptRef, {
+      status: "paid",
+      paymentTransactionId: cleanTransactionId,
+      paidAt: paidAt || Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    return {
+      idempotent: false,
+      commandeId,
+      numeroCommande: String(attempt.numeroCommande || ""),
+      commandeExiste: true,
+    };
+  });
+}
+
 module.exports = {
   ORDER_SOURCE,
   INITIAL_STATUS,
@@ -230,4 +298,5 @@ module.exports = {
   OrderCreationError,
   buildOrderData,
   createPendingPaymentAttempt,
+  finalizePaidOrder,
 };
