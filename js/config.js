@@ -15,8 +15,8 @@
 const CDC_CONFIG = {
   liens: {
     commandeGenerale: "pages/commande.html",
-    devis: "pages/demande-devis-traiteur.html",
-    chefADomicile: "pages/demande-chef-domicile.html",
+    devis: "pages/questionnaire.html",
+    chefADomicile: "pages/questionnaire.html",
     instagram: "https://www.instagram.com/lecarnetduchef?igsh=bDFmdmRhZGtta2xk&utm_source=qr",
     tiktok: "https://www.tiktok.com/@le.carnet.du.chef?_r=1&_t=ZN-98ka4XRpEn8",
     snapchat: "https://snapchat.com/t/lYsC8ek7",
