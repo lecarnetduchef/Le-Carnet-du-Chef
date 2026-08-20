@@ -411,7 +411,7 @@
           <article class="experience-card featured reveal">
             <div class="card-icon" aria-hidden="true">🍽️</div>
             <div>
-              <h2>Commander</h2>
+              <h2>Commander</h2><p style="color:var(--color-gold);font-weight:600;">Découvrez notre catalogue</p>
               <p>
                 Vous savez déjà ce que vous voulez ?
                 Découvrez le catalogue et commandez simplement vos plats.
@@ -481,67 +481,52 @@
       </div>
     </section>
 
-    <!-- OFFRES / NOUVEAUTES / RESEAUX -->
-    <section class="section social-section">
+    <!-- OFFRES / NOUVEAUTES + CHEF A DOMICILE -->
+    <section class="section social-chef-combined">
       <div class="container">
-
-        <div class="social-box reveal">
-          <p class="eyebrow">Offres & nouveautés</p>
-          <h2>Le Carnet bouge.</h2>
-
-          <p class="muted">
-            Nouveaux plats, créations du moment, offres ponctuelles, coulisses et actualités :
-            retrouvez régulièrement ce qui se passe chez Le Carnet du Chef.
-          </p>
-
-          <p class="muted">
-            Une offre peut apparaître aujourd'hui et disparaître demain.
-            Suivez-nous pour ne rien manquer.
-          </p>
-
-          <div class="social-actions">
-            <a class="btn btn-primary" data-cdc-link="liens.tiktok" href="#" target="_blank" rel="noopener">
-              🎵 Découvrir sur TikTok
-            </a>
-
-            <a class="btn btn-secondary" data-cdc-link="liens.snapchat" href="#" target="_blank" rel="noopener">
-              👻 Suivre sur Snapchat
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:2.5rem;align-items:center;">
+          <!-- LE CARNET BOUGE -->
+          <div class="reveal">
+            <p class="eyebrow">Offres & nouveautés</p>
+            <h2>Le Carnet bouge.</h2>
+            <p class="muted">
+              Nouveaux plats, créations du moment, offres ponctuelles, coulisses et actualités :
+              retrouvez régulièrement ce qui se passe chez Le Carnet du Chef.
+            </p>
+            <p class="muted">
+              Une offre peut apparaître aujourd'hui et disparaître demain.
+              Suivez-nous pour ne rien manquer.
+            </p>
+            <div class="social-actions">
+              <a class="btn btn-primary" data-cdc-link="liens.tiktok" href="#" target="_blank" rel="noopener">
+                🎵 Découvrir sur TikTok
+              </a>
+              <a class="btn btn-secondary" data-cdc-link="liens.snapchat" href="#" target="_blank" rel="noopener">
+                👻 Suivre sur Snapchat
+              </a>
+            </div>
+          </div>
+          <!-- SEPARATION -->
+          <div style="width:1px;height:100%;min-height:220px;background:rgba(35,52,42,.18);"></div>
+          <!-- CHEF A DOMICILE -->
+          <div class="reveal">
+            <p class="eyebrow">Chef à domicile</p>
+            <h2>Et si le Chef venait à vous ?</h2>
+            <p class="muted">
+              Une soirée particulière, un dîner en petit comité, une occasion à célébrer…
+              le Chef se déplace chez vous et prépare une expérience pensée autour de votre envie.
+            </p>
+            <p class="muted">
+              Vous profitez de votre moment.
+              Le Carnet du Chef s'occupe de créer l'expérience.
+            </p>
+            <a class="btn btn-gold" href="questionnaire.html">
+              💬 Décrire mon projet
             </a>
           </div>
         </div>
-
       </div>
     </section>
-
-    <!-- CHEF A DOMICILE -->
-    <section class="section home-chef">
-      <div class="container story-grid">
-
-        <div class="story-copy reveal">
-          <p class="eyebrow" style="color:#e7d6b5;">Chef à domicile</p>
-          <h2>Et si le Chef venait à vous ?</h2>
-
-          <p class="muted">
-            Une soirée particulière, un dîner en petit comité, une occasion à célébrer…
-            le Chef se déplace chez vous et prépare une expérience pensée autour de votre envie.
-          </p>
-
-          <p class="muted">
-            Vous profitez de votre moment. Le Carnet du Chef s'occupe de créer l'expérience.
-          </p>
-
-          <a class="btn btn-gold" href="questionnaire.html">💬 Décrire mon projet</a>
-        </div>
-
-        <div class="story-image reveal">
-          <img
-            src="https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/photos/traiteur-chef.jpg"
-            alt="Chef en cuisine — Le Carnet du Chef">
-        </div>
-
-      </div>
-    </section>
-
     <!-- QUESTIONNAIRE -->
     <section class="section project-section">
       <div class="container">
@@ -566,26 +551,46 @@
 
     <!-- COMMANDER -->
     <section class="section">
-      <div class="container">
+  <div class="container">
 
-        <div class="order-reminder reveal">
-          <p class="eyebrow">Vous savez déjà ?</p>
-          <h2>Vous savez déjà ce que vous voulez ?</h2>
+    <div class="section-head center">
+      <p class="eyebrow">À vous de choisir</p>
+      <h2>Deux façons de commencer</h2>
+    </div>
 
-          <p class="muted">
-            Pas besoin de formulaire : découvrez simplement le catalogue et passez votre commande.
-          </p>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2rem;background:#fff;border-radius:18px;padding:2.5rem;box-shadow:0 8px 30px rgba(35,52,42,.08);">
 
-          <a class="btn btn-primary" href="commande.html">🛒 Voir le catalogue et commander</a>
+      <div class="reveal" style="text-align:center;">
+        <div style="width:150px;height:150px;margin:0 auto 1.5rem;border-radius:50%;background:linear-gradient(135deg,var(--color-sage-dark),var(--color-gold));display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <span style="color:#fff;font-size:2rem;">+</span>
         </div>
 
+        <h3>Vous avez une idée ?</h3>
+        <p class="muted">Vous ne savez pas encore exactement ce qu'il vous faut ? Expliquez-nous simplement votre projet et nous vous aiderons à le construire.</p>
+
+        <a class="btn btn-primary" href="questionnaire.html">💬 Décrire mon projet</a>
       </div>
-    </section>
+
+      <div class="reveal" style="text-align:center;">
+        <div style="width:150px;height:150px;margin:0 auto 1.5rem;border-radius:50%;background:linear-gradient(135deg,var(--color-sage-dark),var(--color-gold));display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <span style="color:#fff;font-size:2rem;">+</span>
+        </div>
+
+        <h3>Vous savez déjà ce que vous voulez ?</h3>
+        <p class="muted">Découvrez directement notre catalogue et choisissez simplement les plats qui vous font envie.</p>
+
+        <a class="btn btn-gold" href="commande.html">🛒 Voir le catalogue et commander</a>
+      </div>
+
+    </div>
+
+  </div>
+</section>
 
     <!-- CTA FINAL -->
     <section class="section final-cta">
       <div class="container">
-        <h2>Une envie, une occasion, une idée ?</h2>
+        <h2 style="color:var(--color-gold);">Une envie, une occasion, une idée ?</h2>
 
         <p>
           Le Carnet du Chef est là pour lui donner vie.
