@@ -43,7 +43,8 @@ function renderEditor() {
   if (!editor) return;
   editor.innerHTML = `<p class="admin-eyebrow">NOUVEAU PAIEMENT</p><h3>Enregistrer un encaissement</h3><form data-p-form><div class="admin-form-grid"><div class="form-field"><label>Facture</label><select name="factureId"><option value="">Paiement non rattaché</option>${invoices.map(i => `<option value="${esc(i.id)}">${esc(i.numero || i.id)} · ${esc(i.clientNom || "Client")} · ${money(i.total)} · reste ${money(Math.max(0, Number(i.total || 0) - Number(i.montantPaye || 0)))}</option>`).join("")}</select></div><div class="form-field"><label>Référence facture / commande</label><input name="reference" required></div><div class="form-field"><label>Client</label><input name="clientNom"></div><div class="form-field"><label>Montant encaissé</label><input name="montant" type="number" min="0.01" step="0.01" required></div><div class="form-field"><label>Moyen de paiement</label><select name="moyen"><option value="Carte">Carte</option><option value="Virement">Virement</option><option value="Espèces">Espèces</option><option value="Chèque">Chèque</option><option value="Autre">Autre</option></select></div><div class="form-field"><label>Date</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="form-field admin-field-full"><label>Note</label><textarea name="note" rows="3"></textarea></div></div><button class="btn btn-primary" type="submit">Enregistrer le paiement</button></form>`;
   const form = editor.querySelector("[data-p-form]");
-  form.querySelector("[name=factureId]").addEventListener("change", () => { const invoice = invoices.find(i => i.id === form.factureId.value); if (!invoice) return; form.reference.value = invoice.numero || ""; form.clientNom.value = invoice.clientNom || ""; form.montant.value = Math.max(0, Number(invoice.total || 0) - Number(invoice.montantPaye || 0)).toFixed(2); });
+  const invoiceSelect = form.querySelector("[name=factureId]");
+  invoiceSelect.addEventListener("change", () => { const invoice = invoices.find(i => i.id === invoiceSelect.value); if (!invoice) return; form.reference.value = invoice.numero || ""; form.clientNom.value = invoice.clientNom || ""; form.montant.value = Math.max(0, Number(invoice.total || 0) - Number(invoice.montantPaye || 0)).toFixed(2); });
   form.addEventListener("submit", save);
 }
 
@@ -53,14 +54,20 @@ async function save(event) {
   const montant = Number(data.montant || 0);
   if (!(montant > 0)) return;
   const invoice = invoices.find(i => i.id === data.factureId);
+  if (invoice) {
+    const total = Math.max(0, Number(invoice.total || 0));
+    const alreadyPaid = Math.max(0, Number(invoice.montantPaye || 0));
+    const remaining = Math.max(0, total - alreadyPaid);
+    if (remaining <= 0) { alert("Cette facture est déjà entièrement payée."); return; }
+    if (montant > remaining) { alert(`Le montant saisi (${money(montant)}) dépasse le reste à payer (${money(remaining)}).`); return; }
+  }
   try {
     await addDoc(collection(db, "paiements"), { reference: data.reference.trim(), clientNom: data.clientNom.trim(), montant, moyen: data.moyen, date: data.date, note: data.note.trim(), factureId: data.factureId || null, factureNumero: invoice?.numero || null, createdAt: serverTimestamp() });
     if (invoice) {
       const total = Number(invoice.total || 0);
       const paid = Number(invoice.montantPaye || 0) + montant;
-      const cappedPaid = Math.min(total, paid);
-      const statut = cappedPaid >= total && total > 0 ? "payee" : "partiellement_payee";
-      await updateDoc(doc(db, "factures", invoice.id), { montantPaye: cappedPaid, statut, updatedAt: serverTimestamp() });
+      const statut = paid >= total && total > 0 ? "payee" : "partiellement_payee";
+      await updateDoc(doc(db, "factures", invoice.id), { montantPaye: paid, statut, updatedAt: serverTimestamp() });
     }
     event.currentTarget.reset();
     await load();
