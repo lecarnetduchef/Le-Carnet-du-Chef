@@ -150,7 +150,6 @@ function buildOrderData({
     },
     livraison,
     paiement: {
-      provider: "stripe",
       statut: PAYMENT_STATUS,
       orderId: null,
       transactionId: null,
