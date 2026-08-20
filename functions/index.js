@@ -7,10 +7,10 @@ if (!admin.apps.length) {
 
 const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { createPayment, CreatePaymentError } = require("./createPayment");
+const { handleStripeWebhook } = require("./stripe");
 const { submitDemande } = require("./demandes");
 
 // Expose createPayment as a 2nd gen HTTP function in europe-west9.
-// The payment flow itself remains free of Revolut integration at this stage.
 const createPaymentHttp = onRequest(
   { region: "europe-west9", cors: true },
   async (req, res) => {
@@ -36,10 +36,45 @@ const createPaymentHttp = onRequest(
         });
       }
 
+      console.error("Erreur createPayment non prévue :", error);
       return res.status(500).json({
         ok: false,
         code: "INTERNAL_ERROR",
         message: "Une erreur interne est survenue.",
+      });
+    }
+  },
+);
+
+// Stripe sends the raw request body here so its signature can be verified.
+// The browser never calls this endpoint directly.
+const stripeWebhook = onRequest(
+  { region: "europe-west9", cors: false },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.set("Allow", "POST");
+      return res.status(405).send("Method Not Allowed");
+    }
+
+    try {
+      const signature = req.get("stripe-signature");
+      const rawBody = req.rawBody;
+      if (!rawBody) {
+        return res.status(400).json({
+          ok: false,
+          code: "RAW_BODY_REQUIRED",
+          message: "Corps brut Stripe indisponible.",
+        });
+      }
+
+      const result = await handleStripeWebhook(rawBody, signature);
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Erreur webhook Stripe :", error);
+      return res.status(400).json({
+        ok: false,
+        code: "STRIPE_WEBHOOK_ERROR",
+        message: "Webhook Stripe invalide ou impossible à traiter.",
       });
     }
   },
@@ -106,6 +141,7 @@ module.exports = {
   getProduits,
   getCommandesConfig,
   createPayment: createPaymentHttp,
+  stripeWebhook,
   getCatalogue,
   submitDemande,
 };
