@@ -133,7 +133,6 @@ async function getOrCreatePaymentAttempt(requestId, requestFingerprint) {
       status: "creating",
       commandeId: null,
       numeroCommande: null,
-      revolutOrderId: null,
       checkoutUrl: null,
       createdAt: now,
       updatedAt: now,
