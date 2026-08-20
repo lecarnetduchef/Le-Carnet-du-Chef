@@ -1,5 +1,6 @@
 import "./demandes-pipeline.js";
 import "./devis.js";
+import "./factures.js";
 
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import {
