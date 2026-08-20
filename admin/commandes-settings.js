@@ -3,19 +3,35 @@ import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/fi
 
 const SETTINGS_ID = "commandes";
 const SETTINGS_COLLECTION = "siteContent";
-const defaults = { ouvert: true, mode: "ouvert", fermetureJusqua: "", raison: "", updatedAt: null };
+const defaults = { mode: "ouvert", fermetureJusqua: "", raison: "" };
 let mounted = false;
+
+function todayParis() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+function deriveMode(data) {
+  if (data.serviceSuspendu?.active === true) return "suspendu";
+  if (data.fermetureProgrammee?.active === true) return "programme";
+  if (data.fermetureExceptionnelle?.active === true) return "exception";
+  if (data.modeManuel === "ferme" || data.fermetureManuelleGlobale === true) return "manuel";
+  if (data.modeManuel === "ouvert") return "ouvert";
+  if (data.fermetureManuelleDejeuner || data.fermetureManuelleDiner) return "horaires";
+  return "ouvert";
+}
+
+function scheduledValue(data) {
+  const p = data.fermetureProgrammee;
+  if (!p?.active || !p.dateFin) return "";
+  const time = p.heureReouverture || "23:59";
+  return `${p.dateFin}T${time}`;
+}
 
 async function getSettings() {
   const snap = await getDoc(doc(db, SETTINGS_COLLECTION, SETTINGS_ID));
   if (!snap.exists()) return defaults;
   const data = snap.data();
-  const modeManuel = data.modeManuel;
-  let mode = "ouvert";
-  if (modeManuel === "ferme") mode = data.fermetureExceptionnelle?.active ? "exception" : "manuel";
-  else if (modeManuel === "ouvert") mode = "ouvert";
-  else if (data.fermetureManuelleDejeuner || data.fermetureManuelleDiner) mode = "manuel";
-  return { ...defaults, ...data, mode, ouvert: mode === "ouvert" };
+  return { ...defaults, ...data, mode: deriveMode(data), fermetureJusqua: scheduledValue(data), raison: data.fermetureProgrammee?.motif || data.fermetureExceptionnelle?.motif || data.serviceSuspendu?.motif || data.raisonFermeture || "" };
 }
 
 function mount() {
@@ -38,7 +54,7 @@ async function load() {
     const form = document.querySelector("#settings-section [data-cs-form]");
     form.elements.mode.value = d.mode;
     form.elements.fermetureJusqua.value = d.fermetureJusqua || "";
-    form.elements.raison.value = d.raison || d.fermetureExceptionnelle?.message || "";
+    form.elements.raison.value = d.raison || "";
     renderStatus(d);
   } catch (e) { show(e.message, true); }
 }
@@ -50,22 +66,51 @@ function renderStatus(d) {
   s.textContent = labels[d.mode] || "—";
 }
 
+function parseUntil(value) {
+  if (!value) return { date: "", time: "" };
+  const [date, time = ""] = value.split("T");
+  return { date, time: time.slice(0, 5) };
+}
+
 async function setMode(mode) {
   const form = document.querySelector("#settings-section [data-cs-form]");
   const reason = form?.elements.raison.value.trim() || "";
   const until = form?.elements.fermetureJusqua.value || "";
+  const { date, time } = parseUntil(until);
   const closed = mode !== "ouvert";
   const data = {
-    modeManuel: mode === "ouvert" ? "ouvert" : mode === "horaires" || mode === "programme" ? null : "ferme",
-    fermetureManuelleGlobale: closed,
+    modeManuel: mode === "manuel" ? "ferme" : mode === "ouvert" ? "ouvert" : null,
+    fermetureManuelleGlobale: mode === "manuel",
     fermetureManuelleDejeuner: false,
     fermetureManuelleDiner: false,
-    fermetureExceptionnelle: { active: mode === "exception" || mode === "suspendu", message: reason },
+    fermetureProgrammee: { active: mode === "programme", dateDebut: todayParis(), dateFin: date, heureReouverture: time, motif: reason },
+    fermetureExceptionnelle: { active: mode === "exception", dateDebut: todayParis(), dateFin: date || todayParis(), motif: reason },
+    serviceSuspendu: { active: mode === "suspendu", motif: reason },
     fermetureJusqua: until,
     raisonFermeture: reason,
     adminMode: mode,
     updatedAt: serverTimestamp()
   };
+  if (mode === "horaires") {
+    data.modeManuel = null;
+    data.fermetureManuelleDejeuner = true;
+    data.fermetureManuelleDiner = true;
+  }
+  if (mode === "programme" && !date) {
+    show("Indiquez une date et une heure de réouverture pour programmer la fermeture.", true);
+    return;
+  }
+  if (mode === "exception" && !date) {
+    show("Indiquez une date et une heure de fin pour la fermeture exceptionnelle.", true);
+    return;
+  }
+  if (!closed) {
+    data.fermetureProgrammee = { active: false, dateDebut: "", dateFin: "", heureReouverture: "", motif: "" };
+    data.fermetureExceptionnelle = { active: false, dateDebut: "", dateFin: "", motif: "" };
+    data.serviceSuspendu = { active: false, motif: "" };
+    data.fermetureJusqua = "";
+    data.raisonFermeture = "";
+  }
   try {
     await setDoc(doc(db, SETTINGS_COLLECTION, SETTINGS_ID), data, { merge: true });
     const local = { ...data, mode, ouvert: mode === "ouvert", fermetureJusqua: until, raison: reason };
