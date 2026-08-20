@@ -7,45 +7,57 @@ const db = getFirestore();
 
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error("STRIPE_SECRET_KEY est manquante.");
-  }
+  if (!secretKey) throw new Error("STRIPE_SECRET_KEY est manquante.");
   return new Stripe(secretKey);
 }
 
 function requiredText(value, label) {
-  if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`${label} est obligatoire.`);
-  }
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${label} est obligatoire.`);
   return value.trim();
 }
 
 async function createCheckoutSession({ requestId, paymentAttempt }) {
   const validRequestId = validateRequestId(requestId);
-  if (!paymentAttempt || paymentAttempt.status !== "awaiting_payment" || !paymentAttempt.orderData) {
+  if (!paymentAttempt || !paymentAttempt.commandeId || !paymentAttempt.orderData) {
     throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
+  }
+
+  if (paymentAttempt.status === "paid") {
+    return {
+      checkoutUrl: null,
+      stripeCheckoutSessionId: paymentAttempt.stripeCheckoutSessionId || null,
+      alreadyPaid: true,
+    };
+  }
+
+  if (paymentAttempt.status !== "awaiting_payment") {
+    throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
+  }
+
+  if (paymentAttempt.checkoutUrl && paymentAttempt.stripeCheckoutSessionId) {
+    return {
+      checkoutUrl: paymentAttempt.checkoutUrl,
+      stripeCheckoutSessionId: paymentAttempt.stripeCheckoutSessionId,
+      alreadyCreated: true,
+    };
   }
 
   const stripe = getStripe();
   const order = paymentAttempt.orderData;
   const amount = order?.montants?.totalCentimes;
-  if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error("Montant Stripe invalide.");
-  }
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error("Montant Stripe invalide.");
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     currency: "eur",
-    line_items: [
-      {
-        price_data: {
-          currency: "eur",
-          product_data: { name: `Commande ${paymentAttempt.numeroCommande}` },
-          unit_amount: amount,
-        },
-        quantity: 1,
+    line_items: [{
+      price_data: {
+        currency: "eur",
+        product_data: { name: `Commande ${paymentAttempt.numeroCommande}` },
+        unit_amount: amount,
       },
-    ],
+      quantity: 1,
+    }],
     customer_email: order.client?.email || undefined,
     client_reference_id: validRequestId,
     metadata: {
@@ -67,18 +79,17 @@ async function createCheckoutSession({ requestId, paymentAttempt }) {
     updatedAt: Timestamp.now(),
   });
 
-  return { checkoutUrl: session.url, stripeCheckoutSessionId: session.id };
+  return { checkoutUrl: session.url, stripeCheckoutSessionId: session.id, alreadyCreated: false };
 }
 
 function constructWebhookEvent(rawBody, signature) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) throw new Error("STRIPE_WEBHOOK_SECRET est manquante.");
-  const stripe = getStripe();
-  return stripe.webhooks.constructEvent(rawBody, signature, secret);
+  return getStripe().webhooks.constructEvent(rawBody, requiredText(signature, "Signature Stripe"), secret);
 }
 
 async function handleStripeWebhook(rawBody, signature) {
-  const event = constructWebhookEvent(rawBody, requiredText(signature, "Signature Stripe"));
+  const event = constructWebhookEvent(rawBody, signature);
 
   if (event.type !== "checkout.session.completed") {
     return { received: true, handled: false, eventType: event.type };
@@ -92,16 +103,16 @@ async function handleStripeWebhook(rawBody, signature) {
   const requestId = validateRequestId(session.metadata?.requestId || session.client_reference_id);
   const transactionId = requiredText(session.payment_intent, "Référence de paiement Stripe");
 
-  const result = await finalizePaidOrder({
-    requestId,
-    transactionId,
-    paidAt: Timestamp.fromMillis(event.created * 1000),
-  });
-
-  return { received: true, handled: true, eventId: event.id, ...result };
+  return {
+    received: true,
+    handled: true,
+    eventId: event.id,
+    ...await finalizePaidOrder({
+      requestId,
+      transactionId,
+      paidAt: Timestamp.fromMillis(event.created * 1000),
+    }),
+  };
 }
 
-module.exports = {
-  createCheckoutSession,
-  handleStripeWebhook,
-};
+module.exports = { createCheckoutSession, handleStripeWebhook };
