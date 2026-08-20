@@ -1,3 +1,5 @@
+import "./demandes-pipeline.js";
+
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import {
   addDoc,
