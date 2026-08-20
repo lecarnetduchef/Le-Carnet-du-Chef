@@ -9,7 +9,6 @@ const { validateCartIntent, validateScheduleIntent, ValidationError } = require(
 const { calculateValidatedOrder, PricingError } = require("./pricing");
 const { getDeliveryDistance } = require("./delivery");
 const { createPendingPaymentAttempt, OrderCreationError } = require("./order");
-const { createCheckoutSession } = require("./stripe");
 
 class CreatePaymentError extends Error {
   constructor(message, code = "CREATE_PAYMENT_FAILED") {
@@ -33,11 +32,6 @@ function safeBusinessError(error, stage) {
 
   if (stage === "delivery") {
     return new CreatePaymentError("Les informations de livraison ne peuvent pas être validées.", "DELIVERY_ERROR");
-  }
-
-  if (stage === "stripe") {
-    console.error("Erreur Stripe pendant la création du paiement :", error);
-    return new CreatePaymentError("Le paiement ne peut pas être préparé pour le moment.", "PAYMENT_PROVIDER_ERROR");
   }
 
   return new CreatePaymentError("Une erreur interne est survenue.", "INTERNAL_ERROR");
@@ -105,12 +99,6 @@ async function createPayment(request) {
       allergies: input.allergies,
     });
 
-    stage = "stripe";
-    const checkout = await createCheckoutSession({
-      requestId,
-      paymentAttempt,
-    });
-
     return {
       ok: true,
       requestId,
@@ -118,9 +106,8 @@ async function createPayment(request) {
       numeroCommande: String(paymentAttempt.numeroCommande),
       totalCentimes: paymentAttempt.montants.totalCentimes,
       devise: paymentAttempt.montants.devise,
-      checkoutUrl: checkout.checkoutUrl,
-      stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
-      idempotent: attempt.existing === true || paymentAttempt.idempotent === true || checkout.alreadyCreated === true,
+      checkoutUrl: paymentAttempt.paiement.checkoutUrl,
+      idempotent: attempt.existing === true || paymentAttempt.idempotent === true,
     };
   } catch (error) {
     if (error instanceof CreatePaymentError) {

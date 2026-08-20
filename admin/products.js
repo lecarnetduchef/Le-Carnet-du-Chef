@@ -1,7 +1,3 @@
-import "./demandes-pipeline.js";
-import "./devis.js";
-import "./factures.js";
-
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import {
   addDoc,
@@ -54,16 +50,280 @@ function setStatus(message = "", isError = false) {
   statusEl.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`;
   statusEl.style.display = message ? "block" : "none";
 }
-function toNonNegativeInteger(value, label) { const number = Number(value); if (!Number.isInteger(number) || number < 0) throw new Error(`${label} doit être un entier supérieur ou égal à 0.`); return number; }
-function toPrice(value) { const number = Number(value); if (!Number.isFinite(number) || number < 0) throw new Error("Le prix doit être un nombre supérieur ou égal à 0."); return Math.round(number * 100) / 100; }
-function resetForm() { form.reset(); idInput.value=""; activeInput.checked=true; orderInput.value="0"; initialInput.value="0"; availableInput.value="0"; reservedInput.value="0"; soldInput.value="0"; reservedInput.disabled=true; soldInput.disabled=true; availableInput.disabled=false; initialInput.disabled=false; stockAdjustment.value=""; adjustButton.disabled=true; cancelButton.hidden=true; saveButton.textContent=`Créer la ${pageCategory.toLowerCase()}`; }
-function fillForm(product) { idInput.value=product.id; nameInput.value=product.nom||""; descriptionInput.value=product.description||""; priceInput.value=product.prix??""; photoInput.value=product.photo||""; activeInput.checked=product.actif!==false; orderInput.value=Number.isFinite(product.ordre)?product.ordre:0; initialInput.value=Number.isFinite(product.stockInitial)?product.stockInitial:0; availableInput.value=Number.isFinite(product.stockDisponible)?product.stockDisponible:0; reservedInput.value=Number.isFinite(product.stockReserve)?product.stockReserve:0; soldInput.value=Number.isFinite(product.stockVendu)?product.stockVendu:0; initialInput.disabled=true; reservedInput.disabled=true; soldInput.disabled=true; availableInput.disabled=false; stockAdjustment.value=""; adjustButton.disabled=false; cancelButton.hidden=false; saveButton.textContent="Enregistrer les modifications"; form.scrollIntoView({behavior:"smooth",block:"start"}); }
-function productRow(product) { const row=document.createElement("article"); row.className=`admin-row ${product.actif===false?"admin-row-off":""}`; const main=document.createElement("div"); main.className="admin-row-main"; const title=document.createElement("strong"); title.textContent=product.nom||"Produit sans nom"; main.appendChild(title); const meta=document.createElement("span"); meta.className="muted"; meta.textContent=`${Number(product.prix||0).toFixed(2)} € · ${pageCategory} · ordre ${Number(product.ordre||0)}`; main.appendChild(meta); const stocks=document.createElement("div"); stocks.className="admin-product-stock-grid"; stocks.innerHTML=`<span><strong>Disponible</strong><b>${Number(product.stockDisponible||0)}</b></span><span><strong>Réservé</strong><b>${Number(product.stockReserve||0)}</b></span><span><strong>Vendu</strong><b>${Number(product.stockVendu||0)}</b></span>`; main.appendChild(stocks); const status=document.createElement("span"); status.className="admin-tag"; status.textContent=product.actif===false?"Désactivé":"Actif"; main.appendChild(status); const actions=document.createElement("div"); actions.className="admin-row-actions"; const editButton=document.createElement("button"); editButton.type="button"; editButton.textContent="Modifier"; editButton.addEventListener("click",()=>fillForm(product)); actions.appendChild(editButton); const toggleButton=document.createElement("button"); toggleButton.type="button"; toggleButton.textContent=product.actif===false?"Activer":"Désactiver"; toggleButton.addEventListener("click",()=>toggleProduct(product)); actions.appendChild(toggleButton); const deleteButton=document.createElement("button"); deleteButton.type="button"; deleteButton.textContent="Supprimer"; deleteButton.addEventListener("click",()=>deleteProduct(product)); actions.appendChild(deleteButton); row.append(main,actions); return row; }
-function renderProducts(){ list.innerHTML=""; if(!currentProducts.length){const empty=document.createElement("p");empty.className="muted";empty.textContent=`Aucun produit dans la catégorie ${pageCategory}.`;list.appendChild(empty);return;} currentProducts.forEach((product)=>list.appendChild(productRow(product))); }
-async function loadProducts(){ if(!currentUser||!FIREBASE_READY||!pageCategory)return; setStatus("Chargement des produits…"); try{const productsQuery=query(collection(db,"produits"),orderBy("ordre","asc"));const snapshot=await getDocs(productsQuery);currentProducts=snapshot.docs.map((item)=>({id:item.id,...item.data()})).filter((product)=>String(product.categorie||"").trim()===pageCategory);renderProducts();setStatus(`${currentProducts.length} ${pageCategory.toLowerCase()}${currentProducts.length>1?"s":""} chargé${currentProducts.length>1?"s":""}.`);}catch(error){console.error("Erreur de lecture de la collection produits :",error);setStatus(`Impossible de charger les produits : ${error?.message||"erreur inconnue"}`,true);list.innerHTML="";} }
-async function saveProduct(event){event.preventDefault();if(!currentUser||!pageCategory)return;saveButton.disabled=true;setStatus("Enregistrement en cours…");try{const nom=nameInput.value.trim();if(!nom)throw new Error("Le nom du produit est obligatoire.");const prix=toPrice(priceInput.value);const ordre=toNonNegativeInteger(orderInput.value,"L’ordre");const stockInitial=toNonNegativeInteger(initialInput.value,"Le stock initial");const stockDisponible=toNonNegativeInteger(availableInput.value,"Le stock disponible");const id=idInput.value.trim();const data={nom,description:descriptionInput.value.trim(),prix,photo:photoInput.value.trim(),categorie:pageCategory,actif:activeInput.checked,ordre,stockDisponible,updatedAt:serverTimestamp()};if(id){await updateDoc(doc(db,"produits",id),data);setStatus("Produit modifié. Le stock initial, le stock réservé et le stock vendu ont été conservés.");}else{data.stockInitial=stockInitial;data.stockReserve=0;data.stockVendu=0;data.stockDisponible=stockInitial;data.createdAt=serverTimestamp();await addDoc(collection(db,"produits"),data);setStatus("Produit créé avec stock réservé et stock vendu initialisés à 0.");}resetForm();await loadProducts();}catch(error){console.error("Erreur d’enregistrement du produit :",error);setStatus(`Enregistrement impossible : ${error?.message||"erreur inconnue"}`,true);}finally{saveButton.disabled=false;}}
-async function toggleProduct(product){if(!currentUser)return;try{await updateDoc(doc(db,"produits",product.id),{actif:product.actif===false,updatedAt:serverTimestamp()});setStatus(product.actif===false?"Produit activé.":"Produit désactivé.");await loadProducts();}catch(error){console.error("Erreur d’activation/désactivation :",error);setStatus(`Modification impossible : ${error?.message||"erreur inconnue"}`,true);}}
-async function deleteProduct(product){if(!currentUser)return;const confirmed=window.confirm(`Supprimer définitivement le produit « ${product.nom||"Produit sans nom"} » ?`);if(!confirmed)return;try{await deleteDoc(doc(db,"produits",product.id));setStatus("Produit supprimé avec succès.");await loadProducts();}catch(error){console.error("Erreur de suppression du produit :",error);setStatus(`Suppression impossible : ${error?.message||"erreur inconnue"}`,true);}}
-async function adjustAvailableStock(){if(!currentUser||!idInput.value)return;try{const newAvailable=toNonNegativeInteger(stockAdjustment.value,"Le nouveau stock disponible");await updateDoc(doc(db,"produits",idInput.value),{stockDisponible:newAvailable,updatedAt:serverTimestamp()});availableInput.value=newAvailable;stockAdjustment.value="";setStatus("Stock disponible ajusté. Le stock vendu et le stock réservé n’ont pas été modifiés.");await loadProducts();}catch(error){console.error("Erreur d’ajustement du stock :",error);setStatus(`Ajustement impossible : ${error?.message||"erreur inconnue"}`,true);}}
-function init(){if(!productsSection||!form||!pageCategory)return;if(!FIREBASE_READY){productsSection.hidden=true;return;}resetForm();form.addEventListener("submit",saveProduct);cancelButton.addEventListener("click",resetForm);adjustButton.addEventListener("click",adjustAvailableStock);initialInput.addEventListener("input",()=>{if(!idInput.value)availableInput.value=initialInput.value;});auth.onAuthStateChanged((user)=>{currentUser=user;productsSection.hidden=!user;if(user){void loadProducts();}else{currentProducts=[];list.innerHTML="";}});}
-if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init,{once:true});}else{init();}
+
+function toNonNegativeInteger(value, label) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 0) throw new Error(`${label} doit être un entier supérieur ou égal à 0.`);
+  return number;
+}
+
+function toPrice(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) throw new Error("Le prix doit être un nombre supérieur ou égal à 0.");
+  return Math.round(number * 100) / 100;
+}
+
+function resetForm() {
+  form.reset();
+  idInput.value = "";
+  activeInput.checked = true;
+  orderInput.value = "0";
+  initialInput.value = "0";
+  availableInput.value = "0";
+  reservedInput.value = "0";
+  soldInput.value = "0";
+  reservedInput.disabled = true;
+  soldInput.disabled = true;
+  availableInput.disabled = false;
+  initialInput.disabled = false;
+  stockAdjustment.value = "";
+  adjustButton.disabled = true;
+  cancelButton.hidden = true;
+  saveButton.textContent = `Créer la ${pageCategory.toLowerCase()}`;
+}
+
+function fillForm(product) {
+  idInput.value = product.id;
+  nameInput.value = product.nom || "";
+  descriptionInput.value = product.description || "";
+  priceInput.value = product.prix ?? "";
+  photoInput.value = product.photo || "";
+  activeInput.checked = product.actif !== false;
+  orderInput.value = Number.isFinite(product.ordre) ? product.ordre : 0;
+  initialInput.value = Number.isFinite(product.stockInitial) ? product.stockInitial : 0;
+  availableInput.value = Number.isFinite(product.stockDisponible) ? product.stockDisponible : 0;
+  reservedInput.value = Number.isFinite(product.stockReserve) ? product.stockReserve : 0;
+  soldInput.value = Number.isFinite(product.stockVendu) ? product.stockVendu : 0;
+  initialInput.disabled = true;
+  reservedInput.disabled = true;
+  soldInput.disabled = true;
+  availableInput.disabled = false;
+  stockAdjustment.value = "";
+  adjustButton.disabled = false;
+  cancelButton.hidden = false;
+  saveButton.textContent = `Enregistrer les modifications`;
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function productRow(product) {
+  const row = document.createElement("article");
+  row.className = `admin-row ${product.actif === false ? "admin-row-off" : ""}`;
+
+  const main = document.createElement("div");
+  main.className = "admin-row-main";
+
+  const title = document.createElement("strong");
+  title.textContent = product.nom || "Produit sans nom";
+  main.appendChild(title);
+
+  const meta = document.createElement("span");
+  meta.className = "muted";
+  meta.textContent = `${Number(product.prix || 0).toFixed(2)} € · ${pageCategory} · ordre ${Number(product.ordre || 0)}`;
+  main.appendChild(meta);
+
+  const stocks = document.createElement("div");
+  stocks.className = "admin-product-stock-grid";
+  stocks.innerHTML = `
+    <span><strong>Disponible</strong><b>${Number(product.stockDisponible || 0)}</b></span>
+    <span><strong>Réservé</strong><b>${Number(product.stockReserve || 0)}</b></span>
+    <span><strong>Vendu</strong><b>${Number(product.stockVendu || 0)}</b></span>
+  `;
+  main.appendChild(stocks);
+
+  const status = document.createElement("span");
+  status.className = "admin-tag";
+  status.textContent = product.actif === false ? "Désactivé" : "Actif";
+  main.appendChild(status);
+
+  const actions = document.createElement("div");
+  actions.className = "admin-row-actions";
+
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.textContent = "Modifier";
+  editButton.addEventListener("click", () => fillForm(product));
+  actions.appendChild(editButton);
+
+  const toggleButton = document.createElement("button");
+  toggleButton.type = "button";
+  toggleButton.textContent = product.actif === false ? "Activer" : "Désactiver";
+  toggleButton.addEventListener("click", () => toggleProduct(product));
+  actions.appendChild(toggleButton);
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.textContent = "Supprimer";
+  deleteButton.addEventListener("click", () => deleteProduct(product));
+  actions.appendChild(deleteButton);
+
+  row.append(main, actions);
+  return row;
+}
+
+function renderProducts() {
+  list.innerHTML = "";
+
+  if (!currentProducts.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = `Aucun produit dans la catégorie ${pageCategory}.`;
+    list.appendChild(empty);
+    return;
+  }
+
+  currentProducts.forEach((product) => list.appendChild(productRow(product)));
+}
+
+async function loadProducts() {
+  if (!currentUser || !FIREBASE_READY || !pageCategory) return;
+  setStatus("Chargement des produits…");
+  try {
+    const productsQuery = query(collection(db, "produits"), orderBy("ordre", "asc"));
+    const snapshot = await getDocs(productsQuery);
+    currentProducts = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .filter((product) => String(product.categorie || "").trim() === pageCategory);
+    renderProducts();
+    setStatus(`${currentProducts.length} ${pageCategory.toLowerCase()}${currentProducts.length > 1 ? "s" : ""} chargé${currentProducts.length > 1 ? "s" : ""}.`);
+  } catch (error) {
+    console.error("Erreur de lecture de la collection produits :", error);
+    setStatus(`Impossible de charger les produits : ${error?.message || "erreur inconnue"}`, true);
+    list.innerHTML = "";
+  }
+}
+
+async function saveProduct(event) {
+  event.preventDefault();
+  if (!currentUser || !pageCategory) return;
+
+  saveButton.disabled = true;
+  setStatus("Enregistrement en cours…");
+
+  try {
+    const nom = nameInput.value.trim();
+    if (!nom) throw new Error("Le nom du produit est obligatoire.");
+
+    const prix = toPrice(priceInput.value);
+    const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
+    const stockInitial = toNonNegativeInteger(initialInput.value, "Le stock initial");
+    const stockDisponible = toNonNegativeInteger(availableInput.value, "Le stock disponible");
+    const id = idInput.value.trim();
+
+    const data = {
+      nom,
+      description: descriptionInput.value.trim(),
+      prix,
+      photo: photoInput.value.trim(),
+      categorie: pageCategory,
+      actif: activeInput.checked,
+      ordre,
+      stockDisponible,
+      updatedAt: serverTimestamp()
+    };
+
+    if (id) {
+      await updateDoc(doc(db, "produits", id), data);
+      setStatus("Produit modifié. Le stock initial, le stock réservé et le stock vendu ont été conservés.");
+    } else {
+      data.stockInitial = stockInitial;
+      data.stockReserve = 0;
+      data.stockVendu = 0;
+      data.stockDisponible = stockInitial;
+      data.createdAt = serverTimestamp();
+      await addDoc(collection(db, "produits"), data);
+      setStatus("Produit créé avec stock réservé et stock vendu initialisés à 0.");
+    }
+
+    resetForm();
+    await loadProducts();
+  } catch (error) {
+    console.error("Erreur d’enregistrement du produit :", error);
+    setStatus(`Enregistrement impossible : ${error?.message || "erreur inconnue"}`, true);
+  } finally {
+    saveButton.disabled = false;
+  }
+}
+
+async function toggleProduct(product) {
+  if (!currentUser) return;
+  try {
+    await updateDoc(doc(db, "produits", product.id), {
+      actif: product.actif === false,
+      updatedAt: serverTimestamp()
+    });
+    setStatus(product.actif === false ? "Produit activé." : "Produit désactivé.");
+    await loadProducts();
+  } catch (error) {
+    console.error("Erreur d’activation/désactivation :", error);
+    setStatus(`Modification impossible : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
+async function deleteProduct(product) {
+  if (!currentUser) return;
+
+  const confirmed = window.confirm(`Supprimer définitivement le produit « ${product.nom || "Produit sans nom"} » ?`);
+  if (!confirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "produits", product.id));
+    setStatus("Produit supprimé avec succès.");
+    await loadProducts();
+  } catch (error) {
+    console.error("Erreur de suppression du produit :", error);
+    setStatus(`Suppression impossible : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
+async function adjustAvailableStock() {
+  if (!currentUser || !idInput.value) return;
+  try {
+    const newAvailable = toNonNegativeInteger(stockAdjustment.value, "Le nouveau stock disponible");
+    await updateDoc(doc(db, "produits", idInput.value), {
+      stockDisponible: newAvailable,
+      updatedAt: serverTimestamp()
+    });
+    availableInput.value = newAvailable;
+    stockAdjustment.value = "";
+    setStatus("Stock disponible ajusté. Le stock vendu et le stock réservé n’ont pas été modifiés.");
+    await loadProducts();
+  } catch (error) {
+    console.error("Erreur d’ajustement du stock :", error);
+    setStatus(`Ajustement impossible : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
+function init() {
+  if (!productsSection || !form || !pageCategory) return;
+
+  if (!FIREBASE_READY) {
+    productsSection.hidden = true;
+    return;
+  }
+
+  resetForm();
+  form.addEventListener("submit", saveProduct);
+  cancelButton.addEventListener("click", resetForm);
+  adjustButton.addEventListener("click", adjustAvailableStock);
+
+  initialInput.addEventListener("input", () => {
+    if (!idInput.value) availableInput.value = initialInput.value;
+  });
+
+  auth.onAuthStateChanged((user) => {
+    currentUser = user;
+    productsSection.hidden = !user;
+    if (user) {
+      void loadProducts();
+    } else {
+      currentProducts = [];
+      list.innerHTML = "";
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init, { once: true });
+} else {
+  init();
+}
