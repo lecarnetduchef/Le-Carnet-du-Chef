@@ -16,217 +16,28 @@
 <body class="admin-body">
   <div class="admin-shell">
     <div class="admin-brand">Le Carnet <span>du Chef</span></div>
-
-    <section id="login-screen" class="admin-login-card" hidden>
-      <h1>Connexion</h1>
-      <form id="login-form">
-        <div class="form-field"><label for="login-email">Email</label><input type="email" id="login-email" name="email" required autocomplete="username"></div>
-        <div class="form-field"><label for="login-password">Mot de passe</label><input type="password" id="login-password" name="password" required autocomplete="current-password"></div>
-        <div id="login-error" class="admin-alert admin-alert-error" hidden></div>
-        <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
-      </form>
-    </section>
-
+    <section id="login-screen" class="admin-login-card" hidden><h1>Connexion</h1><form id="login-form"><div class="form-field"><label for="login-email">Email</label><input type="email" id="login-email" name="email" required autocomplete="username"></div><div class="form-field"><label for="login-password">Mot de passe</label><input type="password" id="login-password" name="password" required autocomplete="current-password"></div><div id="login-error" class="admin-alert admin-alert-error" hidden></div><button type="submit" class="btn btn-primary btn-block">Se connecter</button></form></section>
     <div id="config-warning" class="admin-alert admin-alert-error" hidden><strong>Configuration Firebase manquante.</strong> Renseignez vos identifiants dans <code>js/firebase-init.js</code>.</div>
-
     <div id="dashboard" class="admin-app" hidden>
-      <aside id="admin-sidebar" class="admin-sidebar" aria-label="Navigation de l'administration">
-        <div class="admin-sidebar-brand">Le Carnet <span>du Chef</span></div>
-        <nav class="admin-nav">
-          <button type="button" class="admin-nav-item active" data-admin-target="dashboard-section">⌂ <span>Tableau de bord</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="orders-section">▣ <span>Commandes</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="products-section">🍽️ <span>Produits / Menus</span></button>
-          <a class="admin-nav-item" href="formules.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Formules</span></a>
-          <a class="admin-nav-item" href="plats.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Plats</span></a>
-          <a class="admin-nav-item" href="boissons.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Boissons</span></a>
-          <a class="admin-nav-item" href="desserts.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Desserts</span></a>
-          <button type="button" class="admin-nav-item" data-admin-target="stocks-section">▤ <span>Stocks</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="requests-section">✉ <span>Demandes</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="quotes-section">▤ <span>Devis</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="invoices-section">▧ <span>Factures</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="payments-section">€ <span>Paiements</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="refunds-section">↩ <span>Remboursements</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="clients-section">◎ <span>Clients</span></button>
-          <button type="button" class="admin-nav-item" data-admin-target="settings-section">⚙ <span>Paramètres</span></button>
-        </nav>
-      </aside>
-
-      <div class="admin-main">
-        <header class="admin-topbar">
-          <div class="admin-topbar-title">
-            <button id="admin-menu-toggle" class="admin-mobile-menu" type="button" aria-label="Ouvrir la navigation" aria-expanded="false">☰</button>
-            <div>
-              <p class="admin-eyebrow">ESPACE ADMIN</p>
-              <h1 id="admin-page-title">Tableau de bord</h1>
-            </div>
-          </div>
-          <div class="admin-user"><span>Connecté en tant que</span><strong id="user-email"></strong></div>
-          <button id="logout-btn" class="btn btn-secondary" type="button">🚪 Se déconnecter</button>
-        </header>
-
-        <main class="admin-content">
-          <section id="dashboard-section" class="admin-view active" data-admin-view>
-            <div class="admin-section-heading">
-              <div><p class="admin-eyebrow">VUE D’ENSEMBLE</p><h2>Tableau de bord</h2></div>
-              <p class="muted">Un accès rapide aux principaux indicateurs de l’ADMIN.</p>
-            </div>
-            <div class="admin-dashboard-grid">
-              <article class="admin-stat-card"><span>Commandes</span><strong id="stat-orders">À venir</strong><small>Gestion des commandes en ligne</small></article>
-              <article class="admin-stat-card"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article>
-              <article class="admin-stat-card"><span>Produits en rupture</span><strong id="stat-out-products">—</strong><small>Actifs avec stock disponible à 0</small></article>
-              <article class="admin-stat-card"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Total des quantités disponibles</small></article>
-              <article class="admin-stat-card"><span>Demandes</span><strong>À venir</strong><small>Traiteur, chef à domicile, conseil</small></article>
-              <article class="admin-stat-card"><span>Devis</span><strong>À venir</strong><small>Suivi des demandes de devis</small></article>
-              <article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article>
-              <article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients centralisée</small></article>
-            </div>
-            <div id="dashboard-status" class="admin-alert" hidden></div>
-          </section>
-
-          <section id="orders-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading">
-              <div><p class="admin-eyebrow">GESTION</p><h2>Commandes</h2></div>
-              <div class="admin-orders-header-actions">
-                <span class="admin-orders-total"><strong id="orders-total">0</strong> commande(s)</span>
-                <button id="orders-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button>
-              </div>
-            </div>
-
-            <div class="admin-order-filters" role="toolbar" aria-label="Filtres des commandes">
-              <button type="button" class="admin-filter-btn active" data-order-filter="all">Toutes</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="new">Nouvelles</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="preparing">En préparation</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="ready">Prêtes</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="pickup">Retrait</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="delivery">Livraison</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="completed">Terminées</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="cancelled">Annulées</button>
-            </div>
-
-            <div id="orders-list-status" class="admin-alert" hidden aria-live="polite"></div>
-            <div id="orders-list" class="admin-orders-list" aria-live="polite">
-              <div class="admin-empty-state compact"><span class="admin-empty-icon">▣</span><h3>Chargement des commandes</h3><p>Les commandes disponibles seront affichées ici.</p></div>
-            </div>
-
-            <section id="order-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="order-detail-title">
-              <div class="admin-section-heading compact">
-                <div><p class="admin-eyebrow">DÉTAIL</p><h3 id="order-detail-title">Commande</h3></div>
-                <button id="order-detail-close" type="button" class="btn btn-secondary">Fermer</button>
-              </div>
-              <div id="order-detail-content"></div>
-              <div class="admin-order-status-editor">
-                <label for="order-detail-status">Statut de la commande</label>
-                <div class="admin-form-actions">
-                  <select id="order-detail-status">
-                    <option>Nouvelle</option>
-                    <option>En préparation</option>
-                    <option>Prête</option>
-                    <option>Terminée</option>
-                    <option>Annulée</option>
-                  </select>
-                  <button id="order-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button>
-                  <span id="order-detail-status-message" class="muted" aria-live="polite"></span>
-                </div>
-              </div>
-            </section>
-          </section>
-
-          <section id="products-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading"><div><p class="admin-eyebrow">CATALOGUE</p><h2>Produits / Menus</h2></div><p class="muted">Gestion actuelle des produits vendables et des trois menus PDF.</p></div>
-            <div class="admin-section admin-section-inner">
-              <div class="admin-alert">
-                <strong>Produits / stocks — Phase 1</strong>
-                <p>La gestion existante des produits reste active. Aucun paiement, aucune réservation client et aucune logique de commande n’est gérée ici.</p>
-                <p>Le <strong>stock vendu</strong> et le <strong>stock réservé</strong> restent séparés du stock disponible et ne sont jamais modifiés par l’ajustement manuel.</p>
-              </div>
-
-              <div id="products-list" aria-live="polite"></div>
-
-              <form id="product-form">
-                <input type="hidden" id="product-id">
-                <div class="admin-form-grid">
-                  <div class="form-field"><label for="product-name">Nom</label><input id="product-name" type="text" required></div>
-                  <div class="form-field"><label for="product-price">Prix (€)</label><input id="product-price" type="number" min="0" step="0.01" required></div>
-                  <div class="form-field admin-field-full"><label for="product-description">Description</label><textarea id="product-description" rows="3"></textarea></div>
-                  <div class="form-field"><label for="product-photo">Photo (URL)</label><input id="product-photo" type="url" placeholder="URL R2 de la photo"></div>
-                  <div class="form-field"><label for="product-category">Catégorie</label><input id="product-category" type="text" placeholder="Plat, formule…"></div>
-                  <div class="form-field"><label for="product-order">Ordre d’affichage</label><input id="product-order" type="number" min="0" step="1" value="0" required></div>
-                  <div class="form-field"><label for="product-stock-initial">Stock initial</label><input id="product-stock-initial" type="number" min="0" step="1" value="0" required></div>
-                  <div class="form-field"><label for="product-stock-available">Stock disponible</label><input id="product-stock-available" type="number" min="0" step="1" value="0" required></div>
-                  <div class="form-field"><label for="product-stock-reserved">Stock réservé</label><input id="product-stock-reserved" type="number" value="0" readonly disabled></div>
-                  <div class="form-field"><label for="product-stock-sold">Stock vendu</label><input id="product-stock-sold" type="number" value="0" readonly disabled></div>
-                </div>
-                <div class="admin-checkboxes"><label class="admin-checkbox"><input id="product-active" type="checkbox" checked> Produit actif</label></div>
-                <div class="admin-form-actions"><button id="product-save-btn" type="submit" class="btn btn-primary">Créer le produit</button><button id="product-cancel-btn" type="button" class="btn btn-secondary" hidden>Annuler</button></div>
-              </form>
-
-              <div class="admin-stock-adjustment"><h3>Ajuster le stock disponible</h3><p class="muted">Sélectionnez d’abord un produit avec « Modifier ». Cette action ne change ni le stock vendu ni le stock réservé.</p><div class="admin-form-actions"><input id="product-stock-adjustment" type="number" min="0" step="1" placeholder="Nouveau stock disponible" aria-label="Nouveau stock disponible"><button id="product-stock-adjust-btn" type="button" class="btn btn-secondary">Ajuster</button></div></div>
-              <div id="products-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-            </div>
-
-            <div id="menus-pdfs-section" class="admin-section admin-section-inner">
-              <div class="admin-section-heading compact"><div><p class="admin-eyebrow">DOCUMENTS</p><h3>Les 3 menus PDF</h3></div></div>
-              <div class="admin-alert"><strong>Gestion des PDF</strong><p>Les PDF actuels sont hébergés sur Cloudflare R2. L’ADMIN conserve les URLs publiques enregistrées dans Firestore.</p><p>Le remplacement du fichier se fait directement dans R2 ; cette interface ne téléverse aucun fichier.</p></div>
-              <div id="menus-list"></div>
-              <div class="admin-form-actions admin-actions-end"><button type="button" id="save-pdfs-btn" class="btn btn-primary">ENREGISTRER LES URL PDF</button></div>
-              <div id="save-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-            </div>
-          </section>
-
-          <section id="stocks-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading"><div><p class="admin-eyebrow">INVENTAIRE</p><h2>Stocks</h2></div><p class="muted">Lecture centralisée des trois états de stock conservés par produit.</p></div>
-            <div id="stocks-status" class="admin-alert" hidden></div>
-            <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Produit</th><th>Stock initial</th><th>Disponible</th><th>Réservé</th><th>Vendu</th><th>Statut</th></tr></thead><tbody id="stocks-table-body"><tr><td colspan="6" class="muted">Chargement…</td></tr></tbody></table></div>
-          </section>
-
-          <section id="requests-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading">
-              <div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div>
-              <div class="admin-orders-header-actions"><span class="admin-orders-total"><strong id="demandes-count">0</strong> demande(s)</span><button id="demandes-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button></div>
-            </div>
-            <div class="admin-order-filters" role="toolbar" aria-label="Filtres des demandes"><button type="button" class="admin-filter-btn active" data-demande-filter="all">Toutes</button><button type="button" class="admin-filter-btn" data-demande-filter="nouvelle">Nouvelles</button><button type="button" class="admin-filter-btn" data-demande-filter="en_cours">En cours</button><button type="button" class="admin-filter-btn" data-demande-filter="traitee">Traitées</button><button type="button" class="admin-filter-btn" data-demande-filter="annulee">Annulées</button><button type="button" class="admin-filter-btn" data-demande-filter="particulier">Particulier</button><button type="button" class="admin-filter-btn" data-demande-filter="professionnel">Professionnel</button></div>
-            <div id="demandes-loading" class="admin-empty-state compact" hidden aria-live="polite"><span class="admin-empty-icon">✉</span><h3>Chargement des demandes</h3><p>Récupération des demandes enregistrées.</p></div>
-            <div id="demandes-error" class="admin-alert admin-alert-error" hidden aria-live="assertive"></div>
-            <div id="demandes-list" class="admin-orders-list" aria-live="polite"></div>
-            <div id="demandes-empty" class="admin-empty-state compact" hidden><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Aucune demande ne correspond au filtre sélectionné.</p></div>
-            <section id="demande-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="demande-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div><button id="demande-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="demande-detail-content"></div><div class="admin-order-status-editor"><label for="demande-detail-status">Statut de la demande</label><div class="admin-form-actions"><select id="demande-detail-status"><option value="nouvelle">Nouvelle</option><option value="en_cours">En cours</option><option value="traitee">Traitée</option><option value="annulee">Annulée</option></select><button id="demande-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button><span id="demande-detail-message" class="muted" aria-live="polite"></span></div></div></section>
-          </section>
-
-          <section id="quotes-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMMERCIAL</p><h2>Devis</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▤</span><h3>Gestion des devis</h3><p>Création, suivi et acceptation des devis : cette fonction sera connectée lors d’une phase ultérieure.</p><span class="admin-coming">À VENIR</span></div></section>
-
-          <section id="invoices-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMPTABILITÉ</p><h2>Factures</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▧</span><h3>Facturation</h3><p>Les factures commerciales du Carnet du Chef, leurs PDF et leur archivage seront intégrés lors de la phase dédiée.</p><span class="admin-coming">À VENIR</span></div></section>
-
-          <section id="payments-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCE</p><h2>Paiements</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">€</span><h3>Suivi des paiements</h3><p>Le suivi Stripe sera connecté lorsque le paiement en ligne sera développé. Aucun paiement n’est géré ici pour le moment.</p><span class="admin-coming">À VENIR</span></div></section>
-
-          <section id="refunds-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCE</p><h2>Remboursements</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">↩</span><h3>Remboursements</h3><p>La gestion sécurisée des remboursements sera ajoutée avec le futur système de paiement.</p><span class="admin-coming">À VENIR</span></div></section>
-
-          <section id="clients-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Clients</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">◎</span><h3>Base clients</h3><p>La centralisation des clients particuliers et professionnels sera développée lors des phases prévues.</p><span class="admin-coming">À VENIR</span></div></section>
-
-          <section id="settings-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading"><div><p class="admin-eyebrow">CONFIGURATION</p><h2>Paramètres</h2></div><p class="muted">Les fonctions déjà disponibles restent accessibles ici.</p></div>
-
-            <div class="admin-section admin-section-inner">
-              <h3>PRÉSENTATION DU CHEF</h3>
-              <textarea id="chef-presentation" rows="14" aria-label="Présentation du chef"></textarea>
-              <div class="admin-form-actions" style="margin-top:1rem;"><button type="button" id="save-chef-presentation-btn" class="btn btn-primary">Enregistrer</button><span id="chef-presentation-status" class="muted" aria-live="polite"></span></div>
-              <div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div>
-            </div>
-
-            <div class="admin-section admin-section-inner">
-              <h3>🔴 GESTION DES COMMANDES</h3>
-              <div class="admin-alert"><strong>Contrôle des commandes du site</strong><p>La fermeture manuelle reste prioritaire sur la logique automatique existante.</p></div>
-              <div class="admin-form-actions"><button type="button" id="close-orders-btn" class="btn btn-secondary">🔴 Fermer les commandes</button><button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button></div>
-              <div id="orders-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-            </div>
-          </section>
-        </main>
-      </div>
-    </div>
+      <aside id="admin-sidebar" class="admin-sidebar" aria-label="Navigation de l'administration"><div class="admin-sidebar-brand">Le Carnet <span>du Chef</span></div><nav class="admin-nav">
+        <button type="button" class="admin-nav-item active" data-admin-target="dashboard-section">⌂ <span>Tableau de bord</span></button><button type="button" class="admin-nav-item" data-admin-target="orders-section">▣ <span>Commandes</span></button><button type="button" class="admin-nav-item" data-admin-target="products-section">🍽️ <span>Produits / Menus</span></button>
+        <a class="admin-nav-item" href="formules.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Formules</span></a><a class="admin-nav-item" href="plats.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Plats</span></a><a class="admin-nav-item" href="boissons.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Boissons</span></a><a class="admin-nav-item" href="desserts.html" style="padding-left:2rem;font-size:.92rem;gap:.55rem;background:transparent;box-shadow:none;">• <span>Desserts</span></a>
+        <button type="button" class="admin-nav-item" data-admin-target="stocks-section">▤ <span>Stocks</span></button><button type="button" class="admin-nav-item" data-admin-target="requests-section">✉ <span>Demandes</span></button><button type="button" class="admin-nav-item" data-admin-target="quotes-section">▤ <span>Devis</span></button><button type="button" class="admin-nav-item" data-admin-target="invoices-section">▧ <span>Factures</span></button><button type="button" class="admin-nav-item" data-admin-target="payments-section">€ <span>Paiements</span></button><button type="button" class="admin-nav-item" data-admin-target="refunds-section">↩ <span>Remboursements</span></button><button type="button" class="admin-nav-item" data-admin-target="clients-section">◎ <span>Clients</span></button><button type="button" class="admin-nav-item" data-admin-target="settings-section">⚙ <span>Paramètres</span></button>
+      </nav></aside>
+      <div class="admin-main"><header class="admin-topbar"><div class="admin-topbar-title"><button id="admin-menu-toggle" class="admin-mobile-menu" type="button" aria-label="Ouvrir la navigation" aria-expanded="false">☰</button><div><p class="admin-eyebrow">ESPACE ADMIN</p><h1 id="admin-page-title">Tableau de bord</h1></div></div><div class="admin-user"><span>Connecté en tant que</span><strong id="user-email"></strong></div><button id="logout-btn" class="btn btn-secondary" type="button">🚪 Se déconnecter</button></header>
+      <main class="admin-content"><section id="dashboard-section" class="admin-view active" data-admin-view><div class="admin-section-heading"><div><p class="admin-eyebrow">VUE D’ENSEMBLE</p><h2>Tableau de bord</h2></div><p class="muted">Un accès rapide aux principaux indicateurs de l’ADMIN.</p></div><div class="admin-dashboard-grid"><article class="admin-stat-card"><span>Commandes</span><strong id="stat-orders">À venir</strong><small>Gestion des commandes en ligne</small></article><article class="admin-stat-card"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article><article class="admin-stat-card"><span>Produits en rupture</span><strong id="stat-out-products">—</strong><small>Actifs avec stock disponible à 0</small></article><article class="admin-stat-card"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Total des quantités disponibles</small></article><article class="admin-stat-card"><span>Demandes</span><strong>À venir</strong><small>Traiteur, chef à domicile, conseil</small></article><article class="admin-stat-card"><span>Devis</span><strong>À venir</strong><small>Suivi des demandes de devis</small></article><article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article><article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients</small></article></div></section>
+      <section id="orders-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">VENTES</p><h2>Commandes</h2></div><button id="orders-refresh-btn" class="btn btn-secondary" type="button">↻ Actualiser</button></div><div class="admin-stats-row"><div><span>Total</span><strong id="orders-total">—</strong></div><div><span>En cours</span><strong id="orders-active">—</strong></div><div><span>Terminées</span><strong id="orders-completed">—</strong></div><div><span>Annulées</span><strong id="orders-cancelled">—</strong></div></div><div class="admin-toolbar"><label>Filtrer <select id="orders-filter"><option value="all">Toutes</option><option value="nouvelle">Nouvelles</option><option value="en_preparation">En préparation</option><option value="prete">Prêtes</option><option value="terminee">Terminées</option><option value="annulee">Annulées</option></select></label></div><div id="orders-list" class="admin-list"></div></section>
+      <section id="products-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">CATALOGUE</p><h2>Produits / Menus</h2></div></div><div id="products-status" class="admin-alert" hidden></div><form id="product-form"><input type="hidden" id="product-id"><div class="admin-form-grid"><div class="form-field"><label for="product-name">Nom</label><input id="product-name" required></div><div class="form-field"><label for="product-price">Prix</label><input id="product-price" type="number" min="0" step="0.01" required></div><div class="form-field admin-field-full"><label for="product-description">Description</label><textarea id="product-description" rows="3"></textarea></div><div class="form-field admin-field-full"><label for="product-photo">Photo</label><input id="product-photo"></div><div class="form-field"><label><input id="product-active" type="checkbox" checked> Actif</label></div><div class="form-field"><label for="product-order">Ordre</label><input id="product-order" type="number" min="0" step="1" value="0"></div><div class="form-field"><label for="product-stock-initial">Stock initial</label><input id="product-stock-initial" type="number" min="0" step="1" value="0"></div><div class="form-field"><label for="product-stock-available">Stock disponible</label><input id="product-stock-available" type="number" min="0" step="1" value="0"></div><div class="form-field"><label for="product-stock-reserved">Stock réservé</label><input id="product-stock-reserved" type="number" min="0" step="1" value="0"></div><div class="form-field"><label for="product-stock-sold">Stock vendu</label><input id="product-stock-sold" type="number" min="0" step="1" value="0"></div></div><div class="admin-form-actions"><button id="product-save-btn" class="btn btn-primary" type="submit">Créer</button><button id="product-cancel-btn" class="btn btn-secondary" type="button" hidden>Annuler</button></div></form><div id="products-list" class="admin-list"></div></section>
+      <section id="stocks-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">INVENTAIRE</p><h2>Stocks</h2></div></div><div id="stock-list" class="admin-list"></div></section>
+      <section id="requests-section" class="admin-view" data-admin-view hidden></section>
+      <section id="quotes-section" class="admin-view" data-admin-view hidden></section>
+      <section id="invoices-section" class="admin-view" data-admin-view hidden></section>
+      <section id="payments-section" class="admin-view" data-admin-view hidden></section>
+      <section id="refunds-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCES</p><h2>Remboursements</h2></div></div><div class="lcc-demande-empty">La gestion des remboursements sera reliée aux paiements après validation du flux financier.</div></section>
+      <section id="clients-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Clients</h2></div></div><div class="lcc-demande-empty">La base clients sera reliée aux demandes, commandes, devis et factures.</div></section>
+      <section id="settings-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">CONFIGURATION</p><h2>Paramètres</h2></div></div><div class="lcc-demande-empty">Les réglages d’ouverture des commandes, fermetures programmées et alertes seront centralisés ici.</div></section>
+      </main></div></div>
   </div>
-
-  <script type="module" src="admin.js"></script>
-  <script type="module" src="products.js"></script>
-  <script type="module" src="orders.js"></script>
-  <script type="module" src="counters.js"></script>
+  <script type="module" src="admin.js"></script><script type="module" src="orders.js"></script><script type="module" src="products.js"></script><script type="module" src="counters.js"></script><script type="module" src="paiements.js"></script>
 </body>
 </html>
