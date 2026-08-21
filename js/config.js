@@ -9,8 +9,8 @@
  *
  * Tout élément HTML portant un attribut data-cdc-link="clé" ou
  * data-cdc-text="clé" est automatiquement rempli au chargement de la page
- * à partir des valeurs ci-dessous. Vous n'avez normalement jamais besoin
- * de modifier autre chose que les valeurs entre guillemets " " de ce bloc.
+ * à partir des valeurs ci-dessous. Vous n'avez normalement jamais besoin de
+ * modifier autre chose que les valeurs entre guillemets " " de ce bloc.
  */
 const CDC_CONFIG = {
   liens: {
@@ -179,8 +179,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const get = (path) => path.split(".").reduce((obj, key) => (obj ? obj[key] : undefined), SOURCE);
 
   document.querySelectorAll("[data-cdc-link]").forEach((el) => {
-    const value = get(el.getAttribute("data-cdc-link"));
-    if (value) el.setAttribute("href", value);
+    const key = el.getAttribute("data-cdc-link");
+    const value = get(key);
+    if (!value) return;
+
+    if (key === "liens.commandeGenerale" && window.location.pathname.includes("/pages/")) {
+      el.setAttribute("href", "commande.html");
+    } else {
+      el.setAttribute("href", value);
+    }
   });
   document.querySelectorAll("[data-cdc-text]").forEach((el) => {
     const value = get(el.getAttribute("data-cdc-text"));
