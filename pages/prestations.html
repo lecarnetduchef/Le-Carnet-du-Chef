@@ -689,19 +689,22 @@
     width: 100%;
   }
 
-  /* MOBILE : photo Chef à domicile plus grande */
+  /* MOBILE : photo Chef à domicile nettement plus grande */
   .social-chef-combined > .container > div[style*="grid-template-columns"] > .reveal .story-image {
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto 1.5rem;
+    width: 100% !important;
+    max-width: none !important;
+    height: 260px !important;
+    margin: 0 auto 1.5rem !important;
+    overflow: hidden;
+    border-radius: 18px;
   }
 
   .social-chef-combined > .container > div[style*="grid-template-columns"] > .reveal .story-image img {
-    width: 100%;
-    height: auto;
+    width: 100% !important;
+    height: 100% !important;
     display: block;
-    border-radius: 18px;
     object-fit: cover;
+    border-radius: 18px;
   }
 
   .section-head.center h2 {
