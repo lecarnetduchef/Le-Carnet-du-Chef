@@ -100,6 +100,30 @@
 .admin-filter-btn { appearance: none; border: 1px solid var(--color-border); border-radius: 999px; padding: .55rem .85rem; background: var(--color-white); color: var(--color-sage-dark); font: inherit; font-size: var(--fs-xs); cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
 .admin-filter-btn:hover { border-color: var(--color-sage-dark); }
 .admin-filter-btn.active { background: var(--color-sage-dark); border-color: var(--color-sage-dark); color: var(--color-white); }
+.admin-demandes-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-demandes-list-panel {
+  min-width: 0;
+}
+
+.admin-demandes-list-panel .admin-orders-list {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: .25rem;
+}
+
+.admin-demandes-layout .admin-order-detail {
+  min-width: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-top: 0;
+}
+
 .admin-orders-list { display: grid; gap: .75rem; }
 .admin-order-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
 .admin-order-main { min-width: 0; flex: 1; }
@@ -149,6 +173,16 @@
   .admin-product-stock-grid { grid-template-columns: 1fr; }
   .admin-stock-adjustment input { max-width: none; width: 100%; }
   .admin-section { padding: 1rem; }
+  .admin-demandes-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-demandes-list-panel .admin-orders-list,
+  .admin-demandes-layout .admin-order-detail {
+    max-height: none;
+    overflow: visible;
+  }
+
   .admin-orders-header-actions { width: 100%; justify-content: space-between; }
   .admin-order-row { align-items: stretch; flex-direction: column; }
   .admin-order-view { width: 100%; }

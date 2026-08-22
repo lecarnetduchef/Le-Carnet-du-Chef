@@ -187,9 +187,12 @@
             <div class="admin-order-filters" role="toolbar" aria-label="Filtres des demandes"><button type="button" class="admin-filter-btn active" data-demande-filter="all">Toutes</button><button type="button" class="admin-filter-btn" data-demande-filter="nouvelle">Nouvelles</button><button type="button" class="admin-filter-btn" data-demande-filter="en_cours">En cours</button><button type="button" class="admin-filter-btn" data-demande-filter="traitee">Traitées</button><button type="button" class="admin-filter-btn" data-demande-filter="annulee">Annulées</button><button type="button" class="admin-filter-btn" data-demande-filter="particulier">Particulier</button><button type="button" class="admin-filter-btn" data-demande-filter="professionnel">Professionnel</button></div>
             <div id="demandes-loading" class="admin-empty-state compact" hidden aria-live="polite"><span class="admin-empty-icon">✉</span><h3>Chargement des demandes</h3><p>Récupération des demandes enregistrées.</p></div>
             <div id="demandes-error" class="admin-alert admin-alert-error" hidden aria-live="assertive"></div>
-            <div id="demandes-list" class="admin-orders-list" aria-live="polite"></div>
-            <div id="demandes-empty" class="admin-empty-state compact" hidden><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Aucune demande ne correspond au filtre sélectionné.</p></div>
-            <section id="demande-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="demande-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div><button id="demande-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="demande-detail-content"></div>
+            <div class="admin-demandes-layout">
+              <div class="admin-demandes-list-panel">
+                <div id="demandes-list" class="admin-orders-list" aria-live="polite"></div>
+                <div id="demandes-empty" class="admin-empty-state compact" hidden><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Aucune demande ne correspond au filtre sélectionné.</p></div>
+              </div>
+              <section id="demande-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="demande-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div><button id="demande-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="demande-detail-content"></div>
 <div class="admin-order-status-editor">
   <h4>Qualification commerciale</h4>
   <div class="admin-form-grid">
