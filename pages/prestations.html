@@ -670,6 +670,25 @@
 <style>
 @media (max-width:700px) {
 
+  /* MOBILE : séparation des blocs Le Carnet bouge / Chef à domicile */
+  .social-chef-combined > .container > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .social-chef-combined > .container > div[style*="grid-template-columns"] > div[style*="width:1px"] {
+    display: none !important;
+  }
+
+  .social-chef-combined > .container > div[style*="grid-template-columns"] > .reveal {
+    background: #fff;
+    border-radius: 24px;
+    padding: 2rem 1.25rem;
+    box-shadow: 0 12px 32px rgba(35,52,42,.10);
+    box-sizing: border-box;
+    width: 100%;
+  }
+
   .section-head.center h2 {
     padding-left:1rem;
     padding-right:1rem;
