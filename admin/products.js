@@ -36,6 +36,7 @@ const activeInput = document.querySelector("#product-active");
 const orderInput = document.querySelector("#product-order");
 const initialInput = document.querySelector("#product-stock-initial");
 const availableInput = document.querySelector("#product-stock-available");
+const alertThresholdInput = document.querySelector("#product-stock-alert-threshold");
 const reservedInput = document.querySelector("#product-stock-reserved");
 const soldInput = document.querySelector("#product-stock-sold");
 const stockAdjustment = document.querySelector("#product-stock-adjustment");
@@ -70,6 +71,7 @@ function resetForm() {
   orderInput.value = "0";
   initialInput.value = "0";
   availableInput.value = "0";
+  alertThresholdInput.value = "0";
   reservedInput.value = "0";
   soldInput.value = "0";
   reservedInput.disabled = true;
@@ -92,6 +94,7 @@ function fillForm(product) {
   orderInput.value = Number.isFinite(product.ordre) ? product.ordre : 0;
   initialInput.value = Number.isFinite(product.stockInitial) ? product.stockInitial : 0;
   availableInput.value = Number.isFinite(product.stockDisponible) ? product.stockDisponible : 0;
+  alertThresholdInput.value = Number.isFinite(product.seuilAlerte) ? product.seuilAlerte : 0;
   reservedInput.value = Number.isFinite(product.stockReserve) ? product.stockReserve : 0;
   soldInput.value = Number.isFinite(product.stockVendu) ? product.stockVendu : 0;
   initialInput.disabled = true;
@@ -134,6 +137,19 @@ function productRow(product) {
   status.className = "admin-tag";
   status.textContent = product.actif === false ? "Désactivé" : "Actif";
   main.appendChild(status);
+
+  if (
+    product.actif !== false &&
+    Number(product.seuilAlerte || 0) > 0 &&
+    Number(product.stockDisponible || 0) <= Number(product.seuilAlerte)
+  ) {
+    const alert = document.createElement("span");
+    alert.className = "admin-tag admin-tag-warning";
+    alert.textContent = Number(product.stockDisponible || 0) === 0
+      ? "Épuisé"
+      : `Stock faible · seuil ${Number(product.seuilAlerte)}`;
+    main.appendChild(alert);
+  }
 
   const actions = document.createElement("div");
   actions.className = "admin-row-actions";
@@ -207,6 +223,7 @@ async function saveProduct(event) {
     const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
     const stockInitial = toNonNegativeInteger(initialInput.value, "Le stock initial");
     const stockDisponible = toNonNegativeInteger(availableInput.value, "Le stock disponible");
+    const seuilAlerte = toNonNegativeInteger(alertThresholdInput.value, "Le seuil d’alerte");
     const id = idInput.value.trim();
 
     const data = {
@@ -218,6 +235,7 @@ async function saveProduct(event) {
       actif: activeInput.checked,
       ordre,
       stockDisponible,
+      seuilAlerte,
       updatedAt: serverTimestamp()
     };
 
@@ -279,9 +297,28 @@ async function adjustAvailableStock() {
   if (!currentUser || !idInput.value) return;
   try {
     const newAvailable = toNonNegativeInteger(stockAdjustment.value, "Le nouveau stock disponible");
+
+    const product = currentProducts.find((item) => item.id === idInput.value);
+    if (!product) throw new Error("Produit introuvable.");
+
+    const previousAvailable = Number(product.stockDisponible || 0);
+    const difference = newAvailable - previousAvailable;
+
     await updateDoc(doc(db, "produits", idInput.value), {
       stockDisponible: newAvailable,
       updatedAt: serverTimestamp()
+    });
+
+    await addDoc(collection(db, "mouvementsStock"), {
+      produitId: idInput.value,
+      produitNom: product.nom || "",
+      categorie: product.categorie || pageCategory,
+      type: difference > 0 ? "entrée" : difference < 0 ? "sortie" : "ajustement",
+      quantite: Math.abs(difference),
+      stockAvant: previousAvailable,
+      stockApres: newAvailable,
+      motif: "Ajustement manuel",
+      createdAt: serverTimestamp()
     });
     availableInput.value = newAvailable;
     stockAdjustment.value = "";
