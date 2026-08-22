@@ -65,7 +65,7 @@ async function loadDashboardStats() {
     const ds = await getDocs(collection(db, "demandes"));
     const demandes = ds.docs.map((x) => x.data());
     if (els.statDemandes) els.statDemandes.textContent = String(demandes.length);
-    if (els.statDevis) els.statDevis.textContent = String(demandes.filter((x) => x.type === "traiteur" || x.type === "chef_domicile").length);
+    if (els.statDevis) els.statDevis.textContent = "0";
   } catch (error) {
     console.error("Impossible de charger les demandes :", error);
     if (els.statDemandes) els.statDemandes.textContent = "—";
@@ -168,7 +168,15 @@ function formatDemandeFieldLabel(key) {
 }
 
 function formatDemandeValue(value) { if (Array.isArray(value)) return value.map((item) => typeof item === "object" ? JSON.stringify(item) : String(item)).join(", "); if (value instanceof Date) return formatDate(value); if (value && typeof value.toMillis === "function") return formatDate(value); return String(value); }
-function getDemandeTypeLabel(type) { return type === "chef_domicile" ? "Chef à domicile" : type === "traiteur" ? "Traiteur" : String(type || "Type non renseigné"); }
+function getDemandeTypeLabel(type) {
+  const labels = {
+    traiteur: "Traiteur",
+    chef_domicile: "Chef à domicile",
+    demande_particuliere: "Demande particulière",
+    accompagnement: "Accompagnement"
+  };
+  return labels[type] || "Type non renseigné";
+}
 function getDemandeEventDate(demande) { return demande.dateEvenement || demande.dateSouhaitee || ""; }
 function normalizeDemandeStatus(status) { const value = String(status || "").trim().toLowerCase(); return Object.prototype.hasOwnProperty.call(DEMANDE_STATUSES, value) ? value : "nouvelle"; }
 function getDemandeStatusLabel(status) { return DEMANDE_STATUSES[normalizeDemandeStatus(status)]; }
