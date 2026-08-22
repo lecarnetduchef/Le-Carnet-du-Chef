@@ -35,6 +35,9 @@
     .edit-order-button{width:100%;margin-top:1rem}.edit-mode{border:1px solid rgba(49,76,64,.14);border-radius:12px;padding:1rem;background:#f8faf7;margin-bottom:1rem}.edit-mode[hidden]{display:none}.edit-mode-title{margin:0 0 .75rem;font-weight:700}.edit-lines{display:grid;gap:.5rem}.edit-line-button{width:100%;text-align:left;border:1px solid rgba(49,76,64,.16);border-radius:10px;background:#fff;padding:.65rem .75rem;cursor:pointer}.edit-line-button:hover{border-color:rgba(49,76,64,.35)}.editing-badge{display:inline-block;margin-top:.75rem;font-size:.9rem;font-weight:600;color:#315f43}.cancel-edit{margin-left:.5rem;border:0;background:transparent;cursor:pointer;text-decoration:underline}
     .checkout-section{padding-top:0}.checkout-card{max-width:920px;margin:0 auto}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.checkout-field{display:grid;gap:.4rem}.checkout-field-full{grid-column:1/-1}.checkout-field label,.checkout-legend{font-weight:600}.checkout-field input,.checkout-field select,.checkout-field textarea{width:100%;box-sizing:border-box;padding:.75rem .8rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff;font:inherit}.checkout-field textarea{min-height:100px;resize:vertical}.checkout-choice{display:flex;gap:1rem;flex-wrap:wrap}.checkout-choice label{display:flex;align-items:center;gap:.45rem;font-weight:500}.checkout-choice input{accent-color:#314c40}.delivery-fields{display:grid;grid-template-columns:1.5fr .7fr 1fr;gap:1rem}.delivery-fields[hidden]{display:none}.checkout-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.25rem}.checkout-actions .btn:disabled{opacity:.55;cursor:not-allowed}.checkout-help{font-size:.9rem;color:#66706a}.checkout-summary{display:grid;gap:1rem}.summary-line{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.summary-line:last-child{border-bottom:0}.summary-components{margin:.35rem 0 0;color:#59635d;font-size:.92rem}.summary-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:grid;gap:.5rem}.summary-total div{display:flex;justify-content:space-between;gap:1rem}.summary-total .grand-total{font-size:1.15rem;font-weight:700}.summary-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.summary-meta div{padding:.75rem;border-radius:10px;background:#f8faf7}.summary-meta strong{display:block;margin-bottom:.25rem}.delivery-notice{padding:.8rem 1rem;border-radius:10px;background:#f8faf7;color:#59635d;font-size:.9rem}.provisional-total{color:#59635d;font-size:.9rem}.checkout-status{margin-top:1rem}
 
+    .page-hero h1{color:var(--color-gold)}
+    .page-hero{background:var(--color-sage-dark);color:var(--color-gold)}
+    .page-hero .muted{color:var(--color-gold)}
     .info-offres{padding-top:0}
     .info-offres-header{text-align:center;max-width:760px;margin:0 auto 1.75rem}
     .info-offres-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
@@ -43,6 +46,18 @@
     .info-offre-card h3{margin:.1rem 0 .5rem;font-size:1.05rem}
     .info-offre-card p{margin:0;color:#59635d;font-size:.92rem;line-height:1.55}
     .info-offre-card strong{color:#314c40}
+    .info-offre-card.green-card{background:var(--color-sage-dark);color:var(--color-gold)}
+    .info-offre-card.green-card h3,
+    .info-offre-card.green-card p,
+    .info-offre-card.green-card strong{color:var(--color-gold)}
+    .info-offre-card.social-card{cursor:pointer}
+    .social-card-content{display:flex;flex-direction:column;height:100%}
+    .social-links{display:flex;gap:.75rem;margin:.9rem 0 1rem}
+    .social-link{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;border:1px solid rgba(49,76,64,.18);background:#f8faf7;color:var(--color-sage-dark);font-weight:700;text-decoration:none}
+    .social-link:hover{border-color:var(--color-gold);color:var(--color-gold)}
+    .social-link svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.social-link:last-child svg{fill:currentColor;stroke:none}
+    .social-contact-button{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;padding:.65rem .9rem;border-radius:10px;background:var(--color-sage-dark);color:#fff;text-decoration:none;font-weight:600}
+    .social-contact-button:hover{background:var(--color-sage)}
     .catalogue-header{display:flex;justify-content:space-between;align-items:end;gap:1rem;margin-bottom:1rem}
     .catalogue-header h2{margin:0}
     .catalogue-header p{margin:.35rem 0 0}
@@ -95,7 +110,7 @@
         </div>
 
         <div class="info-offres-grid">
-          <article class="info-offre-card">
+          <article class="info-offre-card green-card">
             <div class="info-offre-icon" aria-hidden="true">🛒</div>
             <h3>Comment commander ?</h3>
             <p>Choisissez vos produits dans le catalogue, ajoutez-les à votre panier, renseignez vos informations puis vérifiez votre récapitulatif avant validation.</p>
@@ -104,19 +119,26 @@
           <article class="info-offre-card">
             <div class="info-offre-icon" aria-hidden="true">📍</div>
             <h3>Retrait</h3>
-            <p>Choisissez le <strong>retrait</strong> lors de votre commande puis sélectionnez le créneau disponible qui vous convient.</p>
+            <p>Choisissez le <strong>retrait</strong> lors de votre commande puis sélectionnez le créneau disponible qui vous convient. Une adresse de livraison vous sera fournie une fois votre commande validée.</p>
           </article>
 
-          <article class="info-offre-card">
+          <article class="info-offre-card green-card">
             <div class="info-offre-icon" aria-hidden="true">🚗</div>
             <h3>Livraison</h3>
             <p>La livraison est proposée dans les communes disponibles lors de la commande. Les frais sont indiqués selon les règles de livraison applicables.</p>
           </article>
 
-          <article class="info-offre-card">
-            <div class="info-offre-icon" aria-hidden="true">✨</div>
-            <h3>Offres & nouveautés</h3>
-            <p>Retrouvez prochainement ici les <strong>nouveautés, offres et informations commerciales</strong> du Carnet du Chef.</p>
+          <article class="info-offre-card social-card" onclick="window.location.href='contact.html'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='contact.html';}">
+            <div class="social-card-content">
+              <div class="info-offre-icon" aria-hidden="true">📱</div>
+              <h3>Suivez-nous !</h3>
+              <p>Rejoignez-nous sur nos réseaux sociaux pour découvrir nos nouveautés, offres exclusives et inspirations culinaires.</p>
+              <div class="social-links" aria-label="Réseaux sociaux">
+                <a class="social-link" href="#" aria-label="Instagram" onclick="event.stopPropagation();window.open(CDC_CONFIG?.liens?.instagram || '#','_blank','noopener,noreferrer');return false;"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle></svg></a>
+                <a class="social-link" href="#" aria-label="TikTok" onclick="event.stopPropagation();window.open(CDC_CONFIG?.liens?.tiktok || '#','_blank','noopener,noreferrer');return false;"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4c.4 2.3 1.7 3.8 4 4.1v3.1c-1.5-.1-2.8-.6-4-1.4v6.1a5.1 5.1 0 1 1-4.4-5.1v3.2a2 2 0 1 0 1.3 1.9V4H16z"></path></svg></a>
+              </div>
+              <a class="social-contact-button" href="contact.html" onclick="event.stopPropagation();">Nous contacter</a>
+            </div>
           </article>
         </div>
       </div>
