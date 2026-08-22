@@ -16,7 +16,7 @@ let selectedDemandeId = null;
 
 function cacheElements() {
   els = {
-    configWarning: document.querySelector("#config-warning"), loginScreen: document.querySelector("#login-screen"), loginForm: document.querySelector("#login-form"), loginError: document.querySelector("#login-error"), dashboard: document.querySelector("#dashboard"), logoutBtn: document.querySelector("#logout-btn"), userEmail: document.querySelector("#user-email"), menusList: document.querySelector("#menus-list"), saveButton: document.querySelector("#save-pdfs-btn"), saveStatus: document.querySelector("#save-status"), chefPresentation: document.querySelector("#chef-presentation"), saveChefPresentationButton: document.querySelector("#save-chef-presentation-btn"), chefPresentationStatus: document.querySelector("#chef-presentation-status"), chefPresentationPreview: document.querySelector("#chef-presentation-preview"), closeOrdersButton: document.querySelector("#close-orders-btn"), openOrdersButton: document.querySelector("#open-orders-btn"), automaticOrdersButton: document.querySelector("#automatic-orders-btn"), ordersStatus: document.querySelector("#orders-status"), ordersStateLabel: document.querySelector("#orders-state-label"), ordersStateBadge: document.querySelector("#orders-state-badge"), statActiveProducts: document.querySelector("#stat-active-products"), statOutProducts: document.querySelector("#stat-out-products"), statStock: document.querySelector("#stat-stock"), statDemandes: document.querySelector("#stat-demandes"), statDevis: document.querySelector("#stat-devis"), dashboardStatus: document.querySelector("#dashboard-status"), stocksTableBody: document.querySelector("#stocks-table-body"), stocksStatus: document.querySelector("#stocks-status"), adminPageTitle: document.querySelector("#admin-page-title"), sidebar: document.querySelector("#admin-sidebar"), mobileMenu: document.querySelector("#admin-menu-toggle"), dashboardSection: document.querySelector("#dashboard-section"), requestsSection: document.querySelector("#requests-section"), demandesCount: document.querySelector("#demandes-count"), demandesRefresh: document.querySelector("#demandes-refresh-btn"), demandesLoading: document.querySelector("#demandes-loading"), demandesError: document.querySelector("#demandes-error"), demandesEmpty: document.querySelector("#demandes-empty"), demandesList: document.querySelector("#demandes-list"), demandeDetailPanel: document.querySelector("#demande-detail-panel"), demandeDetailTitle: document.querySelector("#demande-detail-title"), demandeDetailContent: document.querySelector("#demande-detail-content"), demandeDetailStatus: document.querySelector("#demande-detail-status"), demandeDetailSave: document.querySelector("#demande-detail-save"), demandeDetailMessage: document.querySelector("#demande-detail-message"), demandeDetailClose: document.querySelector("#demande-detail-close")
+    configWarning: document.querySelector("#config-warning"), loginScreen: document.querySelector("#login-screen"), loginForm: document.querySelector("#login-form"), loginError: document.querySelector("#login-error"), dashboard: document.querySelector("#dashboard"), logoutBtn: document.querySelector("#logout-btn"), userEmail: document.querySelector("#user-email"), menusList: document.querySelector("#menus-list"), saveButton: document.querySelector("#save-pdfs-btn"), saveStatus: document.querySelector("#save-status"), chefPresentation: document.querySelector("#chef-presentation"), saveChefPresentationButton: document.querySelector("#save-chef-presentation-btn"), chefPresentationStatus: document.querySelector("#chef-presentation-status"), chefPresentationPreview: document.querySelector("#chef-presentation-preview"), closeOrdersButton: document.querySelector("#close-orders-btn"), openOrdersButton: document.querySelector("#open-orders-btn"), automaticOrdersButton: document.querySelector("#automatic-orders-btn"), ordersStatus: document.querySelector("#orders-status"), ordersStateLabel: document.querySelector("#orders-state-label"), ordersStateBadge: document.querySelector("#orders-state-badge"), statActiveProducts: document.querySelector("#stat-active-products"), statOutProducts: document.querySelector("#stat-out-products"), statStock: document.querySelector("#stat-stock"), statDemandes: document.querySelector("#stat-demandes"), statDevis: document.querySelector("#stat-devis"), dashboardStatus: document.querySelector("#dashboard-status"), stocksTableBody: document.querySelector("#stocks-table-body"), stocksStatus: document.querySelector("#stocks-status"), adminPageTitle: document.querySelector("#admin-page-title"), sidebar: document.querySelector("#admin-sidebar"), mobileMenu: document.querySelector("#admin-menu-toggle"), dashboardSection: document.querySelector("#dashboard-section"), requestsSection: document.querySelector("#requests-section"), demandesCount: document.querySelector("#demandes-count"), demandesRefresh: document.querySelector("#demandes-refresh-btn"), demandesLoading: document.querySelector("#demandes-loading"), demandesError: document.querySelector("#demandes-error"), demandesEmpty: document.querySelector("#demandes-empty"), demandesList: document.querySelector("#demandes-list"), demandeDetailPanel: document.querySelector("#demande-detail-panel"), demandeDetailTitle: document.querySelector("#demande-detail-title"), demandeDetailContent: document.querySelector("#demande-detail-content"), demandeDetailStatus: document.querySelector("#demande-detail-status"), demandeDetailSave: document.querySelector("#demande-detail-save"), demandeDetailMessage: document.querySelector("#demande-detail-message"), demandeDetailClose: document.querySelector("#demande-detail-close"), qualificationCategorie: document.querySelector("#demande-qualification-categorie"), qualificationSousCategorie: document.querySelector("#demande-qualification-sous-categorie"), qualificationPriorite: document.querySelector("#demande-qualification-priorite"), qualificationPotentiel: document.querySelector("#demande-qualification-potentiel"), qualificationBesoinPrecision: document.querySelector("#demande-qualification-besoin-precision"), qualificationCommentaire: document.querySelector("#demande-qualification-commentaire"), qualificationSave: document.querySelector("#demande-qualification-save"), qualificationMessage: document.querySelector("#demande-qualification-message")
   };
 }
 function start() { if (initialized) return; initialized = true; cacheElements(); initNavigation(); initProductsParentNavigation(); injectOrderControlIfNeeded(); if (!FIREBASE_READY) { els.configWarning.hidden = false; els.loginScreen.hidden = true; els.dashboard.hidden = true; return; } initAuth(); }
@@ -81,7 +81,7 @@ function startDemandes() {
   if (els.demandesRefresh) els.demandesRefresh.addEventListener("click", () => { void loadDemandes(); });
   els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => button.addEventListener("click", () => { demandesFilter = button.dataset.demandeFilter || "all"; els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderDemandes(); }));
   if (els.demandeDetailClose) els.demandeDetailClose.addEventListener("click", closeDemandeDetail);
-  if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); });
+  if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); }); if (els.qualificationSave) els.qualificationSave.addEventListener("click", () => { void saveDemandeQualification(); });
   void loadDemandes();
 }
 
@@ -135,6 +135,14 @@ function renderDemandeDetail(id) {
   if (els.demandeDetailTitle) els.demandeDetailTitle.textContent = `${getDemandeTypeLabel(demande.type)} — ${((demande.client || {}).prenom || "")} ${((demande.client || {}).nom || "")}`.trim();
   if (els.demandeDetailContent) els.demandeDetailContent.innerHTML = buildDemandeDetailHtml(demande);
   if (els.demandeDetailStatus) els.demandeDetailStatus.value = normalizeDemandeStatus(demande.statut);
+  const qualification = demande.qualification || {};
+  if (els.qualificationCategorie) els.qualificationCategorie.value = qualification.categorie || "a_qualifier";
+  if (els.qualificationSousCategorie) els.qualificationSousCategorie.value = qualification.sousCategorie || "";
+  if (els.qualificationPriorite) els.qualificationPriorite.value = qualification.priorite || "normale";
+  if (els.qualificationPotentiel) els.qualificationPotentiel.value = qualification.potentiel || "non_evalue";
+  if (els.qualificationBesoinPrecision) els.qualificationBesoinPrecision.checked = Boolean(qualification.besoinPrecision);
+  if (els.qualificationCommentaire) els.qualificationCommentaire.value = qualification.commentaireInterne || "";
+  if (els.qualificationMessage) els.qualificationMessage.textContent = "";
   if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = "";
   els.demandeDetailPanel.hidden = false;
 }
@@ -184,6 +192,41 @@ function toMillis(value) { if (value === null || value === undefined || value ==
 function formatDate(value) { const millis = toMillis(value); if (!millis) return "Date inconnue"; try { return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(millis)); } catch (_) { return "Date inconnue"; } }
 function setDemandesState(state, message = "") { if (els.demandesLoading) els.demandesLoading.hidden = state !== "loading"; if (els.demandesError) { els.demandesError.hidden = state !== "error"; els.demandesError.textContent = message; } if (els.demandesEmpty) els.demandesEmpty.hidden = state !== "empty"; if (els.demandesList) els.demandesList.hidden = state === "loading" || state === "error"; }
 function closeDemandeDetail() { selectedDemandeId = null; if (els.demandeDetailPanel) els.demandeDetailPanel.hidden = true; }
+async function saveDemandeQualification() {
+  if (!auth.currentUser || !selectedDemandeId) return;
+
+  const qualification = {
+    categorie: els.qualificationCategorie?.value || "a_qualifier",
+    sousCategorie: (els.qualificationSousCategorie?.value || "").trim(),
+    priorite: els.qualificationPriorite?.value || "normale",
+    potentiel: els.qualificationPotentiel?.value || "non_evalue",
+    besoinPrecision: Boolean(els.qualificationBesoinPrecision?.checked),
+    commentaireInterne: (els.qualificationCommentaire?.value || "").trim()
+  };
+
+  if (els.qualificationSave) els.qualificationSave.disabled = true;
+  if (els.qualificationMessage) els.qualificationMessage.textContent = "Enregistrement…";
+
+  try {
+    await updateDoc(doc(db, "demandes", selectedDemandeId), {
+      qualification,
+      updatedAt: serverTimestamp()
+    });
+
+    const local = demandesCache.find((item) => item.id === selectedDemandeId);
+    if (local) local.qualification = qualification;
+
+    if (els.qualificationMessage) els.qualificationMessage.textContent = "Qualification enregistrée.";
+  } catch (error) {
+    console.error("Impossible d’enregistrer la qualification :", error);
+    if (els.qualificationMessage) {
+      els.qualificationMessage.textContent = `Impossible d’enregistrer la qualification : ${error?.message || "erreur inconnue"}`;
+    }
+  } finally {
+    if (els.qualificationSave) els.qualificationSave.disabled = false;
+  }
+}
+
 async function saveDemandeStatus() { if (!auth.currentUser || !selectedDemandeId || !els.demandeDetailStatus) return; const status = normalizeDemandeStatus(els.demandeDetailStatus.value); if (!Object.prototype.hasOwnProperty.call(DEMANDE_STATUSES, status)) return; if (els.demandeDetailSave) els.demandeDetailSave.disabled = true; if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = "Enregistrement…"; try { await updateDoc(doc(db, "demandes", selectedDemandeId), { statut: status, updatedAt: serverTimestamp() }); const local = demandesCache.find((item) => item.id === selectedDemandeId); if (local) local.statut = status; renderDemandes(); if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = "Statut enregistré."; if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length); } catch (error) { console.error("Impossible d’enregistrer le statut de la demande :", error); if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = `Impossible d’enregistrer le statut : ${error?.message || "erreur inconnue"}`; } finally { if (els.demandeDetailSave) els.demandeDetailSave.disabled = false; } }
 function listValue(x) { return Array.isArray(x) ? x.join(", ") : x || ""; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character])); }
