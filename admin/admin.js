@@ -39,51 +39,97 @@ function setChefPresentationStatus(message, isError = false) { if (!els.chefPres
 
 function updateDashboardStockAlert(products) {
   const alert = document.querySelector("#dashboard-stock-alert");
-  if (!alert) return;
+  const count = document.querySelector("#dashboard-stock-alert-count");
+  const summary = document.querySelector("#dashboard-stock-alert-summary");
+  const list = document.querySelector("#dashboard-stock-alert-list");
 
-  const lowStock = products
-    .filter((product) => product.actif !== false)
+  if (!alert || !count || !summary || !list) return;
+
+  const activeProducts = products.filter((product) => product.actif !== false);
+
+  const lowStock = activeProducts
     .filter((product) => {
       const stock = Number(product.stockDisponible || 0);
       const seuil = Number(product.seuilAlerte || 0);
       return seuil > 0 && stock > 0 && stock <= seuil;
     })
-    .sort((a, b) => Number(a.stockDisponible || 0) - Number(b.stockDisponible || 0));
+    .map((product) => ({
+      ...product,
+      type: "low",
+      stock: Number(product.stockDisponible || 0),
+      seuil: Number(product.seuilAlerte || 0)
+    }));
 
-  const outOfStock = products
-    .filter((product) => product.actif !== false)
-    .filter((product) => Number(product.stockDisponible || 0) <= 0);
+  const outOfStock = activeProducts
+    .filter((product) => Number(product.stockDisponible || 0) <= 0)
+    .map((product) => ({
+      ...product,
+      type: "out",
+      stock: 0,
+      seuil: Number(product.seuilAlerte || 0)
+    }));
 
-  if (!lowStock.length && !outOfStock.length) {
+  const alerts = [...outOfStock, ...lowStock]
+    .sort((a, b) => a.stock - b.stock);
+
+  if (!alerts.length) {
     alert.hidden = true;
-    alert.textContent = "";
+    count.textContent = "0";
+    summary.textContent = "Aucun produit à surveiller";
+    list.innerHTML = "";
     return;
   }
 
-  const lines = [];
-
-  if (lowStock.length) {
-    lines.push(`⚠️ STOCK FAIBLE — ${lowStock.length} produit(s) proche(s) de la rupture`);
-
-    lowStock.forEach((product) => {
-      lines.push(
-        `🟠 ${product.nom || "Produit sans nom"} — reste ${Number(product.stockDisponible || 0)} — seuil ${Number(product.seuilAlerte || 0)}`
-      );
-    });
-  }
-
-  if (outOfStock.length) {
-    lines.push(`🔴 RUPTURE — ${outOfStock.length} produit(s) épuisé(s)`);
-
-    outOfStock.forEach((product) => {
-      lines.push(`🔴 ${product.nom || "Produit sans nom"} — épuisé`);
-    });
-  }
-
-  alert.textContent = lines.join("\n");
-  alert.style.whiteSpace = "pre-line";
   alert.hidden = false;
+  count.textContent = String(alerts.length);
+  summary.textContent = alerts.length === 1
+    ? "1 produit nécessite votre attention"
+    : `${alerts.length} produits nécessitent votre attention`;
+
+  const visibleAlerts = alerts.slice(0, 5);
+
+  list.innerHTML = visibleAlerts.map((product) => {
+    const isOut = product.type === "out";
+
+    return `
+      <div style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:1rem;
+        padding:0.65rem 0;
+        border-top:1px solid rgba(0,0,0,0.08);
+      ">
+        <div style="min-width:0;">
+          <strong style="display:block;">
+            ${isOut ? "🔴" : "🟠"} ${escapeHtml(product.nom || "Produit sans nom")}
+          </strong>
+          <small>
+            ${isOut
+              ? "Rupture de stock"
+              : `Stock disponible : ${product.stock} · Seuil : ${product.seuil}`}
+          </small>
+        </div>
+        <span style="
+          white-space:nowrap;
+          font-weight:600;
+        ">
+          ${isOut ? "RUPTURE" : "STOCK FAIBLE"}
+        </span>
+      </div>
+    `;
+  }).join("");
+
+  if (alerts.length > 5) {
+    list.insertAdjacentHTML(
+      "beforeend",
+      `<small style="display:block;margin-top:0.75rem;font-weight:600;">
+        + ${alerts.length - 5} autre${alerts.length - 5 > 1 ? "s" : ""} alerte${alerts.length - 5 > 1 ? "s" : ""}
+      </small>`
+    );
+  }
 }
+
 
 async function loadDashboardStats() {
   if (!els.statActiveProducts || !auth.currentUser) return;

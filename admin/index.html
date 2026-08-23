@@ -80,7 +80,14 @@
               <article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article>
               <article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients centralisée</small></article>
             </div>
-            <div id="dashboard-status" class="admin-alert" hidden></div><div id="dashboard-stock-alert" class="admin-alert" hidden style="margin-top:1rem;"></div>
+            <div id="dashboard-status" class="admin-alert" hidden></div>
+
+            <article id="dashboard-stock-alert" class="admin-stat-card" hidden style="grid-column: 1 / -1; min-height: 190px;">
+              <span>⚠️ Alertes stock</span>
+              <strong id="dashboard-stock-alert-count">—</strong>
+              <small id="dashboard-stock-alert-summary">Produits nécessitant une surveillance</small>
+              <div id="dashboard-stock-alert-list" style="margin-top:1rem;"></div>
+            </article>
           </section>
 
           <section id="orders-section" class="admin-view" data-admin-view hidden>
