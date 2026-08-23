@@ -37,6 +37,35 @@ function updateChefPresentationPreview() { if (!els.chefPresentationPreview || !
 function setChefPresentationStatus(message, isError = false) { if (!els.chefPresentationStatus) return; els.chefPresentationStatus.textContent = message; els.chefPresentationStatus.style.color = isError ? "#a33" : ""; }
 
 
+async function loadDashboardStats() {
+  if (!els.statActiveProducts || !auth.currentUser) return;
+  try {
+    const snap = await getDocs(collection(db, "produits"));
+    const products = snap.docs.map((item) => item.data());
+    const active = products.filter((product) => product.actif !== false);
+    const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0);
+    const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0);
+
+    els.statActiveProducts.textContent = String(active.length);
+    els.statOutProducts.textContent = String(out.length);
+    els.statStock.textContent = String(available);
+
+    if (els.dashboardStatus) els.dashboardStatus.hidden = true;
+  } catch (error) {
+    els.statActiveProducts.textContent =
+      els.statOutProducts.textContent =
+      els.statStock.textContent = "—";
+
+    if (els.dashboardStatus) {
+      els.dashboardStatus.textContent =
+        "Les indicateurs produits ne sont pas disponibles actuellement.";
+      els.dashboardStatus.hidden = false;
+    }
+
+    console.error(error);
+  }
+}
+
 async function renderStocks() { if (!els.stocksTableBody || !auth.currentUser) return; els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>"; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0)); if (!products.length) { els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>"; return; } els.stocksTableBody.innerHTML = ""; products.forEach((product) => { const row = document.createElement("tr"); const values = [product.nom || "Produit sans nom", Number(product.stockInitial || 0), Number(product.stockDisponible || 0), Number(product.stockReserve || 0), Number(product.stockVendu || 0), product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"]; values.forEach((value) => { const cell = document.createElement("td"); cell.textContent = String(value); row.appendChild(cell); }); els.stocksTableBody.appendChild(row); }); } catch (error) { console.error("Impossible de charger les stocks :", error); els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>"; } }
 
 function startDemandes() {
