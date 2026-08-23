@@ -59,10 +59,6 @@ function setPdfStatus(message = "", isError = false) {
   saveStatus.style.display = message ? "block" : "none";
 }
 
-savePdfsButton?.addEventListener("click", (event) => {
-  event.preventDefault();
-});
-
 function escapeHtml(value) {
   const element = document.createElement("div");
   element.textContent = value ?? "";
