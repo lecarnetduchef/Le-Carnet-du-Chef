@@ -12,6 +12,10 @@ let demandesInitialized = false;
 let demandesCache = [];
 let demandesFilter = "all";
 let selectedDemandeId = null;
+let devisInitialized = false;
+let devisDemandes = [];
+let devisSelectedId = null;
+let devisCurrent = null;
 
 function cacheElements() {
   els = {
@@ -22,258 +26,31 @@ function start() { if (initialized) return; initialized = true; cacheElements();
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true }); else start();
 function injectOrderControlIfNeeded() { if (!els.dashboardSection || document.querySelector("#dashboard-order-control")) return; const heading = els.dashboardSection.querySelector(".admin-section-heading"); if (!heading) return; const panel = document.createElement("section"); panel.id = "dashboard-order-control"; panel.className = "admin-command-control"; panel.setAttribute("aria-labelledby", "orders-control-title"); panel.innerHTML = `<div class="admin-command-control-head"><div><p class="admin-eyebrow">ACTION PRIORITAIRE</p><h3 id="orders-control-title">ÉTAT DES COMMANDES</h3></div><span id="orders-state-badge" class="admin-order-state admin-order-state-unknown">Vérification…</span></div><div class="admin-command-status-row"><strong id="orders-state-label">Vérification de l’état…</strong><span class="muted">Contrôle global des commandes du site.</span></div><div class="admin-form-actions admin-command-actions"><button type="button" id="automatic-orders-btn" class="btn btn-secondary">🕐 Mode automatique</button><button type="button" id="close-orders-btn" class="btn btn-danger">🔴 Fermer les commandes</button><button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button></div><div id="orders-status" class="admin-alert" hidden aria-live="polite"></div>`; heading.insertAdjacentElement("afterend", panel); cacheElements(); }
 function initProductsParentNavigation() { const parent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item")).find((item) => item.querySelector("span")?.textContent?.trim() === "Produits / Menus"); const subItems = Array.from(document.querySelectorAll(".admin-nav-item[href$='.html']")).filter((item) => ["Formules", "Plats", "Boissons", "Desserts"].includes(item.querySelector("span")?.textContent?.trim())); if (!parent || subItems.length !== 4) return; const submenu = document.createElement("div"); submenu.id = "admin-products-submenu"; submenu.className = "admin-nav-submenu"; submenu.hidden = true; submenu.setAttribute("role", "group"); submenu.setAttribute("aria-label", "Produits / Menus"); parent.insertAdjacentElement("afterend", submenu); subItems.forEach((item) => { submenu.appendChild(item); item.classList.add("admin-nav-subitem"); }); const setOpen = (open) => { submenu.hidden = !open; parent.setAttribute("aria-expanded", String(open)); parent.setAttribute("aria-controls", submenu.id); }; setOpen(false); parent.addEventListener("click", (event) => { event.preventDefault(); event.stopImmediatePropagation(); const open = parent.getAttribute("aria-expanded") === "true"; setOpen(!open); const productsSection = document.querySelector("#products-section"); if (productsSection) { productsSection.hidden = true; productsSection.classList.remove("active"); } }, true); }
-function initNavigation() { const items = document.querySelectorAll("[data-admin-target]"); const views = document.querySelectorAll("[data-admin-view]"); items.forEach((item) => { item.addEventListener("click", () => { const target = item.dataset.adminTarget; if (target === "products-section") return; if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return; const productsSubmenu = document.querySelector("#admin-products-submenu"); if (productsSubmenu) productsSubmenu.hidden = true; const productsParent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item")).find((nav) => nav.querySelector("span")?.textContent?.trim() === "Produits / Menus"); if (productsParent) productsParent.setAttribute("aria-expanded", "false"); views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); }); items.forEach((nav) => nav.classList.toggle("active", nav === item)); const title = item.querySelector("span")?.textContent?.trim() || "Administration"; if (els.adminPageTitle) els.adminPageTitle.textContent = title; closeMobileNavigation(); if (target === "stocks-section") void renderStocks(); if (target === "dashboard-section") { void loadDashboardStats(); void loadOrdersState(); } if (target === "requests-section") startDemandes(); }); }); if (els.mobileMenu && els.sidebar) els.mobileMenu.addEventListener("click", () => { if (!auth.currentUser || els.dashboard.hidden) return; const open = els.sidebar.classList.toggle("is-open"); els.mobileMenu.setAttribute("aria-expanded", String(open)); }); }
+function initNavigation() { const items = document.querySelectorAll("[data-admin-target]"); const views = document.querySelectorAll("[data-admin-view]"); items.forEach((item) => { item.addEventListener("click", () => { const target = item.dataset.adminTarget; if (target === "products-section") return; if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return; const productsSubmenu = document.querySelector("#admin-products-submenu"); if (productsSubmenu) productsSubmenu.hidden = true; const productsParent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item")).find((nav) => nav.querySelector("span")?.textContent?.trim() === "Produits / Menus"); if (productsParent) productsParent.setAttribute("aria-expanded", "false"); views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); }); items.forEach((nav) => nav.classList.toggle("active", nav === item)); const title = item.querySelector("span")?.textContent?.trim() || "Administration"; if (els.adminPageTitle) els.adminPageTitle.textContent = title; closeMobileNavigation(); if (target === "stocks-section") void renderStocks(); if (target === "dashboard-section") { void loadDashboardStats(); void loadOrdersState(); } if (target === "requests-section") startDemandes(); if (target === "quotes-section") startDevis(); }); }); if (els.mobileMenu && els.sidebar) els.mobileMenu.addEventListener("click", () => { if (!auth.currentUser || els.dashboard.hidden) return; const open = els.sidebar.classList.toggle("is-open"); els.mobileMenu.setAttribute("aria-expanded", String(open)); }); }
 function closeMobileNavigation() { if (!els.sidebar || !els.mobileMenu) return; els.sidebar.classList.remove("is-open"); els.mobileMenu.setAttribute("aria-expanded", "false"); }
-function resetAdminToLogin() { if (els.dashboard) els.dashboard.hidden = true; if (els.loginScreen) els.loginScreen.hidden = false; pendingUrls.clear(); closeMobileNavigation(); const views = document.querySelectorAll("[data-admin-view]"); views.forEach((view) => { view.hidden = true; view.classList.remove("active"); }); if (els.dashboardSection) { els.dashboardSection.hidden = false; els.dashboardSection.classList.add("active"); } const navItems = document.querySelectorAll("[data-admin-target]"); navItems.forEach((item) => item.classList.toggle("active", item.dataset.adminTarget === "dashboard-section")); if (els.adminPageTitle) els.adminPageTitle.textContent = "Tableau de bord"; if (els.userEmail) els.userEmail.textContent = ""; selectedDemandeId = null; }
+function resetAdminToLogin() { if (els.dashboard) els.dashboard.hidden = true; if (els.loginScreen) els.loginScreen.hidden = false; pendingUrls.clear(); closeMobileNavigation(); const views = document.querySelectorAll("[data-admin-view]"); views.forEach((view) => { view.hidden = true; view.classList.remove("active"); }); if (els.dashboardSection) { els.dashboardSection.hidden = false; els.dashboardSection.classList.add("active"); } const navItems = document.querySelectorAll("[data-admin-target]"); navItems.forEach((item) => item.classList.toggle("active", item.dataset.adminTarget === "dashboard-section")); if (els.adminPageTitle) els.adminPageTitle.textContent = "Tableau de bord"; if (els.userEmail) els.userEmail.textContent = ""; selectedDemandeId = null; devisSelectedId = null; devisCurrent = null; }
 function initAuth() { onAuthStateChanged(auth, async (user) => { if (user) { els.loginScreen.hidden = true; els.dashboard.hidden = false; els.userEmail.textContent = user.email || "administrateur"; await loadChefPresentation(); await loadDashboardStats(); await renderStocks(); await loadOrdersState(); startDemandes(); } else resetAdminToLogin(); }); els.loginForm.addEventListener("submit", async (e) => { e.preventDefault(); els.loginError.hidden = true; try { await signInWithEmailAndPassword(auth, els.loginForm.email.value.trim(), els.loginForm.password.value); } catch (err) { els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code); els.loginError.hidden = false; } }); if (els.logoutBtn) els.logoutBtn.addEventListener("click", async (event) => { event.preventDefault(); els.logoutBtn.disabled = true; try { await signOut(auth); resetAdminToLogin(); } catch (error) { console.error("Erreur de déconnexion Firebase :", error); } finally { els.logoutBtn.disabled = false; } }); if (els.saveChefPresentationButton) els.saveChefPresentationButton.addEventListener("click", (event) => { event.preventDefault(); void saveChefPresentation(); }); if (els.chefPresentation) els.chefPresentation.addEventListener("input", updateChefPresentationPreview); if (els.closeOrdersButton) els.closeOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ferme", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🔴 Commandes forcées fermées.", false); updateOrdersStateUI("ferme"); } catch (error) { showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.openOrdersButton) els.openOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ouvert", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🟢 Commandes forcées ouvertes.", false); updateOrdersStateUI("ouvert"); } catch (error) { showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.automaticOrdersButton) els.automaticOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: null, fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🕐 Mode automatique rétabli.", false); updateOrdersStateUI("aucun"); } catch (error) { showOrderStatus(`Impossible de rétablir le mode automatique : ${error?.message || "erreur inconnue"}`, true); } }); }
 async function loadOrdersState() { if (!auth.currentUser || !els.ordersStateLabel || !els.ordersStateBadge) return; try { const snapshot = await getDoc(doc(db, "siteContent", "commandes")); const data = snapshot.exists() ? snapshot.data() : {}; const mode = data.modeManuel === "ouvert" || data.modeManuel === "ferme" ? data.modeManuel : "aucun"; updateOrdersStateUI(mode); } catch (error) { console.error("Impossible de lire l’état des commandes :", error); els.ordersStateLabel.textContent = "État indisponible"; els.ordersStateBadge.textContent = "Erreur de lecture"; els.ordersStateBadge.className = "admin-order-state admin-order-state-unknown"; } }
 function updateOrdersStateUI(mode) { if (!els.ordersStateLabel || !els.ordersStateBadge) return; const labels = { ouvert: ["🟢 Commandes forcées ouvertes", "OUVERTES"], ferme: ["🔴 Commandes forcées fermées", "FERMÉES"], aucun: ["🕐 Commandes en mode automatique", "AUTOMATIQUE"] }; const [label, badge] = labels[mode] || labels.aucun; els.ordersStateLabel.textContent = label; els.ordersStateBadge.textContent = badge; els.ordersStateBadge.className = `admin-order-state ${mode === "ferme" ? "admin-order-state-closed" : mode === "ouvert" ? "admin-order-state-open" : "admin-order-state-unknown"}`; }
 function showOrderStatus(message, isError) { if (!els.ordersStatus) return; els.ordersStatus.textContent = message; els.ordersStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; els.ordersStatus.hidden = false; }
 function traduireErreur(code) { return { "auth/invalid-email": "adresse email invalide.", "auth/user-not-found": "aucun compte avec cet email.", "auth/wrong-password": "mot de passe incorrect.", "auth/invalid-credential": "identifiants incorrects.", "auth/too-many-requests": "trop de tentatives, réessayez plus tard." }[code] || "veuillez réessayer."; }
-
 async function loadChefPresentation() { if (!els.chefPresentation) return; const fallback = "[Texte à compléter : présentation personnelle du chef — parcours, expériences, ce qui l'anime au quotidien.]"; els.chefPresentation.value = fallback; updateChefPresentationPreview(); setChefPresentationStatus(""); try { const snap = await getDoc(CHEF_PRESENTATION_REF); const texte = snap.exists() && typeof snap.data().texte === "string" ? snap.data().texte : ""; if (texte.trim()) { els.chefPresentation.value = texte; updateChefPresentationPreview(); } } catch (error) { console.error("Erreur de lecture Firestore de la présentation du chef :", error); setChefPresentationStatus("Impossible de charger le texte enregistré. Le texte actuel est conservé.", true); } }
 async function saveChefPresentation() { if (!els.chefPresentation || !els.saveChefPresentationButton) return; const texte = els.chefPresentation.value; setChefPresentationStatus("Enregistrement en cours…"); els.saveChefPresentationButton.disabled = true; try { await setDoc(CHEF_PRESENTATION_REF, { texte, updatedAt: serverTimestamp() }, { merge: true }); setChefPresentationStatus("Présentation du chef enregistrée avec succès."); } catch (error) { console.error("Erreur Firestore lors de l'enregistrement de la présentation du chef :", error); setChefPresentationStatus(`Erreur lors de l'enregistrement : ${error?.message || "opération impossible"}`, true); } finally { els.saveChefPresentationButton.disabled = false; } }
 function updateChefPresentationPreview() { if (!els.chefPresentationPreview || !els.chefPresentation) return; els.chefPresentationPreview.textContent = els.chefPresentation.value; els.chefPresentationPreview.hidden = !els.chefPresentation.value; }
 function setChefPresentationStatus(message, isError = false) { if (!els.chefPresentationStatus) return; els.chefPresentationStatus.textContent = message; els.chefPresentationStatus.style.color = isError ? "#a33" : ""; }
 
-
-function updateDashboardStockAlert(products) {
-  const alert = document.querySelector("#dashboard-stock-alert");
-  const count = document.querySelector("#dashboard-stock-alert-count");
-  const summary = document.querySelector("#dashboard-stock-alert-summary");
-  const list = document.querySelector("#dashboard-stock-alert-list");
-
-  if (!alert || !count || !summary || !list) return;
-
-  const activeProducts = products.filter((product) => product.actif !== false);
-
-  const lowStock = activeProducts
-    .filter((product) => {
-      const stock = Number(product.stockDisponible || 0);
-      const seuil = Number(product.seuilAlerte || 0);
-      return seuil > 0 && stock > 0 && stock <= seuil;
-    })
-    .map((product) => ({
-      ...product,
-      type: "low",
-      stock: Number(product.stockDisponible || 0),
-      seuil: Number(product.seuilAlerte || 0)
-    }));
-
-  const outOfStock = activeProducts
-    .filter((product) => Number(product.stockDisponible || 0) <= 0)
-    .map((product) => ({
-      ...product,
-      type: "out",
-      stock: 0,
-      seuil: Number(product.seuilAlerte || 0)
-    }));
-
-  const alerts = [...outOfStock, ...lowStock]
-    .sort((a, b) => a.stock - b.stock);
-
-  if (!alerts.length) {
-    alert.hidden = true;
-    count.textContent = "0";
-    summary.textContent = "Aucun produit à surveiller";
-    list.innerHTML = "";
-    return;
-  }
-
-  alert.hidden = false;
-  count.textContent = String(alerts.length);
-  summary.textContent = alerts.length === 1
-    ? "1 produit nécessite votre attention"
-    : `${alerts.length} produits nécessitent votre attention`;
-
-  const visibleAlerts = alerts.slice(0, 5);
-
-  list.innerHTML = visibleAlerts.map((product) => {
-    const isOut = product.type === "out";
-
-    return `
-      <div style="
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:1rem;
-        padding:0.65rem 0;
-        border-top:1px solid rgba(0,0,0,0.08);
-      ">
-        <div style="min-width:0;">
-          <strong style="display:block;">
-            ${isOut ? "🔴" : "🟠"} ${escapeHtml(product.nom || "Produit sans nom")}
-          </strong>
-          <small>
-            ${isOut
-              ? "Rupture de stock"
-              : `Stock disponible : ${product.stock} · Seuil : ${product.seuil}`}
-          </small>
-        </div>
-        <span style="
-          white-space:nowrap;
-          font-weight:600;
-        ">
-          ${isOut ? "RUPTURE" : "STOCK FAIBLE"}
-        </span>
-      </div>
-    `;
-  }).join("");
-
-  if (alerts.length > 5) {
-    list.insertAdjacentHTML(
-      "beforeend",
-      `<small style="display:block;margin-top:0.75rem;font-weight:600;">
-        + ${alerts.length - 5} autre${alerts.length - 5 > 1 ? "s" : ""} alerte${alerts.length - 5 > 1 ? "s" : ""}
-      </small>`
-    );
-  }
-}
-
-
-async function loadDashboardStats() {
-  if (!els.statActiveProducts || !auth.currentUser) return;
-  try {
-    const snap = await getDocs(collection(db, "produits"));
-    const products = snap.docs.map((item) => item.data());
-    updateDashboardStockAlert(products);
-    const active = products.filter((product) => product.actif !== false);
-    const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0);
-    const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0);
-
-    els.statActiveProducts.textContent = String(active.length);
-    els.statOutProducts.textContent = String(out.length);
-    els.statStock.textContent = String(available);
-
-    if (els.dashboardStatus) els.dashboardStatus.hidden = true;
-  } catch (error) {
-    els.statActiveProducts.textContent =
-      els.statOutProducts.textContent =
-      els.statStock.textContent = "—";
-
-    if (els.dashboardStatus) {
-      els.dashboardStatus.textContent =
-        "Les indicateurs produits ne sont pas disponibles actuellement.";
-      els.dashboardStatus.hidden = false;
-    }
-
-    console.error(error);
-  }
-}
-
+function updateDashboardStockAlert(products) { const alert = document.querySelector("#dashboard-stock-alert"); const count = document.querySelector("#dashboard-stock-alert-count"); const summary = document.querySelector("#dashboard-stock-alert-summary"); const list = document.querySelector("#dashboard-stock-alert-list"); if (!alert || !count || !summary || !list) return; const activeProducts = products.filter((product) => product.actif !== false); const lowStock = activeProducts.filter((product) => { const stock = Number(product.stockDisponible || 0); const seuil = Number(product.seuilAlerte || 0); return seuil > 0 && stock > 0 && stock <= seuil; }).map((product) => ({ ...product, type: "low", stock: Number(product.stockDisponible || 0), seuil: Number(product.seuilAlerte || 0) })); const outOfStock = activeProducts.filter((product) => Number(product.stockDisponible || 0) <= 0).map((product) => ({ ...product, type: "out", stock: 0, seuil: Number(product.seuilAlerte || 0) })); const alerts = [...outOfStock, ...lowStock].sort((a, b) => a.stock - b.stock); if (!alerts.length) { alert.hidden = true; count.textContent = "0"; summary.textContent = "Aucun produit à surveiller"; list.innerHTML = ""; return; } alert.hidden = false; count.textContent = String(alerts.length); summary.textContent = alerts.length === 1 ? "1 produit nécessite votre attention" : `${alerts.length} produits nécessitent votre attention`; const visibleAlerts = alerts.slice(0, 5); list.innerHTML = visibleAlerts.map((product) => { const isOut = product.type === "out"; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.65rem 0;border-top:1px solid rgba(0,0,0,0.08);"><div style="min-width:0;"><strong style="display:block;">${isOut ? "🔴" : "🟠"} ${escapeHtml(product.nom || "Produit sans nom")}</strong><small>${isOut ? "Rupture de stock" : `Stock disponible : ${product.stock} · Seuil : ${product.seuil}`}</small></div><span style="white-space:nowrap;font-weight:600;">${isOut ? "RUPTURE" : "STOCK FAIBLE"}</span></div>`; }).join(""); if (alerts.length > 5) list.insertAdjacentHTML("beforeend", `<small style="display:block;margin-top:0.75rem;font-weight:600;">+ ${alerts.length - 5} autre${alerts.length - 5 > 1 ? "s" : ""} alerte${alerts.length - 5 > 1 ? "s" : ""}</small>`); }
+async function loadDashboardStats() { if (!els.statActiveProducts || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "produits")); const products = snap.docs.map((item) => item.data()); updateDashboardStockAlert(products); const active = products.filter((product) => product.actif !== false); const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0); const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0); els.statActiveProducts.textContent = String(active.length); els.statOutProducts.textContent = String(out.length); els.statStock.textContent = String(available); if (els.dashboardStatus) els.dashboardStatus.hidden = true; } catch (error) { els.statActiveProducts.textContent = els.statOutProducts.textContent = els.statStock.textContent = "—"; if (els.dashboardStatus) { els.dashboardStatus.textContent = "Les indicateurs produits ne sont pas disponibles actuellement."; els.dashboardStatus.hidden = false; } console.error(error); } }
 async function renderStocks() { if (!els.stocksTableBody || !auth.currentUser) return; els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>"; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0)); if (!products.length) { els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>"; return; } els.stocksTableBody.innerHTML = ""; products.forEach((product) => { const row = document.createElement("tr"); const values = [product.nom || "Produit sans nom", Number(product.stockInitial || 0), Number(product.stockDisponible || 0), Number(product.stockReserve || 0), Number(product.stockVendu || 0), product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"]; values.forEach((value) => { const cell = document.createElement("td"); cell.textContent = String(value); row.appendChild(cell); }); els.stocksTableBody.appendChild(row); }); } catch (error) { console.error("Impossible de charger les stocks :", error); els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>"; } }
-
-function startDemandes() {
-  if (!auth.currentUser || !els.requestsSection || demandesInitialized) return;
-  demandesInitialized = true;
-  demandesFilter = "all";
-  if (els.demandesRefresh) els.demandesRefresh.addEventListener("click", () => { void loadDemandes(); });
-  els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => button.addEventListener("click", () => { demandesFilter = button.dataset.demandeFilter || "all"; els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderDemandes(); }));
-  if (els.demandeDetailClose) els.demandeDetailClose.addEventListener("click", closeDemandeDetail);
-  if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); }); if (els.qualificationSave) els.qualificationSave.addEventListener("click", () => { void saveDemandeQualification(); });
-  void loadDemandes();
-}
-
-async function loadDemandes() {
-  if (!auth.currentUser || !els.demandesList) return;
-  setDemandesState("loading");
-  try {
-    const snap = await getDocs(collection(db, "demandes"));
-    demandesCache = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
-    if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length);
-    renderDemandes();
-    setDemandesState(demandesCache.length ? "ready" : "empty");
-  } catch (error) {
-    console.error("Impossible de charger les demandes :", error);
-    setDemandesState("error", `Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`);
-  }
-}
-
-function renderDemandes() {
-  if (!els.demandesList) return;
-  const rows = demandesCache.filter((demande) => {
-    if (demandesFilter === "all") return true;
-    if (demandesFilter === "particulier" || demandesFilter === "professionnel") {
-      const client = demande.client && typeof demande.client === "object" ? demande.client : {};
-      return client.particulierProfessionnel === demandesFilter;
-    }
-    return normalizeDemandeStatus(demande.statut) === demandesFilter;
-  });
-  els.demandesList.innerHTML = "";
-  if (!rows.length) { if (els.demandesEmpty) els.demandesEmpty.hidden = false; return; }
-  if (els.demandesEmpty) els.demandesEmpty.hidden = true;
-  rows.forEach((demande) => {
-    const client = demande.client && typeof demande.client === "object" ? demande.client : {};
-    const profil = client.particulierProfessionnel === "professionnel"
-      ? "Professionnel"
-      : client.particulierProfessionnel === "particulier"
-        ? "Particulier"
-        : "Non renseigné";
-    const row = document.createElement("article");
-    row.className = "admin-order-row";
-    row.innerHTML = `<div class="admin-order-main"><div class="admin-order-title-line"><strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong><span class="admin-order-status">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span></div><div class="admin-order-meta"><span>${escapeHtml(getDemandeTypeLabel(demande.type))}</span><span>${escapeHtml(profil)}</span><span>Événement : ${escapeHtml(getDemandeEventDate(demande) || "Non renseignée")}</span><span>${escapeHtml(demande.nombrePersonnes ? `${demande.nombrePersonnes} personne(s)` : "Personnes : non renseigné")}</span><span>Reçue : ${escapeHtml(formatDate(demande.createdAt))}</span></div></div><div class="admin-order-view"><button type="button" class="btn btn-secondary" data-demande-open="${escapeAttr(demande.id)}">Voir le détail</button></div>`;
-    row.querySelector("[data-demande-open]").addEventListener("click", () => renderDemandeDetail(demande.id));
-    els.demandesList.appendChild(row);
-  });
-}
-
-function renderDemandeDetail(id) {
-  const demande = demandesCache.find((item) => item.id === id);
-  if (!demande || !els.demandeDetailPanel) return;
-  selectedDemandeId = id;
-  if (els.demandeDetailTitle) els.demandeDetailTitle.textContent = `${getDemandeTypeLabel(demande.type)} — ${((demande.client || {}).prenom || "")} ${((demande.client || {}).nom || "")}`.trim();
-  if (els.demandeDetailContent) els.demandeDetailContent.innerHTML = buildDemandeDetailHtml(demande);
-  if (els.demandeDetailStatus) els.demandeDetailStatus.value = normalizeDemandeStatus(demande.statut);
-  const qualification = demande.qualification || {};
-  if (els.qualificationCategorie) els.qualificationCategorie.value = qualification.categorie || "a_qualifier";
-  if (els.qualificationSousCategorie) els.qualificationSousCategorie.value = qualification.sousCategorie || "";
-  if (els.qualificationPriorite) els.qualificationPriorite.value = qualification.priorite || "normale";
-  if (els.qualificationPotentiel) els.qualificationPotentiel.value = qualification.potentiel || "non_evalue";
-  if (els.qualificationBesoinPrecision) els.qualificationBesoinPrecision.checked = Boolean(qualification.besoinPrecision);
-  if (els.qualificationCommentaire) els.qualificationCommentaire.value = qualification.commentaireInterne || "";
-  if (els.qualificationMessage) els.qualificationMessage.textContent = "";
-  if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = "";
-  els.demandeDetailPanel.hidden = false;
-}
-
-function buildDemandeDetailHtml(demande) {
-  const rows = [];
-  Object.entries(demande).forEach(([key, value]) => {
-    if (key === "id" || value === undefined || value === null || value === "") return;
-    appendDemandeDetailRows(rows, key, value);
-  });
-  return `<div class="admin-order-detail-grid">${rows.join("")}</div>`;
-}
-
-function appendDemandeDetailRows(rows, key, value) {
-  if (value && typeof value === "object" && !Array.isArray(value) && typeof value.toMillis !== "function" && !(value instanceof Date)) {
-    Object.entries(value).forEach(([childKey, childValue]) => {
-      if (childValue !== undefined && childValue !== null && childValue !== "") appendDemandeDetailRows(rows, `${key}.${childKey}`, childValue);
-    });
-    return;
-  }
-  const label = formatDemandeFieldLabel(key);
-  const displayValue = key === "createdAt" ? formatDate(value) : formatDemandeValue(value);
-  if (!displayValue) return;
-  rows.push(`<div><span class="admin-detail-label">${escapeHtml(label)}</span><div style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(displayValue)}</div></div>`);
-}
-
-function formatDemandeFieldLabel(key) {
-  const labels = { type: "Type", statut: "Statut", createdAt: "Date de réception", updatedAt: "Dernière modification", prenom: "Prénom", nom: "Nom", telephone: "Téléphone", email: "Email", typePrestation: "Type de prestation", description: "Description du projet", dateEvenement: "Date de l’événement", dateSouhaitee: "Date souhaitée", heure: "Heure", heureDebut: "Heure de début", heureFin: "Heure de fin", duree: "Durée", nombrePersonnes: "Nombre de personnes", service: "Service", demande: "Demande", preferencesMenu: "Préférences menu", budget: "Budget", contraintesAlimentaires: "Contraintes alimentaires", precisionsContraintes: "Précisions contraintes", adresse: "Adresse", codePostal: "Code postal", ville: "Ville", besoinsParticuliers: "Besoins particuliers", informationsComplementaires: "Informations complémentaires", description: "Description", services: "Services", ordreComposition: "Ordre / composition", alimentsPrioriser: "Aliments à privilégier", alimentsEviter: "Aliments à éviter", allergies: "Allergies", equipements: "Équipements", informations: "Informations", client: "Client", projet: "Projet", lieu: "Lieu", repas: "Repas", preferences: "Préférences", cuisine: "Cuisine" };
-  const parts = String(key).split(".");
-  return parts.map((part) => labels[part] || part.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())).join(" · ");
-}
-
+function startDemandes() { if (!auth.currentUser || !els.requestsSection || demandesInitialized) return; demandesInitialized = true; demandesFilter = "all"; if (els.demandesRefresh) els.demandesRefresh.addEventListener("click", () => { void loadDemandes(); }); els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => button.addEventListener("click", () => { demandesFilter = button.dataset.demandeFilter || "all"; els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderDemandes(); })); if (els.demandeDetailClose) els.demandeDetailClose.addEventListener("click", closeDemandeDetail); if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); }); if (els.qualificationSave) els.qualificationSave.addEventListener("click", () => { void saveDemandeQualification(); }); void loadDemandes(); }
+async function loadDemandes() { if (!auth.currentUser || !els.demandesList) return; setDemandesState("loading"); try { const snap = await getDocs(collection(db, "demandes")); demandesCache = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length); renderDemandes(); setDemandesState(demandesCache.length ? "ready" : "empty"); } catch (error) { console.error("Impossible de charger les demandes :", error); setDemandesState("error", `Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`); } }
+function renderDemandes() { if (!els.demandesList) return; const rows = demandesCache.filter((demande) => { if (demandesFilter === "all") return true; if (demandesFilter === "particulier" || demandesFilter === "professionnel") { const client = demande.client && typeof demande.client === "object" ? demande.client : {}; return client.particulierProfessionnel === demandesFilter; } return normalizeDemandeStatus(demande.statut) === demandesFilter; }); els.demandesList.innerHTML = ""; if (!rows.length) { if (els.demandesEmpty) els.demandesEmpty.hidden = false; return; } if (els.demandesEmpty) els.demandesEmpty.hidden = true; rows.forEach((demande) => { const client = demande.client && typeof demande.client === "object" ? demande.client : {}; const profil = client.particulierProfessionnel === "professionnel" ? "Professionnel" : client.particulierProfessionnel === "particulier" ? "Particulier" : "Non renseigné"; const row = document.createElement("article"); row.className = "admin-order-row"; row.innerHTML = `<div class="admin-order-main"><div class="admin-order-title-line"><strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong><span class="admin-order-status">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span></div><div class="admin-order-meta"><span>${escapeHtml(getDemandeTypeLabel(demande.type))}</span><span>${escapeHtml(profil)}</span><span>Événement : ${escapeHtml(getDemandeEventDate(demande) || "Non renseignée")}</span><span>${escapeHtml(demande.nombrePersonnes ? `${demande.nombrePersonnes} personne(s)` : "Personnes : non renseigné")}</span><span>Reçue : ${escapeHtml(formatDate(demande.createdAt))}</span></div></div><div class="admin-order-view"><button type="button" class="btn btn-secondary" data-demande-open="${escapeAttr(demande.id)}">Voir le détail</button></div>`; row.querySelector("[data-demande-open]").addEventListener("click", () => renderDemandeDetail(demande.id)); els.demandesList.appendChild(row); }); }
+function renderDemandeDetail(id) { const demande = demandesCache.find((item) => item.id === id); if (!demande || !els.demandeDetailPanel) return; selectedDemandeId = id; if (els.demandeDetailTitle) els.demandeDetailTitle.textContent = `${getDemandeTypeLabel(demande.type)} — ${((demande.client || {}).prenom || "")} ${((demande.client || {}).nom || "")}`.trim(); if (els.demandeDetailContent) els.demandeDetailContent.innerHTML = buildDemandeDetailHtml(demande); if (els.demandeDetailStatus) els.demandeDetailStatus.value = normalizeDemandeStatus(demande.statut); const qualification = demande.qualification || {}; if (els.qualificationCategorie) els.qualificationCategorie.value = qualification.categorie || "a_qualifier"; if (els.qualificationSousCategorie) els.qualificationSousCategorie.value = qualification.sousCategorie || ""; if (els.qualificationPriorite) els.qualificationPriorite.value = qualification.priorite || "normale"; if (els.qualificationPotentiel) els.qualificationPotentiel.value = qualification.potentiel || "non_evalue"; if (els.qualificationBesoinPrecision) els.qualificationBesoinPrecision.checked = Boolean(qualification.besoinPrecision); if (els.qualificationCommentaire) els.qualificationCommentaire.value = qualification.commentaireInterne || ""; if (els.qualificationMessage) els.qualificationMessage.textContent = ""; if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = ""; els.demandeDetailPanel.hidden = false; }
+function buildDemandeDetailHtml(demande) { const rows = []; Object.entries(demande).forEach(([key, value]) => { if (key === "id" || value === undefined || value === null || value === "") return; appendDemandeDetailRows(rows, key, value); }); return `<div class="admin-order-detail-grid">${rows.join("")}</div>`; }
+function appendDemandeDetailRows(rows, key, value) { if (value && typeof value === "object" && !Array.isArray(value) && typeof value.toMillis !== "function" && !(value instanceof Date)) { Object.entries(value).forEach(([childKey, childValue]) => { if (childValue !== undefined && childValue !== null && childValue !== "") appendDemandeDetailRows(rows, `${key}.${childKey}`, childValue); }); return; } const label = formatDemandeFieldLabel(key); const displayValue = key === "createdAt" ? formatDate(value) : formatDemandeValue(value); if (!displayValue) return; rows.push(`<div><span class="admin-detail-label">${escapeHtml(label)}</span><div style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(displayValue)}</div></div>`); }
+function formatDemandeFieldLabel(key) { const labels = { type: "Type", statut: "Statut", createdAt: "Date de réception", updatedAt: "Dernière modification", prenom: "Prénom", nom: "Nom", telephone: "Téléphone", email: "Email", typePrestation: "Type de prestation", description: "Description du projet", dateEvenement: "Date de l’événement", dateSouhaitee: "Date souhaitée", heure: "Heure", heureDebut: "Heure de début", heureFin: "Heure de fin", duree: "Durée", nombrePersonnes: "Nombre de personnes", service: "Service", demande: "Demande", preferencesMenu: "Préférences menu", budget: "Budget", contraintesAlimentaires: "Contraintes alimentaires", precisionsContraintes: "Précisions contraintes", adresse: "Adresse", codePostal: "Code postal", ville: "Ville", besoinsParticuliers: "Besoins particuliers", informationsComplementaires: "Informations complémentaires", description: "Description", services: "Services", ordreComposition: "Ordre / composition", alimentsPrioriser: "Aliments à privilégier", alimentsEviter: "Aliments à éviter", allergies: "Allergies", equipements: "Équipements", informations: "Informations", client: "Client", projet: "Projet", lieu: "Lieu", repas: "Repas", preferences: "Préférences", cuisine: "Cuisine" }; const parts = String(key).split("."); return parts.map((part) => labels[part] || part.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())).join(" · "); }
 function formatDemandeValue(value) { if (Array.isArray(value)) return value.map((item) => typeof item === "object" ? JSON.stringify(item) : String(item)).join(", "); if (value instanceof Date) return formatDate(value); if (value && typeof value.toMillis === "function") return formatDate(value); return String(value); }
-function getDemandeTypeLabel(type) {
-  const labels = {
-    traiteur: "Traiteur",
-    chef_domicile: "Chef à domicile",
-    demande_particuliere: "Demande particulière",
-    accompagnement: "Accompagnement"
-  };
-  return labels[type] || "Type non renseigné";
-}
+function getDemandeTypeLabel(type) { const labels = { traiteur: "Traiteur", chef_domicile: "Chef à domicile", demande_particuliere: "Demande particulière", accompagnement: "Accompagnement" }; return labels[type] || "Type non renseigné"; }
 function getDemandeEventDate(demande) { return demande.dateEvenement || demande.dateSouhaitee || ""; }
 function normalizeDemandeStatus(status) { const value = String(status || "").trim().toLowerCase(); return Object.prototype.hasOwnProperty.call(DEMANDE_STATUSES, value) ? value : "nouvelle"; }
 function getDemandeStatusLabel(status) { return DEMANDE_STATUSES[normalizeDemandeStatus(status)]; }
@@ -281,42 +58,45 @@ function toMillis(value) { if (value === null || value === undefined || value ==
 function formatDate(value) { const millis = toMillis(value); if (!millis) return "Date inconnue"; try { return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(millis)); } catch (_) { return "Date inconnue"; } }
 function setDemandesState(state, message = "") { if (els.demandesLoading) els.demandesLoading.hidden = state !== "loading"; if (els.demandesError) { els.demandesError.hidden = state !== "error"; els.demandesError.textContent = message; } if (els.demandesEmpty) els.demandesEmpty.hidden = state !== "empty"; if (els.demandesList) els.demandesList.hidden = state === "loading" || state === "error"; }
 function closeDemandeDetail() { selectedDemandeId = null; if (els.demandeDetailPanel) els.demandeDetailPanel.hidden = true; }
-async function saveDemandeQualification() {
-  if (!auth.currentUser || !selectedDemandeId) return;
-
-  const qualification = {
-    categorie: els.qualificationCategorie?.value || "a_qualifier",
-    sousCategorie: (els.qualificationSousCategorie?.value || "").trim(),
-    priorite: els.qualificationPriorite?.value || "normale",
-    potentiel: els.qualificationPotentiel?.value || "non_evalue",
-    besoinPrecision: Boolean(els.qualificationBesoinPrecision?.checked),
-    commentaireInterne: (els.qualificationCommentaire?.value || "").trim()
-  };
-
-  if (els.qualificationSave) els.qualificationSave.disabled = true;
-  if (els.qualificationMessage) els.qualificationMessage.textContent = "Enregistrement…";
-
-  try {
-    await updateDoc(doc(db, "demandes", selectedDemandeId), {
-      qualification,
-      updatedAt: serverTimestamp()
-    });
-
-    const local = demandesCache.find((item) => item.id === selectedDemandeId);
-    if (local) local.qualification = qualification;
-
-    if (els.qualificationMessage) els.qualificationMessage.textContent = "Qualification enregistrée.";
-  } catch (error) {
-    console.error("Impossible d’enregistrer la qualification :", error);
-    if (els.qualificationMessage) {
-      els.qualificationMessage.textContent = `Impossible d’enregistrer la qualification : ${error?.message || "erreur inconnue"}`;
-    }
-  } finally {
-    if (els.qualificationSave) els.qualificationSave.disabled = false;
-  }
-}
-
+async function saveDemandeQualification() { if (!auth.currentUser || !selectedDemandeId) return; const qualification = { categorie: els.qualificationCategorie?.value || "a_qualifier", sousCategorie: (els.qualificationSousCategorie?.value || "").trim(), priorite: els.qualificationPriorite?.value || "normale", potentiel: els.qualificationPotentiel?.value || "non_evalue", besoinPrecision: Boolean(els.qualificationBesoinPrecision?.checked), commentaireInterne: (els.qualificationCommentaire?.value || "").trim() }; if (els.qualificationSave) els.qualificationSave.disabled = true; if (els.qualificationMessage) els.qualificationMessage.textContent = "Enregistrement…"; try { await updateDoc(doc(db, "demandes", selectedDemandeId), { qualification, updatedAt: serverTimestamp() }); const local = demandesCache.find((item) => item.id === selectedDemandeId); if (local) local.qualification = qualification; if (els.qualificationMessage) els.qualificationMessage.textContent = "Qualification enregistrée."; } catch (error) { console.error("Impossible d’enregistrer la qualification :", error); if (els.qualificationMessage) els.qualificationMessage.textContent = `Impossible d’enregistrer la qualification : ${error?.message || "erreur inconnue"}`; } finally { if (els.qualificationSave) els.qualificationSave.disabled = false; } }
 async function saveDemandeStatus() { if (!auth.currentUser || !selectedDemandeId || !els.demandeDetailStatus) return; const status = normalizeDemandeStatus(els.demandeDetailStatus.value); if (!Object.prototype.hasOwnProperty.call(DEMANDE_STATUSES, status)) return; if (els.demandeDetailSave) els.demandeDetailSave.disabled = true; if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = "Enregistrement…"; try { await updateDoc(doc(db, "demandes", selectedDemandeId), { statut: status, updatedAt: serverTimestamp() }); const local = demandesCache.find((item) => item.id === selectedDemandeId); if (local) local.statut = status; renderDemandes(); if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = "Statut enregistré."; if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length); } catch (error) { console.error("Impossible d’enregistrer le statut de la demande :", error); if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = `Impossible d’enregistrer le statut : ${error?.message || "erreur inconnue"}`; } finally { if (els.demandeDetailSave) els.demandeDetailSave.disabled = false; } }
 function listValue(x) { return Array.isArray(x) ? x.join(", ") : x || ""; }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character])); }
 function escapeAttr(value) { return escapeHtml(value); }
+
+function startDevis() {
+  if (!auth.currentUser) return;
+  const section = document.querySelector("#quotes-section");
+  if (!section) return;
+  if (!devisInitialized) {
+    devisInitialized = true;
+    section.innerHTML = `<div class="admin-section-heading"><div><p class="admin-eyebrow">COMMERCIAL · PHASE 3</p><h2>Devis</h2><p class="muted">De la demande au suivi du devis, dans un seul espace.</p></div><div class="admin-orders-header-actions"><button id="devis-new-btn" type="button" class="btn btn-primary">＋ Créer un devis</button></div></div><div class="lcc-devis-steps"><span>Demande</span><b>→</b><span>Créer</span><b>→</b><span>Client</span><b>→</b><span>Prestations</span><b>→</b><span>Total</span><b>→</b><span>PDF</span><b>→</b><span>Envoi</span><b>→</b><span>Suivi</span></div><div id="devis-status" class="admin-alert" hidden></div><div class="lcc-devis-grid"><section class="admin-section lcc-devis-form"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">CRÉATION</p><h3>Nouveau devis</h3></div><span id="devis-number" class="lcc-devis-number">Brouillon</span></div><div class="admin-form-grid"><label>Demande source<select id="devis-demande"><option value="">Sélectionner une demande…</option></select></label><label>Statut<select id="devis-statut"><option value="brouillon">Brouillon</option><option value="envoye">Envoyé</option><option value="accepte">Accepté</option><option value="refuse">Refusé</option><option value="expire">Expiré</option></select></label><label>Nom du client<input id="devis-client-nom" type="text"></label><label>Email<input id="devis-client-email" type="email"></label><label>Téléphone<input id="devis-client-telephone" type="tel"></label><label>Validité (jours)<input id="devis-validite" type="number" min="1" value="30"></label></div><div class="lcc-devis-subheading"><h4>Prestations</h4><button id="devis-add-line" type="button" class="btn btn-secondary">＋ Ajouter une prestation</button></div><div id="devis-lines"></div><div class="admin-form-grid lcc-devis-finance"><label>Remise (%)<input id="devis-remise" type="number" min="0" max="100" step="0.01" value="0"></label><label>Remise (€)<input id="devis-remise-euro" type="number" min="0" step="0.01" value="0"></label></div><label class="lcc-devis-full-label">Conditions<textarea id="devis-conditions" rows="5" placeholder="Conditions de prestation, règlement, annulation…"></textarea></label><div class="lcc-devis-total"><span>Total</span><strong id="devis-total">0,00 €</strong></div><div class="admin-form-actions"><button id="devis-save" type="button" class="btn btn-primary">Enregistrer le devis</button><button id="devis-pdf" type="button" class="btn btn-secondary">PDF / Imprimer</button><button id="devis-send" type="button" class="btn btn-secondary">Envoi par email</button></div></section><aside class="admin-section lcc-devis-tracking"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">SUIVI</p><h3>Devis enregistrés</h3></div><button id="devis-refresh" type="button" class="btn btn-secondary">↻</button></div><div id="devis-list" class="lcc-devis-list"></div></aside></div><style>.lcc-devis-steps{display:flex;align-items:center;justify-content:center;gap:.65rem;flex-wrap:wrap;padding:.85rem 1rem;margin-bottom:1rem;background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card);font-size:.78rem;font-weight:700;color:var(--color-sage-dark)}.lcc-devis-steps b{color:var(--color-text-muted)}.lcc-devis-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.7fr);gap:1rem}.lcc-devis-form,.lcc-devis-tracking{min-width:0}.lcc-devis-subheading{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:1.25rem 0 .75rem}.lcc-devis-subheading h4{margin:0;color:var(--color-sage-dark)}.lcc-devis-line{display:grid;grid-template-columns:minmax(0,1fr) 90px 120px 110px auto;gap:.5rem;align-items:center;margin-bottom:.55rem}.lcc-devis-line input{width:100%;box-sizing:border-box}.devis-line-total{font-weight:700;text-align:right}.lcc-devis-finance{margin-top:1rem}.lcc-devis-full-label{display:block;margin-top:1rem}.lcc-devis-full-label textarea{width:100%;box-sizing:border-box}.lcc-devis-total{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm)}.lcc-devis-total strong{font-family:var(--font-display);font-size:1.8rem;color:var(--color-sage-dark)}.lcc-devis-number{font-size:.8rem;font-weight:700;color:var(--color-text-muted)}.lcc-devis-list{display:grid;gap:.55rem}.lcc-devis-list-item{display:grid;gap:.2rem;width:100%;text-align:left;padding:.8rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}.lcc-devis-list-item:hover{border-color:var(--color-sage-dark)}.lcc-devis-list-item small{color:var(--color-text-muted)}@media(max-width:900px){.lcc-devis-grid{grid-template-columns:1fr}.lcc-devis-line{grid-template-columns:1fr 80px 100px auto}.devis-line-total{grid-column:1/-1;text-align:left}.lcc-devis-line .devis-line-remove{grid-column:4;grid-row:1}.lcc-devis-steps{justify-content:flex-start}}@media(max-width:600px){.lcc-devis-line{grid-template-columns:1fr 1fr}.lcc-devis-line .devis-line-label{grid-column:1/-1}.lcc-devis-line .devis-line-remove{grid-column:2;grid-row:auto}.devis-line-total{grid-column:1}.lcc-devis-subheading{align-items:flex-start;flex-direction:column}}</style>`;
+    document.querySelector("#devis-add-line")?.addEventListener("click", () => addDevisLine());
+    document.querySelector("#devis-remise")?.addEventListener("input", updateDevisTotal);
+    document.querySelector("#devis-remise-euro")?.addEventListener("input", updateDevisTotal);
+    document.querySelector("#devis-save")?.addEventListener("click", () => void saveDevis());
+    document.querySelector("#devis-pdf")?.addEventListener("click", printDevis);
+    document.querySelector("#devis-send")?.addEventListener("click", sendDevis);
+    document.querySelector("#devis-refresh")?.addEventListener("click", () => void loadDevisList());
+    document.querySelector("#devis-new-btn")?.addEventListener("click", resetDevisForm);
+    document.querySelector("#devis-demande")?.addEventListener("change", applyDevisDemande);
+    addDevisLine();
+  }
+  void loadDevisDemandes();
+  void loadDevisList();
+}
+function devisText(value) { return String(value ?? "").trim(); }
+function devisMoney(value) { const n = Number(value); return Number.isFinite(n) ? Math.max(0, n) : 0; }
+function addDevisLine(item = {}) { const container = document.querySelector("#devis-lines"); if (!container) return; const row = document.createElement("div"); row.className = "lcc-devis-line"; row.innerHTML = `<input class="devis-line-label" type="text" placeholder="Prestation" value="${escapeAttr(item.label || "")}"><input class="devis-line-qty" type="number" min="0" step="1" value="${Number(item.quantity || 1)}"><input class="devis-line-price" type="number" min="0" step="0.01" value="${Number(item.unitPrice || 0)}"><output class="devis-line-total">0,00 €</output><button type="button" class="btn btn-secondary devis-line-remove" aria-label="Supprimer la prestation">×</button>`; row.querySelectorAll("input").forEach((input) => input.addEventListener("input", updateDevisTotal)); row.querySelector(".devis-line-remove")?.addEventListener("click", () => { row.remove(); updateDevisTotal(); }); container.appendChild(row); updateDevisTotal(); }
+function getDevisLines() { return Array.from(document.querySelectorAll(".lcc-devis-line")).map((row) => ({ label: devisText(row.querySelector(".devis-line-label")?.value), quantity: devisMoney(row.querySelector(".devis-line-qty")?.value), unitPrice: devisMoney(row.querySelector(".devis-line-price")?.value) })).filter((line) => line.label || line.unitPrice); }
+function updateDevisTotal() { const lines = getDevisLines(); const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0); const pct = Math.min(100, Math.max(0, devisMoney(document.querySelector("#devis-remise")?.value))); const euro = Math.min(subtotal, devisMoney(document.querySelector("#devis-remise-euro")?.value)); const total = Math.max(0, subtotal - subtotal * pct / 100 - euro); document.querySelectorAll(".lcc-devis-line").forEach((row) => { const q = devisMoney(row.querySelector(".devis-line-qty")?.value); const p = devisMoney(row.querySelector(".devis-line-price")?.value); const out = row.querySelector(".devis-line-total"); if (out) out.textContent = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(q * p); }); const totalEl = document.querySelector("#devis-total"); if (totalEl) totalEl.textContent = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(total); return { subtotal, pct, euro, total, lines }; }
+async function loadDevisDemandes() { const select = document.querySelector("#devis-demande"); if (!select || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "demandes")); devisDemandes = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a,b) => toMillis(b.createdAt)-toMillis(a.createdAt)); const current = select.value; select.innerHTML = `<option value="">Sélectionner une demande…</option>`; devisDemandes.forEach((d) => { const c = d.client || {}; const name = `${c.prenom || ""} ${c.nom || ""}`.trim() || "Client sans nom"; const opt = document.createElement("option"); opt.value = d.id; opt.textContent = `${name} — ${d.type || "Demande"}${d.dateEvenement ? ` — ${d.dateEvenement}` : ""}`; select.appendChild(opt); }); if (current) select.value = current; } catch (error) { showDevisStatus(`Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`, true); } }
+function applyDevisDemande() { const id = document.querySelector("#devis-demande")?.value; const demande = devisDemandes.find((item) => item.id === id); if (!demande) return; devisSelectedId = id; const client = demande.client || {}; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value || ""; }; set("#devis-client-nom", `${client.prenom || ""} ${client.nom || ""}`.trim()); set("#devis-client-email", client.email); set("#devis-client-telephone", client.telephone); const first = document.querySelector(".lcc-devis-line"); if (first && !first.querySelector(".devis-line-label")?.value) { const label = demande.projet?.typePrestation || demande.type || "Prestation"; first.querySelector(".devis-line-label").value = label; } updateDevisTotal(); }
+function resetDevisForm() { devisSelectedId = null; devisCurrent = null; const demande = document.querySelector("#devis-demande"); if (demande) demande.value = ""; const status = document.querySelector("#devis-statut"); if (status) status.value = "brouillon"; ["#devis-client-nom","#devis-client-email","#devis-client-telephone","#devis-conditions"].forEach((selector) => { const el = document.querySelector(selector); if (el) el.value = ""; }); ["#devis-remise","#devis-remise-euro"].forEach((selector) => { const el = document.querySelector(selector); if (el) el.value = "0"; }); const lines = document.querySelector("#devis-lines"); if (lines) lines.innerHTML = ""; addDevisLine(); const number = document.querySelector("#devis-number"); if (number) number.textContent = "Brouillon"; updateDevisTotal(); }
+function collectDevisForm() { const calc = updateDevisTotal(); return { demandeId: document.querySelector("#devis-demande")?.value || null, statut: document.querySelector("#devis-statut")?.value || "brouillon", client: { nom: devisText(document.querySelector("#devis-client-nom")?.value), email: devisText(document.querySelector("#devis-client-email")?.value), telephone: devisText(document.querySelector("#devis-client-telephone")?.value) }, prestations: calc.lines, sousTotal: calc.subtotal, remisePourcentage: calc.pct, remiseEuro: calc.euro, total: calc.total, conditions: devisText(document.querySelector("#devis-conditions")?.value), validiteJours: Math.max(1, Number(document.querySelector("#devis-validite")?.value || 30)), updatedAt: serverTimestamp() }; }
+async function saveDevis() { if (!auth.currentUser) return; const payload = collectDevisForm(); if (!payload.client.nom && !payload.demandeId) { showDevisStatus("Sélectionnez une demande ou renseignez le client.", true); return; } const id = devisCurrent?.id || `DEV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`; try { await setDoc(doc(db, "devis", id), { ...payload, createdAt: devisCurrent?.createdAt || serverTimestamp() }, { merge: true }); devisCurrent = { id, ...payload }; const number = document.querySelector("#devis-number"); if (number) number.textContent = id; showDevisStatus("Devis enregistré dans Firestore."); await loadDevisList(); } catch (error) { showDevisStatus(`Impossible d’enregistrer le devis : ${error?.message || "erreur inconnue"}`, true); } }
+async function loadDevisList() { const list = document.querySelector("#devis-list"); if (!list || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "devis")); const docs = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a,b) => toMillis(b.createdAt)-toMillis(a.createdAt)); list.innerHTML = ""; if (!docs.length) { list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▤</span><h3>Aucun devis</h3><p>Créez votre premier devis à partir d’une demande.</p></div>`; return; } docs.forEach((d) => { const row = document.createElement("button"); row.type = "button"; row.className = "lcc-devis-list-item"; row.innerHTML = `<strong>${escapeHtml(d.id)}</strong><span>${escapeHtml(d.client?.nom || "Client")}</span><small>${escapeHtml(d.statut || "brouillon")} · ${escapeHtml(formatDate(d.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(Number(d.total || 0)))}</small>`; row.addEventListener("click", () => openDevis(d)); list.appendChild(row); }); } catch (error) { showDevisStatus(`Impossible de charger les devis : ${error?.message || "erreur inconnue"}`, true); } }
+function openDevis(d) { devisCurrent = d; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value ?? ""; }; const number = document.querySelector("#devis-number"); if (number) number.textContent = d.id; set("#devis-statut", d.statut || "brouillon"); set("#devis-client-nom", d.client?.nom); set("#devis-client-email", d.client?.email); set("#devis-client-telephone", d.client?.telephone); set("#devis-remise", d.remisePourcentage || 0); set("#devis-remise-euro", d.remiseEuro || 0); set("#devis-conditions", d.conditions || ""); const lines = document.querySelector("#devis-lines"); if (lines) lines.innerHTML = ""; (d.prestations || []).forEach((line) => addDevisLine(line)); if (!(d.prestations || []).length) addDevisLine(); const demande = document.querySelector("#devis-demande"); if (demande) demande.value = d.demandeId || ""; updateDevisTotal(); }
+function printDevis() { if (!devisCurrent) { showDevisStatus("Enregistrez d’abord le devis avant de générer son PDF.", true); return; } window.print(); }
+function sendDevis() { const email = document.querySelector("#devis-client-email")?.value.trim(); if (!email) { showDevisStatus("Aucune adresse email client n’est renseignée.", true); return; } const number = document.querySelector("#devis-number")?.textContent || "devis"; const subject = encodeURIComponent(`Devis ${number} — Le Carnet du Chef`); const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver votre devis ${number}.\n\nLe Carnet du Chef`); window.location.href = `mailto:${email}?subject=${subject}&body=${body}`; }
+function showDevisStatus(message, isError = false) { const el = document.querySelector("#devis-status"); if (!el) return; el.textContent = message; el.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; el.hidden = false; }
