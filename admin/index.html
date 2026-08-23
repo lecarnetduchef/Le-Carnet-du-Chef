@@ -66,221 +66,150 @@
 
         <main class="admin-content">
           <section id="dashboard-section" class="admin-view active" data-admin-view>
-            <div class="admin-section-heading">
-              <div><p class="admin-eyebrow">VUE D’ENSEMBLE</p><h2>Tableau de bord</h2></div>
-              <p class="muted">Un accès rapide aux principaux indicateurs de l’ADMIN.</p>
+            <div class="lcc-dashboard-hero">
+              <div>
+                <p class="admin-eyebrow">COCKPIT ADMINISTRATEUR</p>
+                <h2>Bonjour 👋</h2>
+                <p>Voici l’état actuel de l’activité du Carnet du Chef.</p>
+              </div>
+              <div class="lcc-dashboard-live"><span class="lcc-live-dot"></span> Données Firestore en direct</div>
             </div>
-            <div class="admin-dashboard-grid">
-              <article class="admin-stat-card"><span>Commandes</span><strong id="stat-orders">À venir</strong><small>Gestion des commandes en ligne</small></article>
-              <article class="admin-stat-card"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article>
-              <article class="admin-stat-card"><span>Produits en rupture</span><strong id="stat-out-products">—</strong><small>Actifs avec stock disponible à 0</small></article>
-              <article class="admin-stat-card"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Total des quantités disponibles</small></article>
-              <article class="admin-stat-card"><span>Demandes</span><strong>À venir</strong><small>Traiteur, chef à domicile, demandes particulières</small></article>
-              <article class="admin-stat-card"><span>Devis</span><strong>À venir</strong><small>Suivi des demandes de devis</small></article>
-              <article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article>
-              <article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients centralisée</small></article>
+
+            <div class="admin-dashboard-grid lcc-kpi-grid">
+              <article class="admin-stat-card lcc-kpi lcc-kpi-green"><span>Commandes</span><strong id="stat-orders">0</strong><small>Commandes actuellement ouvertes dans le suivi</small></article>
+              <article class="admin-stat-card lcc-kpi lcc-kpi-purple"><span>Demandes</span><strong id="stat-demandes">0</strong><small>Demandes enregistrées dans Firestore</small></article>
+              <article class="admin-stat-card lcc-kpi lcc-kpi-blue"><span>Devis</span><strong id="stat-devis">0</strong><small>Devis enregistrés</small></article>
+              <article class="admin-stat-card lcc-kpi lcc-kpi-sage"><span>Factures</span><strong id="stat-factures">0</strong><small>Factures enregistrées</small></article>
+              <article class="admin-stat-card lcc-kpi"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article>
+              <article class="admin-stat-card lcc-kpi lcc-kpi-warning"><span>Ruptures</span><strong id="stat-out-products">—</strong><small>Produits actifs avec stock à zéro</small></article>
+              <article class="admin-stat-card lcc-kpi"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Quantité disponible cumulée</small></article>
+              <article class="admin-stat-card lcc-kpi"><span>Clients</span><strong id="stat-clients">0</strong><small>Clients enregistrés</small></article>
             </div>
+
             <div id="dashboard-status" class="admin-alert" hidden></div>
 
-            <article id="dashboard-stock-alert" class="admin-stat-card" hidden style="grid-column: 1 / -1; min-height: 190px;">
-              <span>⚠️ Alertes stock</span>
-              <strong id="dashboard-stock-alert-count">—</strong>
-              <small id="dashboard-stock-alert-summary">Produits nécessitant une surveillance</small>
-              <div id="dashboard-stock-alert-list" style="margin-top:1rem;"></div>
-            </article>
+            <div class="lcc-dashboard-main-grid">
+              <section class="lcc-dashboard-panel lcc-service-panel" aria-labelledby="dashboard-service-title">
+                <div class="lcc-panel-heading"><div><p class="admin-eyebrow">SERVICE</p><h3 id="dashboard-service-title">État des commandes</h3></div><span class="lcc-panel-icon">◷</span></div>
+                <p class="lcc-panel-description">Le contrôle existant des horaires et de l’ouverture/fermeture reste prioritaire.</p>
+                <div id="dashboard-service-placeholder" class="lcc-service-placeholder">Le contrôle détaillé est chargé automatiquement ici.</div>
+              </section>
+
+              <section class="lcc-dashboard-panel" aria-labelledby="dashboard-catalogue-title">
+                <div class="lcc-panel-heading"><div><p class="admin-eyebrow">CATALOGUE</p><h3 id="dashboard-catalogue-title">État du catalogue</h3></div><span class="lcc-panel-icon">🍽️</span></div>
+                <div class="lcc-catalogue-metrics">
+                  <div><strong id="dashboard-catalogue-active">—</strong><span>actifs</span></div>
+                  <div><strong id="dashboard-catalogue-out">—</strong><span>en rupture</span></div>
+                  <div><strong id="dashboard-catalogue-stock">—</strong><span>en stock</span></div>
+                </div>
+                <a class="lcc-dashboard-link" href="plats.html">Gérer les produits <span>→</span></a>
+              </section>
+            </div>
+
+            <div class="lcc-dashboard-lower-grid">
+              <article id="dashboard-stock-alert" class="lcc-dashboard-panel lcc-alert-panel" hidden>
+                <div class="lcc-panel-heading"><div><p class="admin-eyebrow">À SURVEILLER</p><h3>Alertes stock</h3></div><strong id="dashboard-stock-alert-count" class="lcc-alert-count">—</strong></div>
+                <p id="dashboard-stock-alert-summary" class="lcc-panel-description">Produits nécessitant une surveillance</p>
+                <div id="dashboard-stock-alert-list" class="lcc-alert-list"></div>
+                <a class="lcc-dashboard-link" href="#" data-admin-target="stocks-section">Voir les stocks <span>→</span></a>
+              </article>
+
+              <article class="lcc-dashboard-panel">
+                <div class="lcc-panel-heading"><div><p class="admin-eyebrow">ACTIVITÉ CLIENT</p><h3>Demandes</h3></div><span class="lcc-panel-icon">✉</span></div>
+                <div class="lcc-demandes-summary"><strong id="dashboard-demandes-total">0</strong><span>demandes enregistrées</span></div>
+                <div class="lcc-demandes-status-row"><span>Accès à la gestion</span><button type="button" class="btn btn-secondary" data-admin-target="requests-section">Voir les demandes</button></div>
+              </article>
+
+              <article class="lcc-dashboard-panel">
+                <div class="lcc-panel-heading"><div><p class="admin-eyebrow">ACCÈS RAPIDE</p><h3>Catalogue</h3></div><span class="lcc-panel-icon">↗</span></div>
+                <div class="lcc-quick-links">
+                  <a href="formules.html">Formules <span>→</span></a>
+                  <a href="plats.html">Plats <span>→</span></a>
+                  <a href="boissons.html">Boissons <span>→</span></a>
+                  <a href="desserts.html">Desserts <span>→</span></a>
+                </div>
+              </article>
+            </div>
+
+            <div id="dashboard-order-control-anchor" class="lcc-dashboard-service-anchor" aria-hidden="true"></div>
+
+            <style>
+              #dashboard-section { --lcc-purple:#7b62a8; --lcc-blue:#5f7fbd; --lcc-green:#5d8d3d; --lcc-sage:#7d9a66; --lcc-warm:#c58b34; }
+              .lcc-dashboard-hero{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1.35rem 1.5rem;background:linear-gradient(135deg,#fff 0%,#f7f4ec 100%);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}
+              .lcc-dashboard-hero h2{margin:.1rem 0 .3rem;font-family:var(--font-display);font-size:2rem;color:var(--color-sage-dark)}
+              .lcc-dashboard-hero p:not(.admin-eyebrow){margin:0;color:var(--color-text-muted)}
+              .lcc-dashboard-live{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border:1px solid var(--color-border);border-radius:999px;background:#fff;font-size:.78rem;font-weight:700;color:var(--color-sage-dark);white-space:nowrap}
+              .lcc-live-dot{width:.55rem;height:.55rem;border-radius:50%;background:#6d9b4b;box-shadow:0 0 0 4px rgba(109,155,75,.12)}
+              .lcc-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}
+              .lcc-kpi{min-height:125px;position:relative;overflow:hidden}
+              .lcc-kpi:after{content:"";position:absolute;right:-18px;top:-18px;width:64px;height:64px;border-radius:50%;background:rgba(93,141,61,.08)}
+              .lcc-kpi-purple:after{background:rgba(123,98,168,.1)} .lcc-kpi-blue:after{background:rgba(95,127,189,.1)} .lcc-kpi-sage:after{background:rgba(125,154,102,.12)} .lcc-kpi-warning:after{background:rgba(197,139,52,.12)}
+              .lcc-kpi-purple strong{color:var(--lcc-purple)} .lcc-kpi-blue strong{color:var(--lcc-blue)} .lcc-kpi-sage strong{color:var(--lcc-sage)} .lcc-kpi-warning strong{color:var(--lcc-warm)}
+              .lcc-dashboard-main-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:1rem;margin-top:1rem}
+              .lcc-dashboard-lower-grid{display:grid;grid-template-columns:1.2fr .9fr .9fr;gap:1rem;margin-top:1rem}
+              .lcc-dashboard-panel{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:1.15rem;box-shadow:var(--shadow-card);min-width:0}
+              .lcc-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.7rem}.lcc-panel-heading h3{margin:0;color:var(--color-sage-dark);font-family:var(--font-display)}
+              .lcc-panel-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--color-cream);color:var(--color-sage-dark)}
+              .lcc-panel-description{margin:.35rem 0 1rem;color:var(--color-text-muted);font-size:var(--fs-sm);line-height:1.5}
+              .lcc-service-placeholder{padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm);color:var(--color-text-muted);font-size:var(--fs-sm)}
+              .lcc-catalogue-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin:1rem 0}.lcc-catalogue-metrics div{padding:.75rem;background:var(--color-cream);border-radius:var(--radius-sm);text-align:center}.lcc-catalogue-metrics strong{display:block;font-family:var(--font-display);font-size:1.5rem;color:var(--color-sage-dark)}.lcc-catalogue-metrics span{font-size:.72rem;color:var(--color-text-muted)}
+              .lcc-dashboard-link{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-top:1px solid var(--color-border);color:var(--color-sage-dark);font-size:var(--fs-sm);font-weight:700;text-decoration:none}.lcc-dashboard-link:hover{text-decoration:underline}
+              .lcc-alert-panel{display:block}.lcc-alert-count{min-width:34px;height:34px;padding:0 .55rem;display:grid;place-items:center;border-radius:999px;background:#fff1dd;color:#8c611f}.lcc-alert-list{display:grid;gap:.55rem;max-height:220px;overflow:auto}.lcc-alert-list > div{padding:.65rem .7rem!important;border:1px solid var(--color-border);border-radius:10px;background:#fff}
+              .lcc-demandes-summary{display:flex;align-items:baseline;gap:.65rem;margin:1rem 0}.lcc-demandes-summary strong{font-family:var(--font-display);font-size:2.1rem;color:var(--lcc-purple)}.lcc-demandes-summary span{color:var(--color-text-muted);font-size:var(--fs-sm)}.lcc-demandes-status-row{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding-top:.8rem;border-top:1px solid var(--color-border);font-size:var(--fs-sm);color:var(--color-text-muted)}
+              .lcc-quick-links{display:grid;gap:.45rem}.lcc-quick-links a{display:flex;justify-content:space-between;align-items:center;padding:.7rem .75rem;background:var(--color-cream);border-radius:10px;color:var(--color-sage-dark);text-decoration:none;font-size:var(--fs-sm);font-weight:700}.lcc-quick-links a:hover{background:#e8eadf}
+              .lcc-dashboard-service-anchor{height:0;overflow:hidden}.lcc-dashboard-service-anchor + *{margin-top:0}
+              #dashboard-section #dashboard-order-control{margin-top:1rem;grid-column:1/-1}
+              @media (max-width:1100px){.lcc-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lcc-dashboard-lower-grid{grid-template-columns:1fr 1fr}.lcc-dashboard-lower-grid>.lcc-dashboard-panel:last-child{grid-column:1/-1}.lcc-dashboard-main-grid{grid-template-columns:1fr}}
+              @media (max-width:700px){.lcc-dashboard-hero{align-items:flex-start;flex-direction:column}.lcc-kpi-grid,.lcc-dashboard-lower-grid{grid-template-columns:1fr}.lcc-dashboard-lower-grid>.lcc-dashboard-panel:last-child{grid-column:auto}.lcc-dashboard-live{white-space:normal}.lcc-catalogue-metrics{grid-template-columns:1fr}}
+            </style>
           </section>
 
           <section id="orders-section" class="admin-view" data-admin-view hidden>
             <div class="admin-section-heading">
               <div><p class="admin-eyebrow">GESTION</p><h2>Commandes</h2></div>
-              <div class="admin-orders-header-actions">
-                <span class="admin-orders-total"><strong id="orders-total">0</strong> commande(s)</span>
-                <button id="orders-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button>
-              </div>
+              <div class="admin-orders-header-actions"><span class="admin-orders-total"><strong id="orders-total">0</strong> commande(s)</span><button id="orders-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button></div>
             </div>
-
             <div class="admin-order-filters" role="toolbar" aria-label="Filtres des commandes">
-              <button type="button" class="admin-filter-btn active" data-order-filter="all">Toutes</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="new">Nouvelles</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="preparing">En préparation</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="ready">Prêtes</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="pickup">Retrait</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="delivery">Livraison</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="completed">Terminées</button>
-              <button type="button" class="admin-filter-btn" data-order-filter="cancelled">Annulées</button>
+              <button type="button" class="admin-filter-btn active" data-order-filter="all">Toutes</button><button type="button" class="admin-filter-btn" data-order-filter="new">Nouvelles</button><button type="button" class="admin-filter-btn" data-order-filter="preparing">En préparation</button><button type="button" class="admin-filter-btn" data-order-filter="ready">Prêtes</button><button type="button" class="admin-filter-btn" data-order-filter="pickup">Retrait</button><button type="button" class="admin-filter-btn" data-order-filter="delivery">Livraison</button><button type="button" class="admin-filter-btn" data-order-filter="completed">Terminées</button><button type="button" class="admin-filter-btn" data-order-filter="cancelled">Annulées</button>
             </div>
-
-            <div id="orders-list-status" class="admin-alert" hidden aria-live="polite"></div>
-            <div id="orders-list" class="admin-orders-list" aria-live="polite">
-              <div class="admin-empty-state compact"><span class="admin-empty-icon">▣</span><h3>Chargement des commandes</h3><p>Les commandes disponibles seront affichées ici.</p></div>
-            </div>
-
-            <section id="order-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="order-detail-title">
-              <div class="admin-section-heading compact">
-                <div><p class="admin-eyebrow">DÉTAIL</p><h3 id="order-detail-title">Commande</h3></div>
-                <button id="order-detail-close" type="button" class="btn btn-secondary">Fermer</button>
-              </div>
-              <div id="order-detail-content"></div>
-              <div class="admin-order-status-editor">
-                <label for="order-detail-status">Statut de la commande</label>
-                <div class="admin-form-actions">
-                  <select id="order-detail-status">
-                    <option>Nouvelle</option>
-                    <option>En préparation</option>
-                    <option>Prête</option>
-                    <option>Terminée</option>
-                    <option>Annulée</option>
-                  </select>
-                  <button id="order-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button>
-                  <span id="order-detail-status-message" class="muted" aria-live="polite"></span>
-                </div>
-              </div>
-            </section>
+            <div id="orders-list-status" class="admin-alert" hidden aria-live="polite"></div><div id="orders-list" class="admin-orders-list" aria-live="polite"><div class="admin-empty-state compact"><span class="admin-empty-icon">▣</span><h3>Chargement des commandes</h3><p>Les commandes disponibles seront affichées ici.</p></div></div>
+            <section id="order-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="order-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="order-detail-title">Commande</h3></div><button id="order-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="order-detail-content"></div><div class="admin-order-status-editor"><label for="order-detail-status">Statut de la commande</label><div class="admin-form-actions"><select id="order-detail-status"><option>Nouvelle</option><option>En préparation</option><option>Prête</option><option>Terminée</option><option>Annulée</option></select><button id="order-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button><span id="order-detail-status-message" class="muted" aria-live="polite"></span></div></div></section>
           </section>
 
           <section id="products-section" class="admin-view" data-admin-view hidden>
             <div class="admin-section-heading"><div><p class="admin-eyebrow">CATALOGUE</p><h2>Produits / Menus</h2></div><p class="muted">Gestion actuelle des produits vendables et des trois menus PDF.</p></div>
             <div class="admin-section admin-section-inner">
-              <div class="admin-alert">
-                <strong>Produits / stocks — Phase 1</strong>
-                <p>La gestion existante des produits reste active. Aucun paiement, aucune réservation client et aucune logique de commande n’est gérée ici.</p>
-                <p>Le <strong>stock vendu</strong> et le <strong>stock réservé</strong> restent séparés du stock disponible et ne sont jamais modifiés par l’ajustement manuel.</p>
-              </div>
-
+              <div class="admin-alert"><strong>Produits / stocks — Phase 1</strong><p>La gestion existante des produits reste active. Aucun paiement, aucune réservation client et aucune logique de commande n’est gérée ici.</p><p>Le <strong>stock vendu</strong> et le <strong>stock réservé</strong> restent séparés du stock disponible et ne sont jamais modifiés par l’ajustement manuel.</p></div>
               <div id="products-list" aria-live="polite"></div>
-
-              <form id="product-form">
-                <input type="hidden" id="product-id">
-                <div class="admin-form-grid">
-                  <div class="form-field"><label for="product-name">Nom</label><input id="product-name" type="text" required></div>
-                  <div class="form-field"><label for="product-price">Prix (€)</label><input id="product-price" type="number" min="0" step="0.01" required></div>
-                  <div class="form-field admin-field-full"><label for="product-description">Description</label><textarea id="product-description" rows="3"></textarea></div>
-                  <div class="form-field"><label for="product-photo">Photo (URL)</label><input id="product-photo" type="url" placeholder="URL R2 de la photo"></div>
-                  <div class="form-field"><label for="product-category">Catégorie</label><input id="product-category" type="text" placeholder="Plat, formule…"></div>
-                  <div class="form-field"><label for="product-order">Ordre d’affichage</label><input id="product-order" type="number" min="0" step="1" value="0" required></div>
-                  <div class="form-field"><label for="product-stock-initial">Stock initial</label><input id="product-stock-initial" type="number" min="0" step="1" value="0" required></div>
-                  <div class="form-field"><label for="product-stock-available">Stock disponible</label><input id="product-stock-available" type="number" min="0" step="1" value="0" required></div>
-                  <div class="form-field"><label for="product-stock-reserved">Stock réservé</label><input id="product-stock-reserved" type="number" value="0" readonly disabled></div>
-                  <div class="form-field"><label for="product-stock-sold">Stock vendu</label><input id="product-stock-sold" type="number" value="0" readonly disabled></div>
-                </div>
-                <div class="admin-checkboxes"><label class="admin-checkbox"><input id="product-active" type="checkbox" checked> Produit actif</label></div>
-                <div class="admin-form-actions"><button id="product-save-btn" type="submit" class="btn btn-primary">Créer le produit</button><button id="product-cancel-btn" type="button" class="btn btn-secondary" hidden>Annuler</button></div>
-              </form>
-
-              <div class="admin-stock-adjustment"><h3>Ajuster le stock disponible</h3><p class="muted">Sélectionnez d’abord un produit avec « Modifier ». Cette action ne change ni le stock vendu ni le stock réservé.</p><div class="admin-form-actions"><input id="product-stock-adjustment" type="number" min="0" step="1" placeholder="Nouveau stock disponible" aria-label="Nouveau stock disponible"><button id="product-stock-adjust-btn" type="button" class="btn btn-secondary">Ajuster</button></div></div>
-              <div id="products-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
+              <form id="product-form"><input type="hidden" id="product-id"><div class="admin-form-grid"><div class="form-field"><label for="product-name">Nom</label><input id="product-name" type="text" required></div><div class="form-field"><label for="product-price">Prix (€)</label><input id="product-price" type="number" min="0" step="0.01" required></div><div class="form-field admin-field-full"><label for="product-description">Description</label><textarea id="product-description" rows="3"></textarea></div><div class="form-field"><label for="product-photo">Photo (URL)</label><input id="product-photo" type="url" placeholder="URL R2 de la photo"></div><div class="form-field"><label for="product-category">Catégorie</label><input id="product-category" type="text" placeholder="Plat, formule…"></div><div class="form-field"><label for="product-order">Ordre d’affichage</label><input id="product-order" type="number" min="0" step="1" value="0" required></div><div class="form-field"><label for="product-stock-initial">Stock initial</label><input id="product-stock-initial" type="number" min="0" step="1" value="0" required></div><div class="form-field"><label for="product-stock-available">Stock disponible</label><input id="product-stock-available" type="number" min="0" step="1" value="0" required></div><div class="form-field"><label for="product-stock-reserved">Stock réservé</label><input id="product-stock-reserved" type="number" value="0" readonly disabled></div><div class="form-field"><label for="product-stock-sold">Stock vendu</label><input id="product-stock-sold" type="number" value="0" readonly disabled></div></div><div class="admin-checkboxes"><label class="admin-checkbox"><input id="product-active" type="checkbox" checked> Produit actif</label></div><div class="admin-form-actions"><button id="product-save-btn" type="submit" class="btn btn-primary">Créer le produit</button><button id="product-cancel-btn" type="button" class="btn btn-secondary" hidden>Annuler</button></div></form>
+              <div class="admin-stock-adjustment"><h3>Ajuster le stock disponible</h3><p class="muted">Sélectionnez d’abord un produit avec « Modifier ». Cette action ne change ni le stock vendu ni le stock réservé.</p><div class="admin-form-actions"><input id="product-stock-adjustment" type="number" min="0" step="1" placeholder="Nouveau stock disponible" aria-label="Nouveau stock disponible"><button id="product-stock-adjust-btn" type="button" class="btn btn-secondary">Ajuster</button></div></div><div id="products-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
             </div>
-
-            <div id="menus-pdfs-section" class="admin-section admin-section-inner">
-              <div class="admin-section-heading compact"><div><p class="admin-eyebrow">DOCUMENTS</p><h3>Les 3 menus PDF</h3></div></div>
-
-              <div id="save-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-            </div>
+            <div id="menus-pdfs-section" class="admin-section admin-section-inner"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DOCUMENTS</p><h3>Les 3 menus PDF</h3></div></div><div id="save-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div></div>
           </section>
 
-          <section id="stocks-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading"><div><p class="admin-eyebrow">INVENTAIRE</p><h2>Stocks</h2></div><p class="muted">Lecture centralisée des trois états de stock conservés par produit.</p></div>
-            <div id="stocks-status" class="admin-alert" hidden></div>
-            <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Produit</th><th>Stock initial</th><th>Disponible</th><th>Réservé</th><th>Vendu</th><th>Statut</th></tr></thead><tbody id="stocks-table-body"><tr><td colspan="6" class="muted">Chargement…</td></tr></tbody></table></div>
-          </section>
+          <section id="stocks-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">INVENTAIRE</p><h2>Stocks</h2></div><p class="muted">Lecture centralisée des trois états de stock conservés par produit.</p></div><div id="stocks-status" class="admin-alert" hidden></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Produit</th><th>Stock initial</th><th>Disponible</th><th>Réservé</th><th>Vendu</th><th>Statut</th></tr></thead><tbody id="stocks-table-body"><tr><td colspan="6" class="muted">Chargement…</td></tr></tbody></table></div></section>
 
           <section id="requests-section" class="admin-view" data-admin-view hidden>
-            <div class="admin-section-heading">
-              <div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div>
-              <div class="admin-orders-header-actions"><span class="admin-orders-total"><strong id="demandes-count">0</strong> demande(s)</span><button id="demandes-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button></div>
-            </div>
+            <div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Demandes</h2></div><div class="admin-orders-header-actions"><span class="admin-orders-total"><strong id="demandes-count">0</strong> demande(s)</span><button id="demandes-refresh-btn" type="button" class="btn btn-secondary">↻ Actualiser</button></div></div>
             <div class="admin-order-filters" role="toolbar" aria-label="Filtres des demandes"><button type="button" class="admin-filter-btn active" data-demande-filter="all">Toutes</button><button type="button" class="admin-filter-btn" data-demande-filter="nouvelle">Nouvelles</button><button type="button" class="admin-filter-btn" data-demande-filter="en_cours">En cours</button><button type="button" class="admin-filter-btn" data-demande-filter="traitee">Traitées</button><button type="button" class="admin-filter-btn" data-demande-filter="annulee">Annulées</button><button type="button" class="admin-filter-btn" data-demande-filter="particulier">Particulier</button><button type="button" class="admin-filter-btn" data-demande-filter="professionnel">Professionnel</button></div>
-            <div id="demandes-loading" class="admin-empty-state compact" hidden aria-live="polite"><span class="admin-empty-icon">✉</span><h3>Chargement des demandes</h3><p>Récupération des demandes enregistrées.</p></div>
-            <div id="demandes-error" class="admin-alert admin-alert-error" hidden aria-live="assertive"></div>
-            <div class="admin-demandes-layout">
-              <div class="admin-demandes-list-panel">
-                <div id="demandes-list" class="admin-orders-list" aria-live="polite"></div>
-                <div id="demandes-empty" class="admin-empty-state compact" hidden><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Aucune demande ne correspond au filtre sélectionné.</p></div>
-              </div>
-              <section id="demande-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="demande-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div><button id="demande-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="demande-detail-content"></div>
-<div class="admin-order-status-editor">
-  <h4>Qualification commerciale</h4>
-  <div class="admin-form-grid">
-    <label>
-      Catégorie
-      <select id="demande-qualification-categorie">
-        <option value="a_qualifier">À qualifier</option>
-        <option value="prestation">Prestation</option>
-        <option value="demande_particuliere">Demande particulière</option>
-        <option value="autre">Autre</option>
-      </select>
-    </label>
-    <label>
-      Sous-catégorie
-      <input id="demande-qualification-sous-categorie" type="text" maxlength="200">
-    </label>
-    <label>
-      Priorité
-      <select id="demande-qualification-priorite">
-        <option value="basse">Basse</option>
-        <option value="normale">Normale</option>
-        <option value="haute">Haute</option>
-        <option value="urgente">Urgente</option>
-      </select>
-    </label>
-    <label>
-      Potentiel
-      <select id="demande-qualification-potentiel">
-        <option value="non_evalue">Non évalué</option>
-        <option value="faible">Faible</option>
-        <option value="moyen">Moyen</option>
-        <option value="fort">Fort</option>
-      </select>
-    </label>
-  </div>
-  <label class="admin-checkbox">
-    <input id="demande-qualification-besoin-precision" type="checkbox">
-    Besoin de précision
-  </label>
-  <label>
-    Commentaire interne
-    <textarea id="demande-qualification-commentaire" rows="4" maxlength="2000"></textarea>
-  </label>
-  <div class="admin-form-actions">
-    <button id="demande-qualification-save" type="button" class="btn btn-primary">Enregistrer la qualification</button>
-    <span id="demande-qualification-message" class="muted" aria-live="polite"></span>
-  </div>
-</div>
-<div class="admin-order-status-editor"><label for="demande-detail-status">Statut de la demande</label><div class="admin-form-actions"><select id="demande-detail-status"><option value="nouvelle">Nouvelle</option><option value="en_cours">En cours</option><option value="traitee">Traitée</option><option value="annulee">Annulée</option></select><button id="demande-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button><span id="demande-detail-message" class="muted" aria-live="polite"></span></div></div></section>
+            <div id="demandes-loading" class="admin-empty-state compact" hidden aria-live="polite"><span class="admin-empty-icon">✉</span><h3>Chargement des demandes</h3><p>Récupération des demandes enregistrées.</p></div><div id="demandes-error" class="admin-alert admin-alert-error" hidden aria-live="assertive"></div>
+            <div class="admin-demandes-layout"><div class="admin-demandes-list-panel"><div id="demandes-list" class="admin-orders-list" aria-live="polite"></div><div id="demandes-empty" class="admin-empty-state compact" hidden><span class="admin-empty-icon">✉</span><h3>Aucune demande</h3><p>Aucune demande ne correspond au filtre sélectionné.</p></div></div><section id="demande-detail-panel" class="admin-section admin-order-detail" hidden aria-labelledby="demande-detail-title"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DÉTAIL</p><h3 id="demande-detail-title">Demande</h3></div><button id="demande-detail-close" type="button" class="btn btn-secondary">Fermer</button></div><div id="demande-detail-content"></div><div class="admin-order-status-editor"><h4>Qualification commerciale</h4><div class="admin-form-grid"><label>Catégorie<select id="demande-qualification-categorie"><option value="a_qualifier">À qualifier</option><option value="prestation">Prestation</option><option value="demande_particuliere">Demande particulière</option><option value="autre">Autre</option></select></label><label>Sous-catégorie<input id="demande-qualification-sous-categorie" type="text" maxlength="200"></label><label>Priorité<select id="demande-qualification-priorite"><option value="basse">Basse</option><option value="normale">Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select></label><label>Potentiel<select id="demande-qualification-potentiel"><option value="non_evalue">Non évalué</option><option value="faible">Faible</option><option value="moyen">Moyen</option><option value="fort">Fort</option></select></label></div><label class="admin-checkbox"><input id="demande-qualification-besoin-precision" type="checkbox"> Besoin de précision</label><label>Commentaire interne<textarea id="demande-qualification-commentaire" rows="4" maxlength="2000"></textarea></label><div class="admin-form-actions"><button id="demande-qualification-save" type="button" class="btn btn-primary">Enregistrer la qualification</button><span id="demande-qualification-message" class="muted" aria-live="polite"></span></div></div><div class="admin-order-status-editor"><label for="demande-detail-status">Statut de la demande</label><div class="admin-form-actions"><select id="demande-detail-status"><option value="nouvelle">Nouvelle</option><option value="en_cours">En cours</option><option value="traitee">Traitée</option><option value="annulee">Annulée</option></select><button id="demande-detail-save" type="button" class="btn btn-primary">Enregistrer le statut</button><span id="demande-detail-message" class="muted" aria-live="polite"></span></div></div></section></div>
           </section>
 
           <section id="quotes-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMMERCIAL</p><h2>Devis</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▤</span><h3>Gestion des devis</h3><p>Création, suivi et acceptation des devis : cette fonction sera connectée lors d’une phase ultérieure.</p><span class="admin-coming">À VENIR</span></div></section>
-
           <section id="invoices-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">COMPTABILITÉ</p><h2>Factures</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">▧</span><h3>Facturation</h3><p>Les factures commerciales du Carnet du Chef, leurs PDF et leur archivage seront intégrés lors de la phase dédiée.</p><span class="admin-coming">À VENIR</span></div></section>
-
           <section id="payments-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCE</p><h2>Paiements</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">€</span><h3>Suivi des paiements</h3><p>Le suivi Stripe sera connecté lorsque le paiement en ligne sera développé. Aucun paiement n’est géré ici pour le moment.</p><span class="admin-coming">À VENIR</span></div></section>
-
           <section id="refunds-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">FINANCE</p><h2>Remboursements</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">↩</span><h3>Remboursements</h3><p>La gestion sécurisée des remboursements sera ajoutée avec le futur système de paiement.</p><span class="admin-coming">À VENIR</span></div></section>
-
           <section id="clients-section" class="admin-view" data-admin-view hidden><div class="admin-section-heading"><div><p class="admin-eyebrow">RELATION CLIENT</p><h2>Clients</h2></div></div><div class="admin-empty-state"><span class="admin-empty-icon">◎</span><h3>Base clients</h3><p>La centralisation des clients particuliers et professionnels sera développée lors des phases prévues.</p><span class="admin-coming">À VENIR</span></div></section>
-
           <section id="settings-section" class="admin-view" data-admin-view hidden>
             <div class="admin-section-heading"><div><p class="admin-eyebrow">CONFIGURATION</p><h2>Paramètres</h2></div><p class="muted">Les fonctions déjà disponibles restent accessibles ici.</p></div>
-
-            <div class="admin-section admin-section-inner">
-              <h3>PRÉSENTATION DU CHEF</h3>
-              <textarea id="chef-presentation" rows="14" aria-label="Présentation du chef"></textarea>
-              <div class="admin-form-actions" style="margin-top:1rem;"><button type="button" id="save-chef-presentation-btn" class="btn btn-primary">Enregistrer</button><span id="chef-presentation-status" class="muted" aria-live="polite"></span></div>
-              <div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div>
-            </div>
-
-            <div class="admin-section admin-section-inner">
-              <h3>🔴 GESTION DES COMMANDES</h3>
-              <div class="admin-alert"><strong>Contrôle des commandes du site</strong><p>La fermeture manuelle reste prioritaire sur la logique automatique existante.</p></div>
-              <div class="admin-form-actions"><button type="button" id="close-orders-btn" class="btn btn-secondary">🔴 Fermer les commandes</button><button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button></div>
-              <div id="orders-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div>
-            </div>
+            <div class="admin-section admin-section-inner"><h3>PRÉSENTATION DU CHEF</h3><textarea id="chef-presentation" rows="14" aria-label="Présentation du chef"></textarea><div class="admin-form-actions" style="margin-top:1rem;"><button type="button" id="save-chef-presentation-btn" class="btn btn-primary">Enregistrer</button><span id="chef-presentation-status" class="muted" aria-live="polite"></span></div><div id="chef-presentation-preview" class="admin-alert" style="margin-top:1rem;white-space:pre-wrap;" hidden></div></div>
+            <div class="admin-section admin-section-inner"><h3>🔴 GESTION DES COMMANDES</h3><div class="admin-alert"><strong>Contrôle des commandes du site</strong><p>La fermeture manuelle reste prioritaire sur la logique automatique existante.</p></div><div class="admin-form-actions"><button type="button" id="close-orders-btn" class="btn btn-secondary">🔴 Fermer les commandes</button><button type="button" id="open-orders-btn" class="btn btn-primary">🟢 Ouvrir les commandes</button></div><div id="orders-status" class="admin-alert" style="margin-top:1rem;display:none;" aria-live="polite"></div></div>
           </section>
         </main>
       </div>
     </div>
   </div>
-
   <script type="module" src="admin.js"></script>
   <script type="module" src="products.js"></script>
   <script type="module" src="orders.js"></script>
