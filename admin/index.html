@@ -12,6 +12,59 @@
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="admin.css">
+
+<style id="dashboard-layout-css">
+.admin-dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.dashboard-left-column {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.dashboard-small-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
+}
+
+.dashboard-large-card {
+  min-width: 0;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .admin-dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-left-column {
+    order: 1;
+  }
+
+  #dashboard-ca-card {
+    order: 2;
+  }
+
+  #dashboard-stock-alert {
+    order: 3;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-small-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
 </head>
 <body class="admin-body">
   <div class="admin-shell">
@@ -70,24 +123,40 @@
               <div><p class="admin-eyebrow">VUE D’ENSEMBLE</p><h2>Tableau de bord</h2></div>
               <p class="muted">Un accès rapide aux principaux indicateurs de l’ADMIN.</p>
             </div>
-            <div class="admin-dashboard-grid">
-              <article class="admin-stat-card"><span>Commandes</span><strong id="stat-orders">À venir</strong><small>Gestion des commandes en ligne</small></article>
-              <article class="admin-stat-card"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article>
-              <article class="admin-stat-card"><span>Produits en rupture</span><strong id="stat-out-products">—</strong><small>Actifs avec stock disponible à 0</small></article>
-              <article class="admin-stat-card"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Total des quantités disponibles</small></article>
-              <article class="admin-stat-card"><span>Demandes</span><strong>À venir</strong><small>Traiteur, chef à domicile, demandes particulières</small></article>
-              <article class="admin-stat-card"><span>Devis</span><strong>À venir</strong><small>Suivi des demandes de devis</small></article>
-              <article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article>
-              <article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients centralisée</small></article>
-            </div>
-            <div id="dashboard-status" class="admin-alert" hidden></div>
+            <div class="admin-dashboard-layout">
 
-            <article id="dashboard-stock-alert" class="admin-stat-card" hidden style="grid-column: 1 / -1; min-height: 190px;">
-              <span>⚠️ Alertes stock</span>
-              <strong id="dashboard-stock-alert-count">—</strong>
-              <small id="dashboard-stock-alert-summary">Produits nécessitant une surveillance</small>
-              <div id="dashboard-stock-alert-list" style="margin-top:1rem;"></div>
-            </article>
+              <div class="dashboard-left-column">
+                <div class="admin-dashboard-grid dashboard-small-grid">
+                  <article class="admin-stat-card"><span>Commandes</span><strong id="stat-orders">À venir</strong><small>Gestion des commandes en ligne</small></article>
+                  <article class="admin-stat-card"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article>
+                  <article class="admin-stat-card"><span>Demandes</span><strong>À venir</strong><small>Traiteur, chef à domicile, demandes particulières</small></article>
+                  <article class="admin-stat-card"><span>Devis</span><strong>À venir</strong><small>Suivi des demandes de devis</small></article>
+                </div>
+
+                <div class="admin-dashboard-grid dashboard-small-grid">
+                  <article class="admin-stat-card"><span>Produits en rupture</span><strong id="stat-out-products">—</strong><small>Actifs avec stock disponible à 0</small></article>
+                  <article class="admin-stat-card"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Total des quantités disponibles</small></article>
+                  <article class="admin-stat-card"><span>Paiements</span><strong>À venir</strong><small>Suivi des paiements</small></article>
+                  <article class="admin-stat-card"><span>Clients</span><strong>À venir</strong><small>Base clients centralisée</small></article>
+                </div>
+              </div>
+
+              <article id="dashboard-ca-card" class="admin-stat-card dashboard-large-card">
+                <span>CA</span>
+                <strong>À venir</strong>
+                <small>Chiffre d'affaires</small>
+              </article>
+
+              <article id="dashboard-stock-alert" class="admin-stat-card dashboard-large-card" hidden>
+                <span>⚠️ Alertes stock</span>
+                <strong id="dashboard-stock-alert-count">—</strong>
+                <small id="dashboard-stock-alert-summary">Produits nécessitant une surveillance</small>
+                <div id="dashboard-stock-alert-list"></div>
+              </article>
+
+            </div>
+
+            <div id="dashboard-status" class="admin-alert" hidden></div>
           </section>
 
           <section id="orders-section" class="admin-view" data-admin-view hidden>
