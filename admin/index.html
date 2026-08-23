@@ -38,6 +38,12 @@
             <div class="lcc-dashboard-hero admin-section-heading">
               <div><p class="admin-eyebrow">COCKPIT ADMINISTRATEUR</p><h2>Bonjour 👋</h2><p>Voici l’état actuel de l’activité du Carnet du Chef.</p></div><div class="lcc-dashboard-live"><span class="lcc-live-dot"></span> Données Firestore en direct</div>
             </div>
+            <article id="dashboard-revenue-card" class="lcc-dashboard-panel lcc-revenue-card" aria-labelledby="dashboard-revenue-title">
+              <div class="lcc-panel-heading"><div><p class="admin-eyebrow">FINANCE</p><h3 id="dashboard-revenue-title">Chiffre d’affaires</h3></div><span class="lcc-panel-icon">€</span></div>
+              <div class="lcc-revenue-value" id="dashboard-revenue-value">—</div>
+              <p class="lcc-panel-description">Total des commandes validées, hors commandes annulées.</p>
+              <div class="lcc-revenue-meta"><span id="dashboard-revenue-orders">0 commande validée</span><span>Firestore</span></div>
+            </article>
             <div class="admin-dashboard-grid lcc-kpi-grid">
               <article class="admin-stat-card lcc-kpi lcc-kpi-green"><span>Commandes</span><strong id="stat-orders">0</strong><small>Commandes actuellement ouvertes dans le suivi</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-purple"><span>Demandes</span><strong id="stat-demandes">0</strong><small>Demandes enregistrées dans Firestore</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-blue"><span>Devis</span><strong id="stat-devis">0</strong><small>Devis enregistrés</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-sage"><span>Factures</span><strong id="stat-factures">0</strong><small>Factures enregistrées</small></article><article class="admin-stat-card lcc-kpi"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-warning"><span>Ruptures</span><strong id="stat-out-products">—</strong><small>Produits actifs avec stock à zéro</small></article><article class="admin-stat-card lcc-kpi"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Quantité disponible cumulée</small></article><article class="admin-stat-card lcc-kpi"><span>Clients</span><strong id="stat-clients">0</strong><small>Clients enregistrés</small></article>
             </div>
@@ -53,7 +59,14 @@
             </div>
             <div id="dashboard-order-control-anchor" class="lcc-dashboard-service-anchor" aria-hidden="true"></div>
             <style>
-              #dashboard-section{--lcc-purple:#7b62a8;--lcc-blue:#5f7fbd;--lcc-green:#5d8d3d;--lcc-sage:#7d9a66;--lcc-warm:#c58b34}.lcc-dashboard-hero{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1.35rem 1.5rem;background:linear-gradient(135deg,#fff 0%,#f7f4ec 100%);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}.lcc-dashboard-hero h2{margin:.1rem 0 .3rem;font-family:var(--font-display);font-size:2rem;color:var(--color-sage-dark)}.lcc-dashboard-hero p:not(.admin-eyebrow){margin:0;color:var(--color-text-muted)}.lcc-dashboard-live{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border:1px solid var(--color-border);border-radius:999px;background:#fff;font-size:.78rem;font-weight:700;color:var(--color-sage-dark);white-space:nowrap}.lcc-live-dot{width:.55rem;height:.55rem;border-radius:50%;background:#6d9b4b;box-shadow:0 0 0 4px rgba(109,155,75,.12)}.lcc-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}.lcc-kpi{min-height:125px;position:relative;overflow:hidden}.lcc-kpi:after{content:"";position:absolute;right:-18px;top:-18px;width:64px;height:64px;border-radius:50%;background:rgba(93,141,61,.08)}.lcc-kpi-purple:after{background:rgba(123,98,168,.1)}.lcc-kpi-blue:after{background:rgba(95,127,189,.1)}.lcc-kpi-sage:after{background:rgba(125,154,102,.12)}.lcc-kpi-warning:after{background:rgba(197,139,52,.12)}.lcc-kpi-purple strong{color:var(--lcc-purple)}.lcc-kpi-blue strong{color:var(--lcc-blue)}.lcc-kpi-sage strong{color:var(--lcc-sage)}.lcc-kpi-warning strong{color:var(--lcc-warm)}.lcc-dashboard-main-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:1rem;margin-top:1rem}.lcc-dashboard-lower-grid{display:grid;grid-template-columns:1.2fr .9fr .9fr;gap:1rem;margin-top:1rem}.lcc-dashboard-panel{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:1.15rem;box-shadow:var(--shadow-card);min-width:0}.lcc-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.7rem}.lcc-panel-heading h3{margin:0;color:var(--color-sage-dark);font-family:var(--font-display)}.lcc-panel-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--color-cream);color:var(--color-sage-dark)}.lcc-panel-description{margin:.35rem 0 1rem;color:var(--color-text-muted);font-size:var(--fs-sm);line-height:1.5}.lcc-service-placeholder{padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm);color:var(--color-text-muted);font-size:var(--fs-sm)}.lcc-catalogue-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin:1rem 0}.lcc-catalogue-metrics div{padding:.75rem;background:var(--color-cream);border-radius:var(--radius-sm);text-align:center}.lcc-catalogue-metrics strong{display:block;font-family:var(--font-display);font-size:1.5rem;color:var(--color-sage-dark)}.lcc-catalogue-metrics span{font-size:.72rem;color:var(--color-text-muted)}.lcc-dashboard-link{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-top:1px solid var(--color-border);color:var(--color-sage-dark);font-size:var(--fs-sm);font-weight:700;text-decoration:none}.lcc-dashboard-link:hover{text-decoration:underline}.lcc-alert-panel{display:block}.lcc-alert-count{min-width:34px;height:34px;padding:0 .55rem;display:grid;place-items:center;border-radius:999px;background:#fff1dd;color:#8c611f}.lcc-alert-list{display:grid;gap:.55rem;max-height:220px;overflow:auto}.lcc-alert-list>div{padding:.65rem .7rem!important;border:1px solid var(--color-border);border-radius:10px;background:#fff}.lcc-demandes-summary{display:flex;align-items:baseline;gap:.65rem;margin:1rem 0}.lcc-demandes-summary strong{font-family:var(--font-display);font-size:2.1rem;color:var(--lcc-purple)}.lcc-demandes-summary span{color:var(--color-text-muted);font-size:var(--fs-sm)}.lcc-demandes-status-row{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding-top:.8rem;border-top:1px solid var(--color-border);font-size:var(--fs-sm);color:var(--color-text-muted)}.lcc-quick-links{display:grid;gap:.45rem}.lcc-quick-links a{display:flex;justify-content:space-between;align-items:center;padding:.7rem .75rem;background:var(--color-cream);border-radius:10px;color:var(--color-sage-dark);text-decoration:none;font-size:var(--fs-sm);font-weight:700}.lcc-quick-links a:hover{background:#e8eadf}.lcc-dashboard-service-anchor{height:0;overflow:hidden}@media (max-width:1100px){.lcc-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lcc-dashboard-lower-grid{grid-template-columns:1fr 1fr}.lcc-dashboard-lower-grid>.lcc-dashboard-panel:last-child{grid-column:1/-1}.lcc-dashboard-main-grid{grid-template-columns:1fr}}@media (max-width:700px){.lcc-dashboard-hero{align-items:flex-start;flex-direction:column}.lcc-kpi-grid,.lcc-dashboard-lower-grid{grid-template-columns:1fr}.lcc-dashboard-lower-grid>.lcc-dashboard-panel:last-child{grid-column:auto}.lcc-dashboard-live{white-space:normal}.lcc-catalogue-metrics{grid-template-columns:1fr}}
+              #dashboard-section{--lcc-purple:#7b62a8;--lcc-blue:#5f7fbd;--lcc-green:#5d8d3d;--lcc-sage:#7d9a66;--lcc-warm:#c58b34;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;align-items:start}
+              #dashboard-section>.lcc-dashboard-hero,#dashboard-section>.lcc-kpi-grid,#dashboard-section>#dashboard-status,#dashboard-section>.lcc-dashboard-main-grid,#dashboard-section>.lcc-dashboard-lower-grid,#dashboard-section>.lcc-dashboard-service-anchor{grid-column:1/-1}
+              #dashboard-section>#dashboard-order-control{grid-column:1;grid-row:auto}
+              #dashboard-section>#dashboard-revenue-card{grid-column:2;grid-row:auto}
+              #dashboard-section>style{display:none}
+              .lcc-dashboard-hero{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1.35rem 1.5rem;background:linear-gradient(135deg,#fff 0%,#f7f4ec 100%);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}.lcc-dashboard-hero h2{margin:.1rem 0 .3rem;font-family:var(--font-display);font-size:2rem;color:var(--color-sage-dark)}.lcc-dashboard-hero p:not(.admin-eyebrow){margin:0;color:var(--color-text-muted)}.lcc-dashboard-live{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border:1px solid var(--color-border);border-radius:999px;background:#fff;font-size:.78rem;font-weight:700;color:var(--color-sage-dark);white-space:nowrap}.lcc-live-dot{width:.55rem;height:.55rem;border-radius:50%;background:#6d9b4b;box-shadow:0 0 0 4px rgba(109,155,75,.12)}.lcc-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}.lcc-kpi{min-height:125px;position:relative;overflow:hidden}.lcc-kpi:after{content:"";position:absolute;right:-18px;top:-18px;width:64px;height:64px;border-radius:50%;background:rgba(93,141,61,.08)}.lcc-kpi-purple:after{background:rgba(123,98,168,.1)}.lcc-kpi-blue:after{background:rgba(95,127,189,.1)}.lcc-kpi-sage:after{background:rgba(125,154,102,.12)}.lcc-kpi-warning:after{background:rgba(197,139,52,.12)}.lcc-kpi-purple strong{color:var(--lcc-purple)}.lcc-kpi-blue strong{color:var(--lcc-blue)}.lcc-kpi-sage strong{color:var(--lcc-sage)}.lcc-kpi-warning strong{color:var(--lcc-warm)}.lcc-dashboard-main-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr);gap:1rem;margin-top:1rem}.lcc-dashboard-lower-grid{display:grid;grid-template-columns:1.2fr .9fr .9fr;gap:1rem;margin-top:1rem}.lcc-dashboard-panel{background:var(--color-white);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:1.15rem;box-shadow:var(--shadow-card);min-width:0}.lcc-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.7rem}.lcc-panel-heading h3{margin:0;color:var(--color-sage-dark);font-family:var(--font-display)}.lcc-panel-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:var(--color-cream);color:var(--color-sage-dark)}.lcc-panel-description{margin:.35rem 0 1rem;color:var(--color-text-muted);font-size:var(--fs-sm);line-height:1.5}.lcc-service-placeholder{padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm);color:var(--color-text-muted);font-size:var(--fs-sm)}.lcc-catalogue-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin:1rem 0}.lcc-catalogue-metrics div{padding:.75rem;background:var(--color-cream);border-radius:var(--radius-sm);text-align:center}.lcc-catalogue-metrics strong{display:block;font-family:var(--font-display);font-size:1.5rem;color:var(--color-sage-dark)}.lcc-catalogue-metrics span{font-size:.72rem;color:var(--color-text-muted)}.lcc-dashboard-link{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-top:1px solid var(--color-border);color:var(--color-sage-dark);font-size:var(--fs-sm);font-weight:700;text-decoration:none}.lcc-dashboard-link:hover{text-decoration:underline}.lcc-alert-panel{display:block}.lcc-alert-count{min-width:34px;height:34px;padding:0 .55rem;display:grid;place-items:center;border-radius:999px;background:#fff1dd;color:#8c611f}.lcc-alert-list{display:grid;gap:.55rem;max-height:220px;overflow:auto}.lcc-alert-list>div{padding:.65rem .7rem!important;border:1px solid var(--color-border);border-radius:10px;background:#fff}.lcc-demandes-summary{display:flex;align-items:baseline;gap:.65rem;margin:1rem 0}.lcc-demandes-summary strong{font-family:var(--font-display);font-size:2.1rem;color:var(--lcc-purple)}.lcc-demandes-summary span{color:var(--color-text-muted);font-size:var(--fs-sm)}.lcc-demandes-status-row{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding-top:.8rem;border-top:1px solid var(--color-border);font-size:var(--fs-sm);color:var(--color-text-muted)}.lcc-quick-links{display:grid;gap:.45rem}.lcc-quick-links a{display:flex;justify-content:space-between;align-items:center;padding:.7rem .75rem;background:var(--color-cream);border-radius:10px;color:var(--color-sage-dark);text-decoration:none;font-size:var(--fs-sm);font-weight:700}.lcc-quick-links a:hover{background:#e8eadf}.lcc-dashboard-service-anchor{height:0;overflow:hidden}.lcc-revenue-card{min-height:100%;display:flex;flex-direction:column}.lcc-revenue-value{font-family:var(--font-display);font-size:clamp(2rem,4vw,3rem);font-weight:700;line-height:1;color:#5d8d3d;margin:.35rem 0 .8rem}.lcc-revenue-meta{display:flex;justify-content:space-between;gap:.75rem;margin-top:auto;padding-top:.8rem;border-top:1px solid var(--color-border);font-size:.78rem;color:var(--color-text-muted)}
+              @media (max-width:1100px){#dashboard-section{grid-template-columns:1fr}.lcc-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lcc-dashboard-lower-grid{grid-template-columns:1fr 1fr}.lcc-dashboard-lower-grid>.lcc-dashboard-panel:last-child{grid-column:1/-1}#dashboard-section>#dashboard-order-control,#dashboard-section>#dashboard-revenue-card{grid-column:1}.lcc-dashboard-main-grid{grid-template-columns:1fr}}
+              @media (max-width:700px){.lcc-dashboard-hero{align-items:flex-start;flex-direction:column}.lcc-kpi-grid,.lcc-dashboard-lower-grid{grid-template-columns:1fr}.lcc-dashboard-lower-grid>.lcc-dashboard-panel:last-child{grid-column:auto}.lcc-dashboard-live{white-space:normal}.lcc-catalogue-metrics{grid-template-columns:1fr}}
             </style>
           </section>
 
@@ -72,5 +85,54 @@
     </div>
   </div>
   <script type="module" src="admin.js"></script><script type="module" src="products.js"></script><script type="module" src="orders.js"></script><script type="module" src="counters.js"></script>
+  <script type="module">
+    import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    const revenueValue = document.querySelector("#dashboard-revenue-value");
+    const revenueOrders = document.querySelector("#dashboard-revenue-orders");
+
+    function parseOrderAmount(value) {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value === "string") {
+        const normalized = value.replace(/\s/g, "").replace("€", "").replace(",", ".");
+        const amount = Number(normalized);
+        return Number.isFinite(amount) ? amount : 0;
+      }
+      return 0;
+    }
+
+    function updateRevenue(amount, count) {
+      if (revenueValue) revenueValue.textContent = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount);
+      if (revenueOrders) revenueOrders.textContent = `${count} commande${count > 1 ? "s" : ""} validée${count > 1 ? "s" : ""}`;
+    }
+
+    async function loadRevenue() {
+      if (!FIREBASE_READY || !auth.currentUser || !revenueValue) return;
+      revenueValue.textContent = "…";
+      try {
+        const snapshot = await getDocs(collection(db, "commandes"));
+        let total = 0;
+        let count = 0;
+        snapshot.forEach((item) => {
+          const data = item.data() || {};
+          const status = String(data.statut || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+          if (status === "annulee" || status === "cancelled") return;
+          const amount = parseOrderAmount(data.montantTotal);
+          if (amount > 0) {
+            total += amount;
+            count += 1;
+          }
+        });
+        updateRevenue(total, count);
+      } catch (error) {
+        console.error("Impossible de calculer le chiffre d’affaires :", error);
+        if (revenueValue) revenueValue.textContent = "—";
+        if (revenueOrders) revenueOrders.textContent = "Données indisponibles";
+      }
+    }
+
+    if (FIREBASE_READY) auth.onAuthStateChanged((user) => { if (user) void loadRevenue(); else updateRevenue(0, 0); });
+  </script>
 </body>
 </html>
