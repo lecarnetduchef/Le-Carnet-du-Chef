@@ -37,11 +37,60 @@ function updateChefPresentationPreview() { if (!els.chefPresentationPreview || !
 function setChefPresentationStatus(message, isError = false) { if (!els.chefPresentationStatus) return; els.chefPresentationStatus.textContent = message; els.chefPresentationStatus.style.color = isError ? "#a33" : ""; }
 
 
+function updateDashboardStockAlert(products) {
+  const alert = document.querySelector("#dashboard-stock-alert");
+  if (!alert) return;
+
+  const lowStock = products
+    .filter((product) => product.actif !== false)
+    .filter((product) => {
+      const stock = Number(product.stockDisponible || 0);
+      const seuil = Number(product.seuilAlerte || 0);
+      return seuil > 0 && stock > 0 && stock <= seuil;
+    })
+    .sort((a, b) => Number(a.stockDisponible || 0) - Number(b.stockDisponible || 0));
+
+  const outOfStock = products
+    .filter((product) => product.actif !== false)
+    .filter((product) => Number(product.stockDisponible || 0) <= 0);
+
+  if (!lowStock.length && !outOfStock.length) {
+    alert.hidden = true;
+    alert.textContent = "";
+    return;
+  }
+
+  const lines = [];
+
+  if (lowStock.length) {
+    lines.push(`⚠️ STOCK FAIBLE — ${lowStock.length} produit(s) proche(s) de la rupture`);
+
+    lowStock.forEach((product) => {
+      lines.push(
+        `🟠 ${product.nom || "Produit sans nom"} — reste ${Number(product.stockDisponible || 0)} — seuil ${Number(product.seuilAlerte || 0)}`
+      );
+    });
+  }
+
+  if (outOfStock.length) {
+    lines.push(`🔴 RUPTURE — ${outOfStock.length} produit(s) épuisé(s)`);
+
+    outOfStock.forEach((product) => {
+      lines.push(`🔴 ${product.nom || "Produit sans nom"} — épuisé`);
+    });
+  }
+
+  alert.textContent = lines.join("\n");
+  alert.style.whiteSpace = "pre-line";
+  alert.hidden = false;
+}
+
 async function loadDashboardStats() {
   if (!els.statActiveProducts || !auth.currentUser) return;
   try {
     const snap = await getDocs(collection(db, "produits"));
     const products = snap.docs.map((item) => item.data());
+    updateDashboardStockAlert(products);
     const active = products.filter((product) => product.actif !== false);
     const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0);
     const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0);
