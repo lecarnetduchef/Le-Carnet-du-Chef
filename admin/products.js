@@ -35,6 +35,7 @@ const photoInput = document.querySelector("#product-photo");
 const activeInput = document.querySelector("#product-active");
 const orderInput = document.querySelector("#product-order");
 const initialInput = document.querySelector("#product-stock-initial");
+const alertThresholdInput = document.querySelector("#product-stock-alert-threshold");
 const availableInput = document.querySelector("#product-stock-available");
 const reservedInput = document.querySelector("#product-stock-reserved");
 const soldInput = document.querySelector("#product-stock-sold");
@@ -69,6 +70,7 @@ function resetForm() {
   activeInput.checked = true;
   orderInput.value = "0";
   initialInput.value = "0";
+  alertThresholdInput.value = "0";
   availableInput.value = "0";
   reservedInput.value = "0";
   soldInput.value = "0";
@@ -91,6 +93,7 @@ function fillForm(product) {
   activeInput.checked = product.actif !== false;
   orderInput.value = Number.isFinite(product.ordre) ? product.ordre : 0;
   initialInput.value = Number.isFinite(product.stockInitial) ? product.stockInitial : 0;
+  alertThresholdInput.value = Number.isFinite(product.seuilAlerte) ? product.seuilAlerte : 0;
   availableInput.value = Number.isFinite(product.stockDisponible) ? product.stockDisponible : 0;
   reservedInput.value = Number.isFinite(product.stockReserve) ? product.stockReserve : 0;
   soldInput.value = Number.isFinite(product.stockVendu) ? product.stockVendu : 0;
@@ -206,6 +209,7 @@ async function saveProduct(event) {
     const prix = toPrice(priceInput.value);
     const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
     const stockInitial = toNonNegativeInteger(initialInput.value, "Le stock initial");
+    const seuilAlerte = toNonNegativeInteger(alertThresholdInput.value, "Le seuil d’alerte");
     const stockDisponible = toNonNegativeInteger(availableInput.value, "Le stock disponible");
     const id = idInput.value.trim();
 
@@ -217,6 +221,7 @@ async function saveProduct(event) {
       categorie: pageCategory,
       actif: activeInput.checked,
       ordre,
+      seuilAlerte,
       stockDisponible,
       updatedAt: serverTimestamp()
     };
