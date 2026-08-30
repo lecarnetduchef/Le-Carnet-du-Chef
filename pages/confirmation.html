@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmation de paiement | Le Carnet du Chef</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <main class="section">
+    <div class="container" style="max-width:760px;text-align:center;">
+      <p class="eyebrow">Le Carnet du Chef</p>
+      <h1 id="title">Vérification de votre paiement</h1>
+      <p id="message" class="muted">Stripe a terminé votre parcours de paiement. Nous vérifions maintenant la confirmation côté serveur.</p>
+      <div id="result" class="notice" aria-live="polite">Vérification en cours…</div>
+      <p><a class="btn btn-primary" href="commande.html">Retour au catalogue</a></p>
+    </div>
+  </main>
+  <script>
+    (() => {
+      const result = document.querySelector("#result");
+      const title = document.querySelector("#title");
+      const message = document.querySelector("#message");
+      const sessionId = new URLSearchParams(window.location.search).get("session_id");
+      const endpoint = "https://europe-west9-carnet-du-chef.cloudfunctions.net/getPaymentStatus";
+      if (!sessionId) {
+        result.textContent = "Aucune session de paiement n’a été fournie.";
+        return;
+      }
+      let attempts = 0;
+      async function check() {
+        attempts += 1;
+        try {
+          const response = await fetch(`${endpoint}?session_id=${encodeURIComponent(sessionId)}`);
+          const data = await response.json();
+          if (response.ok && data?.ok && data.status === "paid") {
+            title.textContent = "Paiement confirmé";
+            message.textContent = "Votre paiement a été confirmé par le serveur. Votre commande est maintenant enregistrée dans notre système.";
+            result.className = "notice success";
+            result.textContent = data.numeroCommande ? `Commande ${data.numeroCommande}` : "Votre commande est confirmée.";
+            return;
+          }
+          if (attempts < 10) {
+            result.textContent = "Paiement reçu par Stripe, confirmation serveur en cours…";
+            window.setTimeout(check, 2000);
+          } else {
+            result.textContent = "Le paiement n’a pas encore pu être confirmé par notre serveur. Ne repassez pas une nouvelle commande : la confirmation peut nécessiter quelques instants.";
+          }
+        } catch (error) {
+          if (attempts < 10) window.setTimeout(check, 2000);
+          else result.textContent = "La confirmation automatique est momentanément indisponible. Votre paiement reste traité côté Stripe.";
+        }
+      }
+      check();
+    })();
+  </script>
+</body>
+</html>
