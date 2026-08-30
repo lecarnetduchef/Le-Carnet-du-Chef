@@ -75,7 +75,20 @@ async function finalizePaidOrder({ requestId, transactionId, paidAt = null, stri
     const orderSnapshot = await transaction.get(orderRef);
     const paidAtValue = paidAt || Timestamp.now();
     if (!orderSnapshot.exists) {
-      transaction.create(orderRef, { ...attempt.orderData, statut: "nouvelle", paiement: { ...(attempt.orderData.paiement || {}), provider: "stripe", statut: "paye", transactionId: cleanTransactionId, checkoutSessionId: stripeCheckoutSessionId, paidAt: paidAtValue } });
+      transaction.create(orderRef, {
+        ...attempt.orderData,
+        statut: "nouvelle",
+        paiement: {
+          ...(attempt.orderData.paiement || {}),
+          provider: "stripe",
+          statut: "paye",
+          orderId: stripeCheckoutSessionId || attempt.stripeCheckoutSessionId || null,
+          transactionId: cleanTransactionId,
+          checkoutSessionId: stripeCheckoutSessionId || attempt.stripeCheckoutSessionId || null,
+          checkoutUrl: attempt.checkoutUrl || null,
+          paidAt: paidAtValue,
+        },
+      });
     }
     transaction.update(attemptRef, { status: "paid", paymentTransactionId: cleanTransactionId, stripeCheckoutSessionId: stripeCheckoutSessionId || attempt.stripeCheckoutSessionId || null, paidAt: paidAtValue, updatedAt: Timestamp.now() });
     return { idempotent: false, commandeId, numeroCommande: String(attempt.numeroCommande || "") };
