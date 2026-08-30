@@ -153,18 +153,38 @@ async function synchroniserFermetureGlobale() {
 calculerEtatCommandes();
 
 document.addEventListener("DOMContentLoaded", () => {
-  synchroniserFermetureGlobale().then(() => {
-    if (!CDC_CONFIG.commandes.etat.commandesOuvertes) {
-      document.querySelectorAll("[data-cdc-order-button]").forEach((el) => {
+  function synchroniserBoutonsCommande() {
+    const ouverts = CDC_CONFIG.commandes.etat.commandesOuvertes;
+    document.querySelectorAll("[data-cdc-order-button]").forEach((el) => {
+      if (ouverts) {
+        el.classList.remove("btn-disabled");
+        el.removeAttribute("aria-disabled");
+        el.setAttribute("href", el.dataset.cdcOriginalHref || CDC_CONFIG.liens.commandeGenerale);
+        el.removeAttribute("title");
+        el.textContent = el.dataset.cdcOriginalText || "Commander";
+      } else {
+        if (!el.dataset.cdcOriginalHref && el.getAttribute("href")) {
+          el.dataset.cdcOriginalHref = el.getAttribute("href");
+        }
+        if (!el.dataset.cdcOriginalText) {
+          el.dataset.cdcOriginalText = el.textContent;
+        }
         el.classList.add("btn-disabled");
         el.setAttribute("aria-disabled", "true");
         el.removeAttribute("href");
         el.removeAttribute("target");
         el.textContent = "Commandes fermées";
         if (CDC_CONFIG.commandes.etat.message) el.title = CDC_CONFIG.commandes.etat.message;
-      });
-    }
-  });
+      }
+    });
+  }
+
+  synchroniserFermetureGlobale().then(synchroniserBoutonsCommande);
+
+  setInterval(async () => {
+    await synchroniserFermetureGlobale();
+    synchroniserBoutonsCommande();
+  }, 30000);
 
   const SOURCE = {
     liens: CDC_CONFIG.liens,

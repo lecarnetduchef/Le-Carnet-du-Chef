@@ -330,10 +330,24 @@
       function refreshCheckoutFromCart() {
         try {
           const cart = getCartSnapshot();
+          const hasCart = cart.lines.length > 0;
 
-          if (!cart.lines.length) {
+          if (!hasCart) {
+            reviewButton.disabled = true;
+            formError.textContent = "Votre panier est vide. Ajoutez une formule pour continuer vers la validation.";
+            formError.hidden = false;
             finalSummary.hidden = true;
             summaryError.hidden = true;
+          } else {
+            reviewButton.disabled = false;
+
+            if (
+              formError.textContent ===
+              "Votre panier est vide. Ajoutez une formule pour continuer vers la validation."
+            ) {
+              formError.textContent = "";
+              formError.hidden = true;
+            }
           }
 
           if (typeof renderSummary === "function" && !finalSummary.hidden) {
@@ -832,11 +846,7 @@
       refreshDeliveryFields();
       refreshSlots();
 
-      if (!getCartSnapshot().lines.length) {
-        reviewButton.disabled = true;
-        formError.textContent = "Votre panier est vide. Ajoutez une formule pour continuer vers la validation.";
-        formError.hidden = false;
-      }
+      refreshCheckoutFromCart();
 
       setTimeout(() => {
         refreshSlots();
