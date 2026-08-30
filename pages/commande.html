@@ -270,7 +270,7 @@
               <button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
               <button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
             </div>
-            <p class="checkout-help">Le paiement en ligne sera ajouté ultérieurement. La validation enregistre votre commande. Pour un retrait, l’adresse exacte du point de retrait vous sera communiquée après validation.</p>
+            <p class="checkout-help">La validation prépare votre paiement sécurisé Stripe. Votre commande ne sera confirmée qu’après paiement.</p>
           </div>
         </div>
       </div>
@@ -729,6 +729,7 @@
           INVALID_SERVER_PRICE: "Le prix serveur est invalide.",
           INVALID_SERVER_STOCK: "Le stock serveur est indisponible.",
           PAYMENT_ATTEMPT_NOT_FOUND: "La tentative de commande n’a pas pu être retrouvée.",
+          PAYMENT_CHECKOUT_URL_MISSING: "Le paiement sécurisé n’a pas pu être préparé. Veuillez réessayer.",
           INVALID_CLIENT_DATA: "Les informations client sont invalides.",
           INVALID_ORDER_DATA: "Les informations de commande sont invalides.",
           INVALID_SERVER_PRICING: "Le calcul serveur de la commande est invalide."
@@ -771,30 +772,16 @@
             throw error;
           }
 
-          confirmation.hidden = false;
+          if (!data.checkoutUrl || typeof data.checkoutUrl !== "string") {
+  const error = new Error("createPayment returned no checkoutUrl");
+  error.code = "PAYMENT_CHECKOUT_URL_MISSING";
+  throw error;
+}
 
-          const selectedMode = form.querySelector('input[name="modeReception"]:checked')?.value;
-          const totalServeur = (Number(data.totalCentimes) / 100).toLocaleString("fr-FR", {
-            style: "currency",
-            currency: data.devise || "EUR"
-          });
-
-          confirmation.textContent =
-            `Commande confirmée — ${data.numeroCommande}. Référence : ${data.commandeId}. Total : ${totalServeur}. ` +
-            (selectedMode === "retrait"
-              ? "L’adresse exacte du point de retrait vous sera communiquée après validation de votre commande."
-              : "Votre commande sera livrée à l’adresse indiquée.");
-
-          // La commande a été confirmée par le serveur :
-          // le panier local peut maintenant être supprimé.
-          localStorage.removeItem("cdc-panier-v1");
-          window.dispatchEvent(new CustomEvent("cdc-cart-updated", {
-            detail: { lines: [] }
-          }));
-
-          finalValidationButton.hidden = true;
-          backButton.hidden = true;
-          summaryError.hidden = true;
+// createPayment prépare la tentative de paiement ; la commande n'est
+// confirmée qu'après paiement Stripe et retour vers confirmation.html.
+// Le panier reste volontairement intact jusqu'à ce moment.
+window.location.assign(data.checkoutUrl);
         } catch (error) {
           summaryError.textContent = showServerError(error);
           summaryError.hidden = false;
