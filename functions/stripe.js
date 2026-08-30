@@ -2,236 +2,52 @@ const Stripe = require("stripe");
 const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { validateRequestId } = require("./idempotency");
 const { finalizePaidOrder } = require("./order");
-
 const db = getFirestore();
 const SITE_URL = process.env.SITE_URL || "https://lecarnetduchef.fr";
-
-function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("STRIPE_SECRET_KEY est manquante.");
-  return new Stripe(key);
-}
-
-function requiredText(value, label) {
-  if (typeof value !== "string" || !value.trim()) throw new Error(`${label} est obligatoire.`);
-  return value.trim();
-}
-
+function getStripe() { const key = process.env.STRIPE_SECRET_KEY; if (!key) throw new Error("STRIPE_SECRET_KEY est manquante."); return new Stripe(key); }
+function requiredText(value, label) { if (typeof value !== "string" || !value.trim()) throw new Error(`${label} est obligatoire.`); return value.trim(); }
 async function createCheckoutSession({ requestId, paymentAttempt }) {
-  const validRequestId = validateRequestId(requestId);
-  if (!paymentAttempt?.commandeId || !paymentAttempt?.orderData) throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
+  const validRequestId = validateRequestId(requestId); if (!paymentAttempt?.commandeId || !paymentAttempt?.orderData) throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
   if (paymentAttempt.status === "paid") return { checkoutUrl: null, stripeCheckoutSessionId: paymentAttempt.stripeCheckoutSessionId || null, alreadyPaid: true };
   if (paymentAttempt.status !== "awaiting_payment") throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
   if (paymentAttempt.checkoutUrl && paymentAttempt.stripeCheckoutSessionId) return { checkoutUrl: paymentAttempt.checkoutUrl, stripeCheckoutSessionId: paymentAttempt.stripeCheckoutSessionId, alreadyCreated: true };
-
-  const stripe = getStripe();
-  const order = paymentAttempt.orderData;
-  const lines = Array.isArray(order.lignes) ? order.lignes : [];
-  const lineItems = lines.map((line) => ({
-    price_data: {
-      currency: "eur",
-      product_data: { name: String(line.formuleNom || "Formule") },
-      unit_amount: Number(line.prixUnitaireCentimes),
-    },
-    quantity: Number(line.quantite),
-  }));
-  if (Number(order.montants?.fraisLivraisonCentimes || 0) > 0) {
-    lineItems.push({
-      price_data: {
-        currency: "eur",
-        product_data: { name: "Frais de livraison" },
-        unit_amount: Number(order.montants.fraisLivraisonCentimes),
-      },
-      quantity: 1,
-    });
-  }
+  const stripe = getStripe(); const order = paymentAttempt.orderData; const lines = Array.isArray(order.lignes) ? order.lignes : [];
+  const lineItems = lines.map((line) => ({ price_data: { currency: "eur", product_data: { name: String(line.formuleNom || "Formule") }, unit_amount: Number(line.prixUnitaireCentimes) }, quantity: Number(line.quantite) }));
+  if (Number(order.montants?.fraisLivraisonCentimes || 0) > 0) lineItems.push({ price_data: { currency: "eur", product_data: { name: "Frais de livraison" }, unit_amount: Number(order.montants.fraisLivraisonCentimes) }, quantity: 1 });
   if (!lineItems.length) throw new Error("Aucune ligne Stripe à facturer.");
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: lineItems,
-    customer_email: order.client?.email || undefined,
-    client_reference_id: validRequestId,
-    invoice_creation: {
-      enabled: true,
-      invoice_data: {
-        description: `Commande ${paymentAttempt.numeroCommande}`,
-        metadata: {
-          requestId: validRequestId,
-          commandeId: String(paymentAttempt.commandeId),
-          type: "commande",
-        },
-      },
-    },
-    success_url: `${SITE_URL}/pages/confirmation.html?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_URL}/pages/commande.html?paiement=annule`,
-    metadata: { requestId: validRequestId, commandeId: String(paymentAttempt.commandeId), type: "commande" },
-    payment_intent_data: { metadata: { requestId: validRequestId, commandeId: String(paymentAttempt.commandeId), type: "commande" } },
-  }, { idempotencyKey: `checkout_${validRequestId}` });
-
-  await db.collection("paymentAttempts").doc(validRequestId).update({
-    status: "awaiting_payment",
-    checkoutUrl: session.url || null,
-    stripeCheckoutSessionId: session.id,
-    updatedAt: Timestamp.now(),
-  });
+  const session = await stripe.checkout.sessions.create({ mode: "payment", line_items: lineItems, customer_email: order.client?.email || undefined, client_reference_id: validRequestId, invoice_creation: { enabled: true, invoice_data: { description: `Commande ${paymentAttempt.numeroCommande}`, metadata: { requestId: validRequestId, commandeId: String(paymentAttempt.commandeId), type: "commande" } } }, success_url: `${SITE_URL}/pages/confirmation.html?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${SITE_URL}/pages/commande.html?paiement=annule`, metadata: { requestId: validRequestId, commandeId: String(paymentAttempt.commandeId), type: "commande" }, payment_intent_data: { metadata: { requestId: validRequestId, commandeId: String(paymentAttempt.commandeId), type: "commande" } } }, { idempotencyKey: `checkout_${validRequestId}` });
+  await db.collection("paymentAttempts").doc(validRequestId).update({ status: "awaiting_payment", checkoutUrl: session.url || null, stripeCheckoutSessionId: session.id, updatedAt: Timestamp.now() });
   return { checkoutUrl: session.url, stripeCheckoutSessionId: session.id, alreadyCreated: false };
 }
-
 async function createQuoteCheckoutSession({ devisId }) {
-  const id = requiredText(devisId, "Identifiant du devis");
-  const devisRef = db.collection("devis").doc(id);
-  const snap = await devisRef.get();
-  if (!snap.exists) throw new Error("Devis introuvable.");
-  const devis = snap.data() || {};
-  if (!["accepte", "accepted", "paiement_demande"].includes(String(devis.statut || "").toLowerCase())) throw new Error("Le devis doit être accepté avant le paiement.");
-  const total = Number(devis.total || 0);
-  if (!Number.isFinite(total) || total <= 0) throw new Error("Total du devis invalide.");
-  const paymentRef = db.collection("paiements").doc();
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [{ price_data: { currency: "eur", product_data: { name: `Devis ${id}` }, unit_amount: Math.round(total * 100) }, quantity: 1 }],
-    customer_email: devis.client?.email || undefined,
-    invoice_creation: { enabled: true },
-    success_url: `${SITE_URL}/pages/confirmation.html?devis=${encodeURIComponent(id)}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_URL}/pages/prestations.html?paiement=annule&devis=${encodeURIComponent(id)}`,
-    metadata: { type: "devis", devisId: id, paiementId: paymentRef.id },
-    payment_intent_data: { metadata: { type: "devis", devisId: id, paiementId: paymentRef.id } },
-  }, { idempotencyKey: `quote_${id}` });
-  await paymentRef.set({ type: "devis", devisId: id, statut: "en_attente", provider: "stripe", checkoutSessionId: session.id, montantCentimes: Math.round(total * 100), devise: "EUR", client: devis.client || {}, createdAt: Timestamp.now(), updatedAt: Timestamp.now() });
-  return { checkoutUrl: session.url, stripeCheckoutSessionId: session.id, paiementId: paymentRef.id };
+  const id = requiredText(devisId, "Identifiant du devis"); const devisRef = db.collection("devis").doc(id); const snap = await devisRef.get(); if (!snap.exists) throw new Error("Devis introuvable.");
+  const devis = snap.data() || {}; if (!["accepte", "accepted", "paiement_demande"].includes(String(devis.statut || "").toLowerCase())) throw new Error("Le devis doit être accepté avant le paiement.");
+  const total = Number(devis.total || 0); if (!Number.isFinite(total) || total <= 0) throw new Error("Total du devis invalide."); const paymentRef = db.collection("paiements").doc(); const stripe = getStripe();
+  const session = await stripe.checkout.sessions.create({ mode: "payment", line_items: [{ price_data: { currency: "eur", product_data: { name: `Devis ${id}` }, unit_amount: Math.round(total * 100) }, quantity: 1 }], customer_email: devis.client?.email || undefined, invoice_creation: { enabled: true }, success_url: `${SITE_URL}/pages/confirmation.html?devis=${encodeURIComponent(id)}&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${SITE_URL}/pages/prestations.html?paiement=annule&devis=${encodeURIComponent(id)}`, metadata: { type: "devis", devisId: id, paiementId: paymentRef.id }, payment_intent_data: { metadata: { type: "devis", devisId: id, paiementId: paymentRef.id } } }, { idempotencyKey: `quote_${id}` });
+  await paymentRef.set({ type: "devis", devisId: id, statut: "en_attente", provider: "stripe", checkoutSessionId: session.id, montantCentimes: Math.round(total * 100), devise: "EUR", client: devis.client || {}, createdAt: Timestamp.now(), updatedAt: Timestamp.now() }); return { checkoutUrl: session.url, stripeCheckoutSessionId: session.id, paiementId: paymentRef.id };
 }
-
 async function upsertStripePayment({ session, transactionId, status, invoiceId = null }) {
-  const metadata = session.metadata || {};
-  const paiementId = metadata.paiementId || null;
-  const ref = paiementId ? db.collection("paiements").doc(paiementId) : db.collection("paiements").doc(session.id);
-  const existing = await ref.get();
-  const base = existing.exists ? existing.data() : {};
-  await ref.set({
-    ...base,
-    provider: "stripe",
-    statut: status,
-    checkoutSessionId: session.id,
-    transactionId: transactionId || base.transactionId || null,
-    invoiceStripeId: invoiceId || session.invoice || base.invoiceStripeId || null,
-    type: metadata.type || base.type || "commande",
-    devisId: metadata.devisId || base.devisId || null,
-    commandeId: metadata.commandeId || base.commandeId || null,
-    montantCentimes: session.amount_total ?? base.montantCentimes ?? 0,
-    devise: String(session.currency || base.devise || "eur").toUpperCase(),
-    client: base.client || { email: session.customer_details?.email || session.customer_email || null },
-    updatedAt: Timestamp.now(),
-    ...(status === "paye" ? { paidAt: Timestamp.now() } : {}),
-  }, { merge: true });
-  return ref.id;
+  const metadata = session.metadata || {}; const paiementId = metadata.paiementId || null; const ref = paiementId ? db.collection("paiements").doc(paiementId) : db.collection("paiements").doc(session.id); const existing = await ref.get(); const base = existing.exists ? existing.data() : {};
+  await ref.set({ ...base, provider: "stripe", statut: status, checkoutSessionId: session.id, transactionId: transactionId || base.transactionId || null, invoiceStripeId: invoiceId || session.invoice || base.invoiceStripeId || null, type: metadata.type || base.type || "commande", devisId: metadata.devisId || base.devisId || null, commandeId: metadata.commandeId || base.commandeId || null, montantCentimes: session.amount_total ?? base.montantCentimes ?? 0, devise: String(session.currency || base.devise || "eur").toUpperCase(), client: base.client || { email: session.customer_details?.email || session.customer_email || null }, updatedAt: Timestamp.now(), ...(status === "paye" ? { paidAt: Timestamp.now() } : {}) }, { merge: true }); return ref.id;
 }
-
 async function upsertInvoiceFromStripe({ session, status = "payee" }) {
-  const invoiceId = session.invoice ? String(session.invoice) : session.metadata?.invoiceId || null;
-  if (!invoiceId) return null;
-  const stripe = getStripe();
-  let invoice = null;
+  const invoiceId = session.invoice ? String(session.invoice) : session.metadata?.invoiceId || null; if (!invoiceId) return null; const stripe = getStripe(); let invoice = null;
   try { invoice = await stripe.invoices.retrieve(invoiceId); } catch (error) { console.error("Impossible de récupérer la facture Stripe :", error); }
-  const id = `STRIPE-${invoiceId}`;
-  const ref = db.collection("factures").doc(id);
-  await ref.set({
-    numero: invoice?.number || id,
-    provider: "stripe",
-    stripeInvoiceId: invoiceId,
-    statut: status,
-    type: session.metadata?.type || "commande",
-    commandeId: session.metadata?.commandeId || null,
-    devisId: session.metadata?.devisId || null,
-    paiementId: session.metadata?.paiementId || null,
-    clientEmail: invoice?.customer_email || session.customer_details?.email || session.customer_email || null,
-    totalCentimes: invoice?.total ?? session.amount_total ?? 0,
-    devise: String(invoice?.currency || session.currency || "eur").toUpperCase(),
-    pdfUrl: invoice?.invoice_pdf || null,
-    hostedUrl: invoice?.hosted_invoice_url || null,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  }, { merge: true });
-  return id;
+  const id = `STRIPE-${invoiceId}`; const ref = db.collection("factures").doc(id);
+  await ref.set({ numero: invoice?.number || id, provider: "stripe", stripeInvoiceId: invoiceId, statut: status, type: session.metadata?.type || "commande", commandeId: session.metadata?.commandeId || null, devisId: session.metadata?.devisId || null, paiementId: session.metadata?.paiementId || null, clientEmail: invoice?.customer_email || session.customer_details?.email || session.customer_email || null, totalCentimes: invoice?.total ?? session.amount_total ?? 0, devise: String(invoice?.currency || session.currency || "eur").toUpperCase(), pdfUrl: invoice?.invoice_pdf || null, hostedUrl: invoice?.hosted_invoice_url || null, createdAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true }); return id;
 }
-
 async function handleCheckoutCompleted(session) {
-  if (session.payment_status !== "paid") return { handled: false, paymentStatus: session.payment_status || null };
-  const metadata = session.metadata || {};
-  const transactionId = requiredText(String(session.payment_intent || ""), "Référence de paiement Stripe");
-  if (metadata.type === "devis") {
-    const paiementId = await upsertStripePayment({ session, transactionId, status: "paye" });
-    const devisRef = db.collection("devis").doc(String(metadata.devisId));
-    await devisRef.set({ statut: "paye", paiementId, stripeCheckoutSessionId: session.id, updatedAt: Timestamp.now() }, { merge: true });
-    const factureId = await upsertInvoiceFromStripe({ session });
-    return { handled: true, type: "devis", paiementId, factureId };
-  }
-  const requestId = validateRequestId(metadata.requestId || session.client_reference_id);
-  const result = await finalizePaidOrder({ requestId, transactionId, paidAt: Timestamp.now(), stripeCheckoutSessionId: session.id });
-  const paiementId = await upsertStripePayment({ session, transactionId, status: "paye", invoiceId: session.invoice || null });
-  await upsertInvoiceFromStripe({ session });
-  return { handled: true, type: "commande", paiementId, ...result };
+  if (session.payment_status !== "paid") return { handled: false, paymentStatus: session.payment_status || null }; const metadata = session.metadata || {}; const transactionId = requiredText(String(session.payment_intent || ""), "Référence de paiement Stripe");
+  if (metadata.type === "devis") { const paiementId = await upsertStripePayment({ session, transactionId, status: "paye" }); const devisRef = db.collection("devis").doc(String(metadata.devisId)); await devisRef.set({ statut: "paye", paiementId, stripeCheckoutSessionId: session.id, updatedAt: Timestamp.now() }, { merge: true }); const factureId = await upsertInvoiceFromStripe({ session }); return { handled: true, type: "devis", paiementId, factureId }; }
+  const requestId = validateRequestId(metadata.requestId || session.client_reference_id); const result = await finalizePaidOrder({ requestId, transactionId, paidAt: Timestamp.now(), stripeCheckoutSessionId: session.id }); const paiementId = await upsertStripePayment({ session, transactionId, status: "paye", invoiceId: session.invoice || null }); await upsertInvoiceFromStripe({ session }); return { handled: true, type: "commande", paiementId, ...result };
 }
-
-async function handlePaymentFailure(paymentIntent) {
-  const metadata = paymentIntent.metadata || {};
-  const requestId = metadata.requestId;
-  if (!requestId) return { handled: false };
-  const validRequestId = validateRequestId(requestId);
-  await db.collection("paymentAttempts").doc(validRequestId).set({ status: "failed", paymentTransactionId: String(paymentIntent.id), failureAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true });
-  return { handled: true, requestId: validRequestId };
-}
-
-async function handleCheckoutExpired(session) {
-  const requestId = session.metadata?.requestId || session.client_reference_id;
-  if (!requestId) return { handled: false };
-  const validRequestId = validateRequestId(requestId);
-  await db.collection("paymentAttempts").doc(validRequestId).set({ status: "expired", expiredAt: Timestamp.now(), stripeCheckoutSessionId: session.id, updatedAt: Timestamp.now() }, { merge: true });
-  return { handled: true, requestId: validRequestId };
-}
-
-async function handleInvoicePaid(invoice) {
-  const metadata = invoice.metadata || {};
-  const commandeId = metadata.commandeId || null;
-  const requestId = metadata.requestId || null;
-  const ref = db.collection("factures").doc(`STRIPE-${invoice.id}`);
-  await ref.set({ numero: invoice.number || `STRIPE-${invoice.id}`, provider: "stripe", stripeInvoiceId: invoice.id, statut: "payee", commandeId, clientEmail: invoice.customer_email || null, totalCentimes: invoice.total || 0, devise: String(invoice.currency || "eur").toUpperCase(), pdfUrl: invoice.invoice_pdf || null, hostedUrl: invoice.hosted_invoice_url || null, requestId, updatedAt: Timestamp.now() }, { merge: true });
-  return { handled: true, factureId: ref.id };
-}
-
+async function handlePaymentFailure(paymentIntent) { const requestId = paymentIntent.metadata?.requestId; if (!requestId) return { handled: false }; const validRequestId = validateRequestId(requestId); await db.collection("paymentAttempts").doc(validRequestId).set({ status: "failed", paymentTransactionId: String(paymentIntent.id), failureAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true }); return { handled: true, requestId: validRequestId }; }
+async function handleCheckoutExpired(session) { const requestId = session.metadata?.requestId || session.client_reference_id; if (!requestId) return { handled: false }; const validRequestId = validateRequestId(requestId); await db.collection("paymentAttempts").doc(validRequestId).set({ status: "expired", expiredAt: Timestamp.now(), stripeCheckoutSessionId: session.id, updatedAt: Timestamp.now() }, { merge: true }); return { handled: true, requestId: validRequestId }; }
+async function handleInvoicePaid(invoice) { const metadata = invoice.metadata || {}; const ref = db.collection("factures").doc(`STRIPE-${invoice.id}`); await ref.set({ numero: invoice.number || `STRIPE-${invoice.id}`, provider: "stripe", stripeInvoiceId: invoice.id, statut: "payee", commandeId: metadata.commandeId || null, clientEmail: invoice.customer_email || null, totalCentimes: invoice.total || 0, devise: String(invoice.currency || "eur").toUpperCase(), pdfUrl: invoice.invoice_pdf || null, hostedUrl: invoice.hosted_invoice_url || null, requestId: metadata.requestId || null, updatedAt: Timestamp.now() }, { merge: true }); return { handled: true, factureId: ref.id }; }
+async function getCheckoutStatus(sessionId) { const id = requiredText(sessionId, "Session Stripe"); const session = await getStripe().checkout.sessions.retrieve(id); const requestId = session.metadata?.requestId || session.client_reference_id; if (!requestId) return { status: session.payment_status || "unpaid", numeroCommande: null }; const attempt = await db.collection("paymentAttempts").doc(validateRequestId(requestId)).get(); const data = attempt.exists ? attempt.data() : null; return { status: data?.status === "paid" ? "paid" : session.payment_status || "unpaid", numeroCommande: data?.numeroCommande || null, commandeId: data?.status === "paid" ? data?.commandeId || null : null }; }
 async function handleStripeWebhook(rawBody, signature) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET est manquante.");
-  const event = getStripe().webhooks.constructEvent(rawBody, requiredText(signature, "Signature Stripe"), webhookSecret);
-  const eventRef = db.collection("stripeWebhookEvents").doc(event.id);
-  const existing = await eventRef.get();
-  if (existing.exists && existing.data()?.status === "processed") return { received: true, eventId: event.id, handled: true, duplicate: true };
-  await eventRef.set({ type: event.type, status: "processing", receivedAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true });
-  try {
-    let result;
-    if (event.type === "checkout.session.completed") result = await handleCheckoutCompleted(event.data.object);
-    else if (event.type === "checkout.session.async_payment_succeeded") result = await handleCheckoutCompleted(event.data.object);
-    else if (event.type === "checkout.session.expired") result = await handleCheckoutExpired(event.data.object);
-    else if (event.type === "payment_intent.payment_failed") result = await handlePaymentFailure(event.data.object);
-    else if (event.type === "invoice.paid") result = await handleInvoicePaid(event.data.object);
-    else if (event.type === "charge.refunded") {
-      const charge = event.data.object;
-      const paymentIntentId = charge.payment_intent ? String(charge.payment_intent) : null;
-      const snap = await db.collection("paiements").where("transactionId", "==", paymentIntentId).limit(1).get();
-      if (!snap.empty) {
-        const paymentRef = snap.docs[0].ref;
-        await paymentRef.set({ statut: "rembourse", refundedAt: Timestamp.now(), refundAmountCentimes: charge.amount_refunded || 0, updatedAt: Timestamp.now() }, { merge: true });
-        await db.collection("remboursements").doc(event.id).set({ paiementId: paymentRef.id, provider: "stripe", stripeChargeId: charge.id, transactionId: paymentIntentId, montantCentimes: charge.amount_refunded || 0, devise: String(charge.currency || "eur").toUpperCase(), statut: charge.refunded ? "rembourse" : "partiel", createdAt: Timestamp.now() }, { merge: true });
-      }
-      result = { handled: true, type: "remboursement" };
-    } else result = { handled: false, eventType: event.type };
-    await eventRef.set({ status: "processed", processedAt: Timestamp.now(), updatedAt: Timestamp.now(), result: result || null }, { merge: true });
-    return { received: true, eventId: event.id, ...(result || {}) };
-  } catch (error) {
-    await eventRef.set({ status: "failed", failedAt: Timestamp.now(), updatedAt: Timestamp.now(), error: String(error?.message || error) }, { merge: true });
-    throw error;
-  }
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET; if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET est manquante."); const event = getStripe().webhooks.constructEvent(rawBody, requiredText(signature, "Signature Stripe"), webhookSecret); const eventRef = db.collection("stripeWebhookEvents").doc(event.id); const existing = await eventRef.get();
+  if (existing.exists && existing.data()?.status === "processed") return { received: true, eventId: event.id, handled: true, duplicate: true }; await eventRef.set({ type: event.type, status: "processing", receivedAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true });
+  try { let result; if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") result = await handleCheckoutCompleted(event.data.object); else if (event.type === "checkout.session.expired") result = await handleCheckoutExpired(event.data.object); else if (event.type === "payment_intent.payment_failed") result = await handlePaymentFailure(event.data.object); else if (event.type === "invoice.paid") result = await handleInvoicePaid(event.data.object); else if (event.type === "charge.refunded") { const charge = event.data.object; const paymentIntentId = charge.payment_intent ? String(charge.payment_intent) : null; const snap = await db.collection("paiements").where("transactionId", "==", paymentIntentId).limit(1).get(); if (!snap.empty) { const paymentRef = snap.docs[0].ref; await paymentRef.set({ statut: "rembourse", refundedAt: Timestamp.now(), refundAmountCentimes: charge.amount_refunded || 0, updatedAt: Timestamp.now() }, { merge: true }); await db.collection("remboursements").doc(event.id).set({ paiementId: paymentRef.id, provider: "stripe", stripeChargeId: charge.id, transactionId: paymentIntentId, montantCentimes: charge.amount_refunded || 0, devise: String(charge.currency || "eur").toUpperCase(), statut: charge.refunded ? "rembourse" : "partiel", createdAt: Timestamp.now() }, { merge: true }); } result = { handled: true, type: "remboursement" }; } else result = { handled: false, eventType: event.type }; await eventRef.set({ status: "processed", processedAt: Timestamp.now(), updatedAt: Timestamp.now(), result: result || null }, { merge: true }); return { received: true, eventId: event.id, ...(result || {}) }; } catch (error) { await eventRef.set({ status: "failed", failedAt: Timestamp.now(), updatedAt: Timestamp.now(), error: String(error?.message || error) }, { merge: true }); throw error; }
 }
-
-module.exports = { createCheckoutSession, createQuoteCheckoutSession, handleStripeWebhook };
+module.exports = { createCheckoutSession, createQuoteCheckoutSession, getCheckoutStatus, handleStripeWebhook };
