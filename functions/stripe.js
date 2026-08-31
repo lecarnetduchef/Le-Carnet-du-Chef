@@ -26,13 +26,18 @@ function emailConfig() {
 
 async function createCheckoutSession({ requestId, paymentAttempt }) {
   const validRequestId = validateRequestId(requestId);
-  if (!paymentAttempt?.commandeId || !paymentAttempt?.orderData) throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
-  if (paymentAttempt.status === "paid") return { checkoutUrl: null, stripeCheckoutSessionId: paymentAttempt.stripeCheckoutSessionId || null, alreadyPaid: true };
-  if (paymentAttempt.status !== "awaiting_payment") throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
-  if (paymentAttempt.checkoutUrl && paymentAttempt.stripeCheckoutSessionId) return { checkoutUrl: paymentAttempt.checkoutUrl, stripeCheckoutSessionId: paymentAttempt.stripeCheckoutSessionId, alreadyCreated: true };
+  const attemptRef = db.collection("paymentAttempts").doc(validRequestId);
+  const attemptSnapshot = await attemptRef.get();
+  if (!attemptSnapshot.exists) throw new Error("La tentative de paiement est introuvable.");
+  
+  const attempt = attemptSnapshot.data() || {};
+  if (!attempt.commandeId || !attempt.orderData) throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
+  if (attempt.status === "paid") return { checkoutUrl: null, stripeCheckoutSessionId: attempt.stripeCheckoutSessionId || null, alreadyPaid: true };
+  if (attempt.status !== "awaiting_payment") throw new Error("La tentative de paiement n'est pas prête pour Stripe.");
+  if (attempt.checkoutUrl && attempt.stripeCheckoutSessionId) return { checkoutUrl: attempt.checkoutUrl, stripeCheckoutSessionId: attempt.stripeCheckoutSessionId, alreadyCreated: true };
 
   const stripe = getStripe();
-  const order = paymentAttempt.orderData;
+  const order = attempt.orderData;
   const lines = Array.isArray(order.lignes) ? order.lignes : [];
   const lineItems = lines.map((line) => ({
     price_data: {
