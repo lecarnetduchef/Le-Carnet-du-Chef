@@ -11,6 +11,7 @@ const DEFAULTS = {
   fermetureManuelleDiner: false,
   fermetureExceptionnelle: { active: false, motif: "", dateDebut: null, dateFin: null }
 };
+
 function ensureUI() {
   if (document.querySelector("#commandes-config-section")) return;
   const settings = document.querySelector("#settings-section");
@@ -43,17 +44,122 @@ function ensureUI() {
     </form>`;
   settings.appendChild(section);
 }
+
 function elements() {
   return {
-    section: document.querySelector("#commandes-config-section"), form: document.querySelector("#commandes-config-form"), modeManuel: document.querySelector("#commandes-mode-manuel"), limiteDejeuner: document.querySelector("#commandes-limite-dejeuner"), limiteDiner: document.querySelector("#commandes-limite-diner"), fermetureGlobale: document.querySelector("#commandes-fermeture-globale"), fermetureDejeuner: document.querySelector("#commandes-fermeture-dejeuner"), fermetureDiner: document.querySelector("#commandes-fermeture-diner"), fermetureExceptionnelle: document.querySelector("#commandes-fermeture-exceptionnelle"), motif: document.querySelector("#commandes-fermeture-motif"), dateDebut: document.querySelector("#commandes-fermeture-date-debut"), dateFin: document.querySelector("#commandes-fermeture-date-fin"), status: document.querySelector("#commandes-config-status"), saveButton: document.querySelector("#commandes-config-save")
+    section: document.querySelector("#commandes-config-section"),
+    form: document.querySelector("#commandes-config-form"),
+    modeManuel: document.querySelector("#commandes-mode-manuel"),
+    limiteDejeuner: document.querySelector("#commandes-limite-dejeuner"),
+    limiteDiner: document.querySelector("#commandes-limite-diner"),
+    fermetureGlobale: document.querySelector("#commandes-fermeture-globale"),
+    fermetureDejeuner: document.querySelector("#commandes-fermeture-dejeuner"),
+    fermetureDiner: document.querySelector("#commandes-fermeture-diner"),
+    fermetureExceptionnelle: document.querySelector("#commandes-fermeture-exceptionnelle"),
+    motif: document.querySelector("#commandes-fermeture-motif"),
+    dateDebut: document.querySelector("#commandes-fermeture-date-debut"),
+    dateFin: document.querySelector("#commandes-fermeture-date-fin"),
+    status: document.querySelector("#commandes-config-status"),
+    saveButton: document.querySelector("#commandes-config-save")
   };
 }
-function showStatus(message="",isError=false){const e=elements();if(!e.status)return;e.status.textContent=message;e.status.className=`muted ${isError?"admin-alert admin-alert-error":""}`;}
-function setExceptionnelleVisibility(){const e=elements();const visible=e.fermetureExceptionnelle?.checked===true;if(e.motif)e.motif.disabled=!visible;if(e.dateDebut)e.dateDebut.disabled=!visible;if(e.dateFin)e.dateFin.disabled=!visible;}
-function applyData(data={}){const e=elements();const exceptionnelle={...DEFAULTS.fermetureExceptionnelle,...(data.fermetureExceptionnelle&&typeof data.fermetureExceptionnelle==="object"?data.fermetureExceptionnelle:{})};e.modeManuel.value=["auto","ouvert","ferme"].includes(data.modeManuel)?data.modeManuel:DEFAULTS.modeManuel;e.limiteDejeuner.value=typeof data.limiteDejeuner==="string"?data.limiteDejeuner:DEFAULTS.limiteDejeuner;e.limiteDiner.value=typeof data.limiteDiner==="string"?data.limiteDiner:DEFAULTS.limiteDiner;e.fermetureGlobale.checked=data.fermetureManuelleGlobale===true;e.fermetureDejeuner.checked=data.fermetureManuelleDejeuner===true;e.fermetureDiner.checked=data.fermetureManuelleDiner===true;e.fermetureExceptionnelle.checked=exceptionnelle.active===true;e.motif.value=typeof exceptionnelle.motif==="string"?exceptionnelle.motif:"";e.dateDebut.value=typeof exceptionnelle.dateDebut==="string"?exceptionnelle.dateDebut:"";e.dateFin.value=typeof exceptionnelle.dateFin==="string"?exceptionnelle.dateFin:"";setExceptionnelleVisibility();}
-async function load(){const e=elements();if(!auth.currentUser||!FIREBASE_READY||!e.form)return;showStatus("Chargement des paramètres…");try{const snapshot=await getDoc(COMMANDES_REF);applyData(snapshot.exists()?snapshot.data():{});showStatus("");}catch(error){console.error("Erreur de lecture de siteContent/commandes :",error);showStatus(`Impossible de charger les paramètres : ${error?.message||"erreur inconnue"}`,true);}}
-async function save(event){event.preventDefault();const e=elements();if(!auth.currentUser||!e.form)return;const modeManuel=e.modeManuel.value,limiteDejeuner=e.limiteDejeuner.value,limiteDiner=e.limiteDiner.value,dateDebut=e.dateDebut.value||null,dateFin=e.dateFin.value||null;if(!["auto","ouvert","ferme"].includes(modeManuel))return showStatus("État des commandes invalide.",true);if(!/^\d{2}:\d{2}$/.test(limiteDejeuner)||!/^\d{2}:\d{2}$/.test(limiteDiner))return showStatus("Les limites horaires doivent être au format HH:MM.",true);if(dateDebut&&dateFin&&dateFin<dateDebut)return showStatus("La date de fin doit être postérieure ou égale à la date de début.",true);e.saveButton.disabled=true;showStatus("Enregistrement en cours…");try{const snapshot=await getDoc(COMMANDES_REF);const existing=snapshot.exists()?snapshot.data():{};const oldExceptionnelle=existing.fermetureExceptionnelle&&typeof existing.fermetureExceptionnelle==="object"?existing.fermetureExceptionnelle:{};await setDoc(COMMANDES_REF,{modeManuel,limiteDejeuner,limiteDiner,fermetureManuelleGlobale:e.fermetureGlobale.checked,fermetureManuelleDejeuner:e.fermetureDejeuner.checked,fermetureManuelleDiner:e.fermetureDiner.checked,fermetureExceptionnelle:{...oldExceptionnelle,active:e.fermetureExceptionnelle.checked,motif:e.motif.value.trim(),dateDebut,dateFin},updatedAt:serverTimestamp()},{merge:true});showStatus("Paramètres des commandes enregistrés dans Firestore.");}catch(error){console.error("Erreur Firestore lors de l’enregistrement de siteContent/commandes :",error);showStatus(`Enregistrement impossible : ${error?.message||"erreur inconnue"}`,true);}finally{e.saveButton.disabled=false;}}
-function init(){ensureUI();const e=elements();if(!e.section||!e.form||!FIREBASE_READY)return;e.form.addEventListener("submit",save);e.fermetureExceptionnelle.addEventListener("change",setExceptionnelleVisibility);auth.onAuthStateChanged(user=>{e.section.hidden=!user;if(user)void load();});}
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
+
+function showStatus(message = "", isError = false) {
+  const e = elements();
+  if (!e.status) return;
+  e.status.textContent = message;
+  e.status.className = `muted ${isError ? "admin-alert admin-alert-error" : ""}`;
+}
+
+function setExceptionnelleVisibility() {
+  const e = elements();
+  const visible = e.fermetureExceptionnelle?.checked === true;
+  if (e.motif) e.motif.disabled = !visible;
+  if (e.dateDebut) e.dateDebut.disabled = !visible;
+  if (e.dateFin) e.dateFin.disabled = !visible;
+}
+
+function applyData(data = {}) {
+  const e = elements();
+  const exceptionnelle = { ...DEFAULTS.fermetureExceptionnelle, ...(data.fermetureExceptionnelle && typeof data.fermetureExceptionnelle === "object" ? data.fermetureExceptionnelle : {}) };
+  e.modeManuel.value = ["auto", "ouvert", "ferme"].includes(data.modeManuel) ? data.modeManuel : DEFAULTS.modeManuel;
+  e.limiteDejeuner.value = typeof data.limiteDejeuner === "string" ? data.limiteDejeuner : DEFAULTS.limiteDejeuner;
+  e.limiteDiner.value = typeof data.limiteDiner === "string" ? data.limiteDiner : DEFAULTS.limiteDiner;
+  e.fermetureGlobale.checked = data.fermetureManuelleGlobale === true;
+  e.fermetureDejeuner.checked = data.fermetureManuelleDejeuner === true;
+  e.fermetureDiner.checked = data.fermetureManuelleDiner === true;
+  e.fermetureExceptionnelle.checked = exceptionnelle.active === true;
+  e.motif.value = typeof exceptionnelle.motif === "string" ? exceptionnelle.motif : "";
+  e.dateDebut.value = typeof exceptionnelle.dateDebut === "string" ? exceptionnelle.dateDebut : "";
+  e.dateFin.value = typeof exceptionnelle.dateFin === "string" ? exceptionnelle.dateFin : "";
+  setExceptionnelleVisibility();
+}
+
+async function load() {
+  const e = elements();
+  if (!auth.currentUser || !FIREBASE_READY || !e.form) return;
+  showStatus("Chargement des paramètres…");
+  try {
+    const snapshot = await getDoc(COMMANDES_REF);
+    applyData(snapshot.exists() ? snapshot.data() : {});
+    showStatus("");
+  } catch (error) {
+    console.error("Erreur de lecture de siteContent/commandes :", error);
+    showStatus(`Impossible de charger les paramètres : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
+async function save(event) {
+  event.preventDefault();
+  const e = elements();
+  if (!auth.currentUser || !e.form) return;
+  const modeManuel = e.modeManuel.value;
+  const limiteDejeuner = e.limiteDejeuner.value;
+  const limiteDiner = e.limiteDiner.value;
+  const dateDebut = e.dateDebut.value || null;
+  const dateFin = e.dateFin.value || null;
+  if (!["auto", "ouvert", "ferme"].includes(modeManuel)) return showStatus("État des commandes invalide.", true);
+  if (!/^\d{2}:\d{2}$/.test(limiteDejeuner) || !/^\d{2}:\d{2}$/.test(limiteDiner)) return showStatus("Les limites horaires doivent être au format HH:MM.", true);
+  if (dateDebut && dateFin && dateFin < dateDebut) return showStatus("La date de fin doit être postérieure ou égale à la date de début.", true);
+  e.saveButton.disabled = true;
+  showStatus("Enregistrement en cours…");
+  try {
+    const snapshot = await getDoc(COMMANDES_REF);
+    const existing = snapshot.exists() ? snapshot.data() : {};
+    const oldExceptionnelle = existing.fermetureExceptionnelle && typeof existing.fermetureExceptionnelle === "object" ? existing.fermetureExceptionnelle : {};
+    await setDoc(COMMANDES_REF, {
+      modeManuel,
+      limiteDejeuner,
+      limiteDiner,
+      fermetureManuelleGlobale: e.fermetureGlobale.checked,
+      fermetureManuelleDejeuner: e.fermetureDejeuner.checked,
+      fermetureManuelleDiner: e.fermetureDiner.checked,
+      fermetureExceptionnelle: { ...oldExceptionnelle, active: e.fermetureExceptionnelle.checked, motif: e.motif.value.trim(), dateDebut, dateFin },
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    showStatus("Paramètres des commandes enregistrés dans Firestore.");
+  } catch (error) {
+    console.error("Erreur Firestore lors de l’enregistrement de siteContent/commandes :", error);
+    showStatus(`Enregistrement impossible : ${error?.message || "erreur inconnue"}`, true);
+  } finally {
+    e.saveButton.disabled = false;
+  }
+}
+
+function init() {
+  ensureUI();
+  const e = elements();
+  if (!e.section || !e.form || !FIREBASE_READY) return;
+  e.form.addEventListener("submit", save);
+  e.fermetureExceptionnelle.addEventListener("change", setExceptionnelleVisibility);
+  auth.onAuthStateChanged((user) => {
+    e.section.hidden = !user;
+    if (user) void load();
+  });
+}
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+else init();
+
 import("./finance.js");
 import("./finance-enhancer.js");
