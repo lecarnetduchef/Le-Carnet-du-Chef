@@ -8,7 +8,7 @@ const ALLOWED_DELIVERY_AREAS = Object.freeze({
 });
 
 const ORIGIN_ADDRESS = "50 rue Maréchal Foch, 42300 Roanne, France";
-const GEOCODING_URL = "https://geocode.googleapis.com/v4/geocode/address";
+const GEOCODING_URL = "https://maps.googleapis.com/maps/api/geocode/json";
 const ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
 
 function normalize(value) {
@@ -56,23 +56,52 @@ async function geocodeAddress(address, apiKey) {
   const url = new URL(GEOCODING_URL);
   url.searchParams.set("address", address);
   url.searchParams.set("key", apiKey);
+  url.searchParams.set("language", "fr");
+  url.searchParams.set("region", "fr");
 
   const response = await fetch(url, { method: "GET" });
+  const data = await response.json().catch(() => null);
+
   if (!response.ok) {
+    console.error("Google Geocoding HTTP error:", {
+      httpStatus: response.status,
+      googleStatus: data?.status || null,
+      googleError: data?.error_message || null,
+    });
     throw new Error(`Google Geocoding API a répondu HTTP ${response.status}.`);
   }
 
-  const data = await response.json();
-  const firstResult = data?.results?.[0];
-  const location = firstResult?.location || firstResult?.geometry?.location;
+  if (data?.status !== "OK") {
+    console.error("Google Geocoding API error:", {
+      httpStatus: response.status,
+      googleStatus: data?.status || null,
+      googleError: data?.error_message || null,
+    });
 
-  if (!location || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude)) {
+    if (data?.status === "REQUEST_DENIED") {
+      throw new Error("Google Geocoding API a refusé la requête.");
+    }
+
+    if (data?.status === "ZERO_RESULTS") {
+      throw new Error("Adresse impossible à géocoder.");
+    }
+
+    throw new Error("Google Geocoding API a retourné une réponse invalide.");
+  }
+
+  const location = data?.results?.[0]?.geometry?.location;
+
+  if (
+    !location ||
+    !Number.isFinite(location.lat) ||
+    !Number.isFinite(location.lng)
+  ) {
     throw new Error("Adresse impossible à géocoder.");
   }
 
   return {
-    latitude: location.latitude,
-    longitude: location.longitude,
+    latitude: location.lat,
+    longitude: location.lng,
   };
 }
 
@@ -102,14 +131,24 @@ async function computeDrivingDistance(destination, apiKey) {
     }),
   });
 
+  const data = await response.json().catch(() => null);
+
   if (!response.ok) {
+    console.error("Google Routes HTTP error:", {
+      httpStatus: response.status,
+      googleStatus: data?.error?.status || null,
+      googleError: data?.error?.message || null,
+    });
     throw new Error(`Google Routes API a répondu HTTP ${response.status}.`);
   }
 
-  const data = await response.json();
   const distanceMeters = data?.routes?.[0]?.distanceMeters;
 
   if (!Number.isFinite(distanceMeters) || distanceMeters < 0) {
+    console.error("Google Routes API returned no usable route:", {
+      httpStatus: response.status,
+      hasRoutes: Array.isArray(data?.routes),
+    });
     throw new Error("Distance routière indisponible.");
   }
 
