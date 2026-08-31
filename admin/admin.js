@@ -1,6 +1,6 @@
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const MENU_IDS = [1, 2, 3];
 const CHEF_PRESENTATION_REF = doc(db, "siteContent", "chefPresentation");
@@ -95,7 +95,48 @@ function applyDevisDemande() { const id = document.querySelector("#devis-demande
 function resetDevisForm() { devisSelectedId = null; devisCurrent = null; const demande = document.querySelector("#devis-demande"); if (demande) demande.value = ""; const status = document.querySelector("#devis-statut"); if (status) status.value = "brouillon"; ["#devis-client-nom","#devis-client-email","#devis-client-telephone","#devis-conditions"].forEach((selector) => { const el = document.querySelector(selector); if (el) el.value = ""; }); ["#devis-remise","#devis-remise-euro"].forEach((selector) => { const el = document.querySelector(selector); if (el) el.value = "0"; }); const lines = document.querySelector("#devis-lines"); if (lines) lines.innerHTML = ""; addDevisLine(); const number = document.querySelector("#devis-number"); if (number) number.textContent = "Brouillon"; updateDevisTotal(); }
 function collectDevisForm() { const calc = updateDevisTotal(); return { demandeId: document.querySelector("#devis-demande")?.value || null, statut: document.querySelector("#devis-statut")?.value || "brouillon", client: { nom: devisText(document.querySelector("#devis-client-nom")?.value), email: devisText(document.querySelector("#devis-client-email")?.value), telephone: devisText(document.querySelector("#devis-client-telephone")?.value) }, prestations: calc.lines, sousTotal: calc.subtotal, remisePourcentage: calc.pct, remiseEuro: calc.euro, total: calc.total, conditions: devisText(document.querySelector("#devis-conditions")?.value), validiteJours: Math.max(1, Number(document.querySelector("#devis-validite")?.value || 30)), updatedAt: serverTimestamp() }; }
 async function saveDevis() { if (!auth.currentUser) return; const payload = collectDevisForm(); if (!payload.client.nom && !payload.demandeId) { showDevisStatus("Sélectionnez une demande ou renseignez le client.", true); return; } const id = devisCurrent?.id || `DEV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`; try { await setDoc(doc(db, "devis", id), { ...payload, createdAt: devisCurrent?.createdAt || serverTimestamp() }, { merge: true }); devisCurrent = { id, ...payload }; const number = document.querySelector("#devis-number"); if (number) number.textContent = id; showDevisStatus("Devis enregistré dans Firestore."); await loadDevisList(); } catch (error) { showDevisStatus(`Impossible d’enregistrer le devis : ${error?.message || "erreur inconnue"}`, true); } }
-async function loadDevisList() { const list = document.querySelector("#devis-list"); if (!list || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "devis")); const docs = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a,b) => toMillis(b.createdAt)-toMillis(a.createdAt)); list.innerHTML = ""; if (!docs.length) { list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▤</span><h3>Aucun devis</h3><p>Créez votre premier devis à partir d’une demande.</p></div>`; return; } docs.forEach((d) => { const row = document.createElement("button"); row.type = "button"; row.className = "lcc-devis-list-item"; row.innerHTML = `<strong>${escapeHtml(d.id)}</strong><span>${escapeHtml(d.client?.nom || "Client")}</span><small>${escapeHtml(d.statut || "brouillon")} · ${escapeHtml(formatDate(d.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(Number(d.total || 0)))}</small>`; row.addEventListener("click", () => openDevis(d)); list.appendChild(row); }); } catch (error) { showDevisStatus(`Impossible de charger les devis : ${error?.message || "erreur inconnue"}`, true); } }
+async function loadDevisList() { const list = document.querySelector("#devis-list"); if (!list || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "devis")); const docs = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a,b) => toMillis(b.createdAt)-toMillis(a.createdAt)); list.innerHTML = ""; if (!docs.length) { list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▤</span><h3>Aucun devis</h3><p>Créez votre premier devis à partir d’une demande.</p></div>`; return; } docs.forEach((d) => {
+      const row = document.createElement("div");
+      row.className = "lcc-devis-list-item";
+
+      const openButton = document.createElement("button");
+      openButton.type = "button";
+      openButton.className = "lcc-devis-list-open";
+      openButton.innerHTML = `<strong>${escapeHtml(d.id)}</strong><span>${escapeHtml(d.client?.nom || "Client")}</span><small>${escapeHtml(d.statut || "brouillon")} · ${escapeHtml(formatDate(d.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(Number(d.total || 0)))}</small>`;
+      openButton.addEventListener("click", () => openDevis(d));
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "btn btn-danger lcc-devis-delete";
+      deleteButton.textContent = "Supprimer";
+      deleteButton.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        if (!confirm(`Supprimer définitivement le devis ${d.id} ?\n\nCette action supprimera uniquement devis/${d.id}.`)) {
+          return;
+        }
+
+        deleteButton.disabled = true;
+
+        try {
+          await deleteDoc(doc(db, "devis", d.id));
+
+          if (devisCurrent?.id === d.id) {
+            resetDevisForm();
+          }
+
+          showDevisStatus(`Devis ${d.id} supprimé.`);
+          await loadDevisList();
+        } catch (error) {
+          deleteButton.disabled = false;
+          showDevisStatus(`Impossible de supprimer le devis : ${error?.message || "erreur inconnue"}`, true);
+        }
+      });
+
+      row.appendChild(openButton);
+      row.appendChild(deleteButton);
+      list.appendChild(row);
+    }); } catch (error) { showDevisStatus(`Impossible de charger les devis : ${error?.message || "erreur inconnue"}`, true); } }
 function openDevis(d) { devisCurrent = d; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value ?? ""; }; const number = document.querySelector("#devis-number"); if (number) number.textContent = d.id; set("#devis-statut", d.statut || "brouillon"); set("#devis-client-nom", d.client?.nom); set("#devis-client-email", d.client?.email); set("#devis-client-telephone", d.client?.telephone); set("#devis-remise", d.remisePourcentage || 0); set("#devis-remise-euro", d.remiseEuro || 0); set("#devis-conditions", d.conditions || ""); const lines = document.querySelector("#devis-lines"); if (lines) lines.innerHTML = ""; (d.prestations || []).forEach((line) => addDevisLine(line)); if (!(d.prestations || []).length) addDevisLine(); const demande = document.querySelector("#devis-demande"); if (demande) demande.value = d.demandeId || ""; updateDevisTotal(); }
 function printDevis() { if (!devisCurrent) { showDevisStatus("Enregistrez d’abord le devis avant de générer son PDF.", true); return; } window.print(); }
 function sendDevis() { const email = document.querySelector("#devis-client-email")?.value.trim(); if (!email) { showDevisStatus("Aucune adresse email client n’est renseignée.", true); return; } const number = document.querySelector("#devis-number")?.textContent || "devis"; const subject = encodeURIComponent(`Devis ${number} — Le Carnet du Chef`); const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver votre devis ${number}.\n\nLe Carnet du Chef`); window.location.href = `mailto:${email}?subject=${subject}&body=${body}`; }

@@ -106,28 +106,6 @@ async function createQuoteCheckoutSession({ devisId }) {
   const total = Number(devis.total || 0);
   if (!Number.isFinite(total) || total <= 0) throw new Error("Total du devis invalide.");
 
-  const existing = await db.collection("paiements")
-    .where("devisId", "==", id)
-    .where("type", "==", "devis")
-    .limit(10)
-    .get();
-
-  const pending = existing.docs.find((d) => {
-    const data = d.data() || {};
-    return ["en_attente", "paye"].includes(String(data.statut || "")) && data.stripeCheckoutSessionId;
-  });
-
-  if (pending) {
-    const data = pending.data() || {};
-    return {
-      checkoutUrl: data.checkoutUrl || null,
-      stripeCheckoutSessionId: data.stripeCheckoutSessionId,
-      paiementId: pending.id,
-      alreadyCreated: true,
-      alreadyPaid: data.statut === "paye"
-    };
-  }
-
   const paymentRef = db.collection("paiements").doc();
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
@@ -151,7 +129,7 @@ async function createQuoteCheckoutSession({ devisId }) {
     cancel_url: `${SITE_URL}/pages/prestations.html?paiement=annule&devis=${encodeURIComponent(id)}`,
     metadata: { type: "devis", devisId: id, paiementId: paymentRef.id },
     payment_intent_data: { metadata: { type: "devis", devisId: id, paiementId: paymentRef.id } }
-  }, { idempotencyKey: `quote_${id}` });
+  }, { idempotencyKey: `quote_${id}_${paymentRef.id}` });
 
   await paymentRef.set({
     type: "devis",

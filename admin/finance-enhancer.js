@@ -131,10 +131,9 @@ async function buildQuotePdf() {
 }
 async function generateQuotePdf() { return buildQuotePdf(); }
 async function printQuotePdf() {
-  const { pdf } = await generateQuotePdf(); const blob = pdf.output("blob"); const url = URL.createObjectURL(blob);
-  const popup = window.open(url, "_blank", "width=900,height=900,resizable=yes,scrollbars=yes");
-  if (!popup) { URL.revokeObjectURL(url); throw new Error("La fenêtre PDF a été bloquée par le navigateur."); }
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  const { pdf, quote } = await generateQuotePdf();
+  const filename = `${quote.id}.pdf`;
+  pdf.save(filename);
 }
 async function sendQuoteEmail() {
   const { pdf, quote } = await generateQuotePdf(); if (!quote.client.email) throw new Error("Aucune adresse email client n’est renseignée.");
