@@ -12,7 +12,15 @@ if (!admin.apps.length) admin.initializeApp();
 const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { createPayment, CreatePaymentError } = require("./createPayment");
 const { createQuoteCheckoutSession, getCheckoutStatus, handleStripeWebhook } = require("./stripe");
+const { refundPayment, deleteOrder } = require("./adminFinance");
 const { submitDemande } = require("./demandes");
+
+async function requireAuthenticatedUser(req) {
+  const header = req.get("authorization") || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) throw new Error("Authentification requise.");
+  return admin.auth().verifyIdToken(match[1]);
+}
 
 const createPaymentHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, SITE_URL, GOOGLE_MAPS_API_KEY] }, async (req, res) => {
   if (req.method !== "POST") { res.set("Allow", "POST"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
@@ -22,8 +30,14 @@ const createPaymentHttp = onRequest({ region: "europe-west9", cors: true, secret
 
 const createQuotePaymentHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY, SITE_URL] }, async (req, res) => {
   if (req.method !== "POST") { res.set("Allow", "POST"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
-  try { return res.status(200).json({ ok: true, ...(await createQuoteCheckoutSession({ devisId: req.body?.devisId })) }); }
-  catch (error) { console.error("Erreur paiement devis :", error); return res.status(400).json({ ok: false, code: "QUOTE_PAYMENT_ERROR", message: "Le paiement du devis ne peut pas être préparé." }); }
+  try {
+    await requireAuthenticatedUser(req);
+    return res.status(200).json({ ok: true, ...(await createQuoteCheckoutSession({ devisId: req.body?.devisId })) });
+  } catch (error) {
+    console.error("Erreur paiement devis :", error);
+    const status = error?.message === "Authentification requise." ? 401 : 400;
+    return res.status(status).json({ ok: false, code: status === 401 ? "UNAUTHENTICATED" : "QUOTE_PAYMENT_ERROR", message: status === 401 ? "Authentification administrateur requise." : "Le paiement du devis ne peut pas être préparé." });
+  }
 });
 
 const getPaymentStatusHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY] }, async (req, res) => {
@@ -44,4 +58,4 @@ const getCatalogue = onRequest({ region: "europe-west9", cors: true }, async (re
   try { const [formules, produits] = await Promise.all([getFormules(), getProduits()]); return res.status(200).json({ formules: formules.map((f) => projectCatalogueItem(f)), produits: produits.map((p) => projectCatalogueItem(p, { product: true })) }); }
   catch (error) { console.error("Erreur de lecture du catalogue public :", error); return res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Le catalogue ne peut pas être chargé pour le moment." }); }
 });
-module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createQuotePayment: createQuotePaymentHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande };
+module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createQuotePayment: createQuotePaymentHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };
