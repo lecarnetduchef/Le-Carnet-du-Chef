@@ -128,7 +128,13 @@ async function createPendingPaymentAttempt(args) {
       updatedAt: Timestamp.now(),
     });
 
-    return { idempotent: attempt.status === "awaiting_payment", commandeId, numeroCommande, ...orderData };
+    return {
+      idempotent: attempt.status === "awaiting_payment",
+      status: "awaiting_payment",
+      commandeId,
+      numeroCommande,
+      ...orderData,
+    };
   });
 }
 
