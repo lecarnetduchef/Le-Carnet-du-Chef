@@ -40,6 +40,49 @@ const createQuotePaymentHttp = onRequest({ region: "europe-west9", cors: true, s
   }
 });
 
+const sendQuoteEmailHttp = onRequest({ region: "europe-west9", cors: true, secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL] }, async (req, res) => {
+  if (req.method !== "POST") { res.set("Allow", "POST"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
+  try {
+    await requireAuthenticatedUser(req);
+    const devisId = String(req.body?.devisId || "").trim();
+    const pdfBase64 = String(req.body?.pdfBase64 || "").trim();
+    if (!devisId) return res.status(400).json({ ok: false, code: "QUOTE_REQUIRED", message: "Devis manquant." });
+    if (!pdfBase64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(pdfBase64)) return res.status(400).json({ ok: false, code: "PDF_REQUIRED", message: "PDF du devis manquant ou invalide." });
+    if (pdfBase64.length > 7_000_000) return res.status(413).json({ ok: false, code: "PDF_TOO_LARGE", message: "Le PDF du devis est trop volumineux." });
+
+    const db = admin.firestore();
+    const quoteSnap = await db.collection("devis").doc(devisId).get();
+    if (!quoteSnap.exists) return res.status(404).json({ ok: false, code: "QUOTE_NOT_FOUND", message: "Devis introuvable." });
+    const devis = quoteSnap.data() || {};
+    const email = String(devis.client?.email || "").trim();
+    if (!email) return res.status(400).json({ ok: false, code: "CLIENT_EMAIL_MISSING", message: "Aucune adresse email client n’est renseignée dans le devis." });
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.RESEND_FROM_EMAIL;
+    if (!apiKey || !from) throw new Error("Configuration email Resend incomplète.");
+
+    const total = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(Number(devis.total || 0));
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject: `Devis ${devisId} — Le Carnet du Chef`,
+        html: `<p>Bonjour,</p><p>Veuillez trouver votre devis <strong>${devisId}</strong> en pièce jointe.</p><p>Montant total : <strong>${total}</strong>.</p><p>Ce document est un devis et non une facture.</p><p>Le Carnet du Chef</p>`,
+        attachments: [{ content: pdfBase64, filename: `${devisId}.pdf`, content_type: "application/pdf" }]
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(`Resend email error ${response.status}: ${JSON.stringify(data)}`);
+    return res.status(200).json({ ok: true, emailId: data?.id || null, recipient: email, attachment: `${devisId}.pdf` });
+  } catch (error) {
+    console.error("Erreur envoi devis email :", error);
+    const status = error?.message === "Authentification requise." ? 401 : 400;
+    return res.status(status).json({ ok: false, code: status === 401 ? "UNAUTHENTICATED" : "QUOTE_EMAIL_ERROR", message: status === 401 ? "Authentification administrateur requise." : error?.message || "Envoi du devis impossible." });
+  }
+});
+
 const getPaymentStatusHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY] }, async (req, res) => {
   if (req.method !== "GET") { res.set("Allow", "GET"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
   try { return res.status(200).json({ ok: true, ...(await getCheckoutStatus(req.query?.session_id)) }); }
@@ -58,4 +101,4 @@ const getCatalogue = onRequest({ region: "europe-west9", cors: true }, async (re
   try { const [formules, produits] = await Promise.all([getFormules(), getProduits()]); return res.status(200).json({ formules: formules.map((f) => projectCatalogueItem(f)), produits: produits.map((p) => projectCatalogueItem(p, { product: true })) }); }
   catch (error) { console.error("Erreur de lecture du catalogue public :", error); return res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Le catalogue ne peut pas être chargé pour le moment." }); }
 });
-module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createQuotePayment: createQuotePaymentHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };
+module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createQuotePayment: createQuotePaymentHttp, sendQuoteEmail: sendQuoteEmailHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };
