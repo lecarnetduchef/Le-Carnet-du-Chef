@@ -145,26 +145,163 @@ function showDevisStatus(message, isError = false) { const el = document.querySe
 function startFactures() {
   if (!auth.currentUser) return;
   const section = document.querySelector("#invoices-section");
-  if (!section || startFactures.initialized) { if (section) void loadFactures(); return; }
+  if (!section || startFactures.initialized) {
+    if (section) void loadFactures();
+    return;
+  }
+
   startFactures.initialized = true;
-  section.innerHTML = `<div class="admin-section-heading"><div><p class="admin-eyebrow">COMPTABILITÉ · PHASE 4</p><h2>Factures</h2><p class="muted">Factures, payées, impayées, avoirs, PDF, envoi et historique.</p></div><div class="admin-orders-header-actions"><span class="admin-orders-total"><strong id="factures-total">0</strong> facture(s)</span><button id="factures-refresh" type="button" class="btn btn-secondary">↻ Actualiser</button><button id="facture-new" type="button" class="btn btn-primary">＋ Nouvelle facture</button></div></div><div class="admin-order-filters" role="toolbar" aria-label="Filtres des factures"><button type="button" class="admin-filter-btn active" data-facture-filter="all">Factures</button><button type="button" class="admin-filter-btn" data-facture-filter="payee">Payées</button><button type="button" class="admin-filter-btn" data-facture-filter="impayee">Impayées</button><button type="button" class="admin-filter-btn" data-facture-filter="avoir">Avoirs</button><button type="button" class="admin-filter-btn" data-facture-filter="history">Historique</button></div><div id="factures-status" class="admin-alert" hidden aria-live="polite"></div><div class="lcc-factures-grid"><section class="admin-section"><div class="admin-section-heading compact"><div><p class="admin-eyebrow">DOCUMENT</p><h3 id="facture-editor-title">Nouvelle facture</h3></div><span id="facture-number" class="muted">Brouillon</span></div><div class="admin-form-grid"><label>Devis source<select id="facture-devis"><option value="">Sélectionner un devis…</option></select></label><label>Statut<select id="facture-statut"><option value="impayee">Impayée</option><option value="payee">Payée</option><option value="annulee">Annulée</option><option value="avoir">Avoir</option></select></label><label>Client<input id="facture-client" type="text"></label><label>Email<input id="facture-email" type="email"></label><label>Téléphone<input id="facture-telephone" type="tel"></label><label>Date d’échéance<input id="facture-echeance" type="date"></label></div><div class="admin-section-heading compact" style="margin-top:1rem;"><h4>Prestations</h4><button id="facture-add-line" type="button" class="btn btn-secondary">＋ Ajouter</button></div><div id="facture-lines"></div><div class="admin-form-grid"><label>Remise (€)<input id="facture-remise" type="number" min="0" step="0.01" value="0"></label><label>Conditions<textarea id="facture-conditions" rows="3" placeholder="Conditions de règlement…"></textarea></label></div><div class="lcc-facture-total"><span>Total</span><strong id="facture-total">0,00 €</strong></div><div class="admin-form-actions"><button id="facture-save" type="button" class="btn btn-primary">Enregistrer</button><button id="facture-pdf" type="button" class="btn btn-secondary">PDF / Imprimer</button><button id="facture-send" type="button" class="btn btn-secondary">Envoi</button></div></section><aside class="admin-section"><div class="admin-section-heading compact"><h3>Historique</h3></div><div id="factures-list" class="lcc-factures-list"></div></aside></div><style>.lcc-factures-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:1rem}.lcc-factures-list{display:grid;gap:.6rem}.lcc-facture-item{display:grid;gap:.25rem;width:100%;text-align:left;padding:.85rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}.lcc-facture-item:hover{border-color:var(--color-sage-dark)}.lcc-facture-badge{display:inline-flex;width:max-content;border-radius:999px;padding:.25rem .55rem;background:var(--color-cream);font-size:.68rem;font-weight:800}.lcc-facture-badge-payee{background:#dfead9}.lcc-facture-badge-avoir{background:#eee5f5}.lcc-facture-badge-annulee{background:#f3d9d5;color:#7e302a}.lcc-facture-line{display:grid;grid-template-columns:minmax(0,1fr) 90px 120px 120px auto;gap:.5rem;align-items:center;margin-bottom:.55rem}.lcc-facture-line input{width:100%;box-sizing:border-box}.lcc-facture-total{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm)}.lcc-facture-total strong{font-family:var(--font-display);font-size:1.8rem;color:var(--color-sage-dark)}@media(max-width:900px){.lcc-factures-grid{grid-template-columns:1fr}.lcc-facture-line{grid-template-columns:1fr 90px 110px auto}}@media(max-width:600px){.lcc-facture-line{grid-template-columns:1fr 1fr}.lcc-facture-line:first-child{grid-column:1/-1}}</style>`;
+
+  section.innerHTML = `
+    <div class="admin-section-heading">
+      <div>
+        <p class="admin-eyebrow">COMPTABILITÉ · FACTURATION</p>
+        <h2>Factures / Paiements</h2>
+        <p class="muted">Créer, modifier, envoyer et suivre les factures et leurs paiements Stripe.</p>
+      </div>
+      <div class="admin-orders-header-actions">
+        <span class="admin-orders-total"><strong id="factures-total">0</strong> facture(s)</span>
+        <button id="factures-refresh" type="button" class="btn btn-secondary">↻ Actualiser</button>
+        <button id="facture-new" type="button" class="btn btn-primary">＋ Nouvelle facture</button>
+      </div>
+    </div>
+
+    <div class="admin-order-filters" role="toolbar" aria-label="Filtres financiers">
+      <button type="button" class="admin-filter-btn active" data-facture-filter="all">Factures</button>
+      <button type="button" class="admin-filter-btn" data-facture-filter="payee">Payées</button>
+      <button type="button" class="admin-filter-btn" data-facture-filter="impayee">Impayées</button>
+      <button type="button" class="admin-filter-btn" data-facture-filter="avoir">Avoirs</button>
+      <button type="button" class="admin-filter-btn" data-facture-filter="history">Historique</button>
+    </div>
+
+    <div id="factures-status" class="admin-alert" hidden aria-live="polite"></div>
+
+    <div class="lcc-factures-grid">
+      <section class="admin-section">
+        <div class="admin-section-heading compact">
+          <div>
+            <p class="admin-eyebrow">DOCUMENT</p>
+            <h3 id="facture-editor-title">Nouvelle facture</h3>
+          </div>
+          <span id="facture-number" class="muted">Brouillon</span>
+        </div>
+
+        <div class="admin-form-grid">
+          <label>Devis source<select id="facture-devis"><option value="">Sélectionner un devis…</option></select></label>
+          <label>Statut<select id="facture-statut">
+            <option value="impayee">Impayée</option>
+            <option value="payee">Payée</option>
+            <option value="annulee">Annulée</option>
+            <option value="avoir">Avoir</option>
+          </select></label>
+          <label>Client<input id="facture-client" type="text"></label>
+          <label>Email<input id="facture-email" type="email"></label>
+          <label>Téléphone<input id="facture-telephone" type="tel"></label>
+          <label>Date d’échéance<input id="facture-echeance" type="date"></label>
+        </div>
+
+        <div class="admin-section-heading compact" style="margin-top:1rem;">
+          <h4>Prestations</h4>
+          <button id="facture-add-line" type="button" class="btn btn-secondary">＋ Ajouter</button>
+        </div>
+
+        <div id="facture-lines"></div>
+
+        <div class="admin-form-grid">
+          <label>Remise (€)<input id="facture-remise" type="number" min="0" step="0.01" value="0"></label>
+          <label>Conditions<textarea id="facture-conditions" rows="3" placeholder="Conditions de règlement…"></textarea></label>
+        </div>
+
+        <div class="lcc-facture-total">
+          <span>Total</span>
+          <strong id="facture-total">0,00 €</strong>
+        </div>
+
+        <div class="admin-form-actions">
+          <button id="facture-save" type="button" class="btn btn-primary">Enregistrer</button>
+          <button id="facture-pdf" type="button" class="btn btn-secondary">Télécharger / Imprimer</button>
+          <button id="facture-send" type="button" class="btn btn-secondary">✉ Envoyer la facture</button>
+          <button id="facture-payment-link" type="button" class="btn btn-primary">💳 Créer le lien Stripe</button>
+          <button id="facture-payment-email" type="button" class="btn btn-secondary">✉ Envoyer le lien Stripe</button>
+          <button id="facture-delete" type="button" class="btn btn-secondary">🗑 Supprimer</button>
+        </div>
+      </section>
+
+      <aside class="admin-section">
+        <div class="admin-section-heading compact">
+          <h3>Factures</h3>
+        </div>
+        <div id="factures-list" class="lcc-factures-list"></div>
+      </aside>
+    </div>
+
+    <section class="admin-section" style="margin-top:1rem;">
+      <div class="admin-section-heading compact">
+        <div>
+          <p class="admin-eyebrow">ENCAISSEMENTS</p>
+          <h3>Paiements</h3>
+          <p class="muted">Chaque événement Stripe reste relié à sa facture.</p>
+        </div>
+        <span class="admin-orders-total"><strong id="paiements-total">0</strong> paiement(s)</span>
+      </div>
+
+      <div id="paiements-list" class="lcc-factures-list"></div>
+      <div id="paiement-detail" class="admin-section" hidden style="margin-top:1rem;"></div>
+    </section>
+
+    <style>
+      .lcc-factures-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:1rem}
+      .lcc-factures-list{display:grid;gap:.6rem}
+      .lcc-facture-item{display:grid;gap:.25rem;width:100%;text-align:left;padding:.85rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}
+      .lcc-facture-item:hover{border-color:var(--color-sage-dark)}
+      .lcc-facture-badge{display:inline-flex;width:max-content;border-radius:999px;padding:.25rem .55rem;background:var(--color-cream);font-size:.68rem;font-weight:800}
+      .lcc-facture-badge-payee{background:#dfead9}
+      .lcc-facture-badge-avoir{background:#eee5f5}
+      .lcc-facture-badge-annulee{background:#f3d9d5;color:#7e302a}
+      .lcc-facture-line{display:grid;grid-template-columns:minmax(0,1fr) 90px 120px 120px auto;gap:.5rem;align-items:center;margin-bottom:.55rem}
+      .lcc-facture-line input{width:100%;box-sizing:border-box}
+      .lcc-facture-total{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm)}
+      .lcc-facture-total strong{font-family:var(--font-display);font-size:1.8rem;color:var(--color-sage-dark)}
+      .lcc-payment-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;align-items:center;width:100%;text-align:left;padding:.9rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}
+      .lcc-payment-row:hover{border-color:var(--color-sage-dark)}
+      .lcc-payment-main{display:grid;gap:.2rem}
+      .lcc-payment-badge{display:inline-flex;width:max-content;border-radius:999px;padding:.25rem .55rem;background:var(--color-cream);font-size:.68rem;font-weight:800}
+      .lcc-payment-badge-paid{background:#dfead9}
+      @media(max-width:900px){.lcc-factures-grid{grid-template-columns:1fr}.lcc-facture-line{grid-template-columns:1fr 90px 110px auto}}
+      @media(max-width:600px){.lcc-facture-line{grid-template-columns:1fr 1fr}.lcc-facture-line:first-child{grid-column:1/-1}.lcc-payment-row{grid-template-columns:1fr}}
+    </style>
+  `;
+
   document.querySelector("#factures-refresh")?.addEventListener("click", () => void loadFactures());
   document.querySelector("#facture-new")?.addEventListener("click", resetFactureForm);
   document.querySelector("#facture-add-line")?.addEventListener("click", () => addFactureLine());
   document.querySelector("#facture-remise")?.addEventListener("input", updateFactureTotal);
   document.querySelector("#facture-save")?.addEventListener("click", () => void saveFacture());
   document.querySelector("#facture-pdf")?.addEventListener("click", printFacture);
-  document.querySelector("#facture-send")?.addEventListener("click", sendFacture);
+  document.querySelector("#facture-send")?.addEventListener("click", () => void sendFacture());
+  document.querySelector("#facture-payment-link")?.addEventListener("click", () => void createFactureStripePayment());
+  document.querySelector("#facture-payment-email")?.addEventListener("click", () => void sendFacturePaymentLink());
+  document.querySelector("#facture-delete")?.addEventListener("click", () => void deleteFacture());
   document.querySelector("#facture-devis")?.addEventListener("change", applyFactureDevis);
-  section.querySelectorAll("[data-facture-filter]").forEach((button) => button.addEventListener("click", () => { startFactures.filter = button.dataset.factureFilter || "all"; section.querySelectorAll("[data-facture-filter]").forEach((item) => item.classList.toggle("active", item === button)); void loadFactures(); }));
+
+  section.querySelectorAll("[data-facture-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      startFactures.filter = button.dataset.factureFilter || "all";
+      section.querySelectorAll("[data-facture-filter]").forEach((item) => item.classList.toggle("active", item === button));
+      void loadFactures();
+    });
+  });
+
   resetFactureForm();
   void loadFactureDevis();
   void loadFactures();
 }
+
 startFactures.initialized = false;
 startFactures.filter = "all";
 startFactures.current = null;
 startFactures.devis = [];
+startFactures.payments = [];
 function factureMoney(value) { const n = Number(value); return Number.isFinite(n) ? Math.max(0, n) : 0; }
 function factureText(value) { return String(value ?? "").trim(); }
 function addFactureLine(item = {}) { const container = document.querySelector("#facture-lines"); if (!container) return; const row = document.createElement("div"); row.className = "lcc-facture-line"; row.innerHTML = `<input class="facture-line-label" type="text" placeholder="Prestation" value="${escapeAttr(item.label || "")}"><input class="facture-line-qty" type="number" min="0" step="1" value="${Number(item.quantity || 1)}"><input class="facture-line-price" type="number" min="0" step="0.01" value="${Number(item.unitPrice || 0)}"><output class="facture-line-total">0,00 €</output><button type="button" class="btn btn-secondary facture-line-remove">×</button>`; row.querySelectorAll("input").forEach((input) => input.addEventListener("input", updateFactureTotal)); row.querySelector(".facture-line-remove")?.addEventListener("click", () => { row.remove(); updateFactureTotal(); }); container.appendChild(row); updateFactureTotal(); }
@@ -173,44 +310,305 @@ function updateFactureTotal() { const lines = getFactureLines(); const subtotal 
 async function loadFactureDevis() { const select = document.querySelector("#facture-devis"); if (!select || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "devis")); startFactures.devis = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); select.innerHTML = `<option value="">Sélectionner un devis…</option>`; startFactures.devis.forEach((devis) => { const client = devis.client || {}; const option = document.createElement("option"); option.value = devis.id; option.textContent = `${client.nom || "Client"} — ${devis.id}`; select.appendChild(option); }); } catch (error) { showFactureStatus(`Impossible de charger les devis : ${error?.message || "erreur inconnue"}`, true); } }
 function applyFactureDevis() { const id = document.querySelector("#facture-devis")?.value; const devis = startFactures.devis.find((item) => item.id === id); if (!devis) return; startFactures.current = null; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value ?? ""; }; const client = devis.client || {}; set("#facture-client", client.nom); set("#facture-email", client.email); set("#facture-telephone", client.telephone); set("#facture-conditions", devis.conditions || ""); const lines = document.querySelector("#facture-lines"); if (lines) lines.innerHTML = ""; (devis.prestations || []).forEach((line) => addFactureLine(line)); if (!(devis.prestations || []).length) addFactureLine({ label: "Prestation", quantity: 1, unitPrice: factureMoney(devis.total) }); const remise = document.querySelector("#facture-remise"); if (remise) remise.value = factureMoney(devis.remiseEuro || 0); updateFactureTotal(); }
 function resetFactureForm() { startFactures.current = null; const title = document.querySelector("#facture-editor-title"); if (title) title.textContent = "Nouvelle facture"; const number = document.querySelector("#facture-number"); if (number) number.textContent = "Brouillon"; ["#facture-devis","#facture-client","#facture-email","#facture-telephone","#facture-conditions"].forEach((selector) => { const el = document.querySelector(selector); if (el) el.value = ""; }); const status = document.querySelector("#facture-statut"); if (status) status.value = "impayee"; const remise = document.querySelector("#facture-remise"); if (remise) remise.value = "0"; const echeance = document.querySelector("#facture-echeance"); if (echeance) { const date = new Date(); date.setDate(date.getDate() + 30); echeance.value = date.toISOString().slice(0, 10); } const lines = document.querySelector("#facture-lines"); if (lines) lines.innerHTML = ""; addFactureLine(); updateFactureTotal(); }
-function collectFactureForm() { const calc = updateFactureTotal(); return { devisId: document.querySelector("#facture-devis")?.value || null, statut: document.querySelector("#facture-statut")?.value || "impayee", client: { nom: factureText(document.querySelector("#facture-client")?.value), email: factureText(document.querySelector("#facture-email")?.value), telephone: factureText(document.querySelector("#facture-telephone")?.value) }, prestations: calc.lines, sousTotal: calc.subtotal, remiseEuro: calc.remise, total: calc.total, conditions: factureText(document.querySelector("#facture-conditions")?.value), dateEcheance: document.querySelector("#facture-echeance")?.value || null, updatedAt: serverTimestamp() }; }
+function collectFactureForm() { const calc = updateFactureTotal(); return { devisId: document.querySelector("#facture-devis")?.value || null, provider: "stripe", statut: document.querySelector("#facture-statut")?.value || "impayee", client: { nom: factureText(document.querySelector("#facture-client")?.value), email: factureText(document.querySelector("#facture-email")?.value), telephone: factureText(document.querySelector("#facture-telephone")?.value) }, prestations: calc.lines, sousTotal: calc.subtotal, remiseEuro: calc.remise, total: calc.total, conditions: factureText(document.querySelector("#facture-conditions")?.value), dateEcheance: document.querySelector("#facture-echeance")?.value || null, updatedAt: serverTimestamp() }; }
 function nextFactureId() { return `FAC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`; }
 async function saveFacture() { if (!auth.currentUser) return; const payload = collectFactureForm(); if (!payload.client.nom) { showFactureStatus("Renseignez le client avant d’enregistrer la facture.", true); return; } const id = startFactures.current?.id || nextFactureId(); const history = Array.isArray(startFactures.current?.historique) ? startFactures.current.historique : []; const entry = { action: startFactures.current ? "modification" : "creation", statut: payload.statut, at: serverTimestamp() }; try { await setDoc(doc(db, "factures", id), { ...payload, createdAt: startFactures.current?.createdAt || serverTimestamp(), historique: [...history, entry] }, { merge: true }); startFactures.current = { id, ...payload, historique: [...history, entry] }; const number = document.querySelector("#facture-number"); if (number) number.textContent = id; const title = document.querySelector("#facture-editor-title"); if (title) title.textContent = `Facture ${id}`; showFactureStatus("Facture enregistrée dans Firestore."); await loadFactures(); } catch (error) { showFactureStatus(`Impossible d’enregistrer la facture : ${error?.message || "erreur inconnue"}`, true); } }
-async function loadFactures() { const list = document.querySelector("#factures-list"); if (!list || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "factures")); const docs = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); const total = document.querySelector("#factures-total"); if (total) total.textContent = String(docs.length); renderFactures(docs); } catch (error) { showFactureStatus(`Impossible de charger les factures : ${error?.message || "erreur inconnue"}`, true); } }
-function renderFactures(docs) { const list = document.querySelector("#factures-list"); if (!list) return; const filtered = docs.filter((facture) => { const filter = startFactures.filter; if (filter === "all") return facture.statut !== "avoir"; if (filter === "payee") return facture.statut === "payee"; if (filter === "impayee") return facture.statut === "impayee"; if (filter === "avoir") return facture.statut === "avoir"; return Array.isArray(facture.historique) && facture.historique.length > 0; }); list.innerHTML = ""; if (!filtered.length) { list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▧</span><h3>Aucune facture</h3><p>Aucun document ne correspond au filtre sélectionné.</p></div>`; return; } filtered.forEach((facture) => { const item = document.createElement("button"); item.type = "button"; item.className = "lcc-facture-item"; const labels = { payee: "Payée", impayee: "Impayée", annulee: "Annulée", avoir: "Avoir" }; const badge = facture.statut === "payee" ? "lcc-facture-badge-payee" : facture.statut === "avoir" ? "lcc-facture-badge-avoir" : facture.statut === "annulee" ? "lcc-facture-badge-annulee" : ""; item.innerHTML = `<strong>${escapeHtml(facture.id)}</strong><span>${escapeHtml(facture.client?.nom || "Client sans nom")}</span><span class="lcc-facture-badge ${badge}">${escapeHtml(labels[facture.statut] || "Impayée")}</span><small>${escapeHtml(formatDate(facture.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(facture.total)))}</small>`; item.addEventListener("click", () => openFacture(facture));
-    if (facture.statut !== "payee") {
-      const pay = document.createElement("button");
-      pay.type = "button";
-      pay.className = "btn btn-primary";
-      pay.textContent = "💳 Payer par Stripe";
-      pay.addEventListener("click", (event) => {
-        event.stopPropagation();
-        void createFactureStripePayment(facture.id);
-      });
-      item.appendChild(pay);
-    } list.appendChild(item); }); }
-function openFacture(facture) { startFactures.current = facture; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value ?? ""; }; const title = document.querySelector("#facture-editor-title"); if (title) title.textContent = `Facture ${facture.id}`; const number = document.querySelector("#facture-number"); if (number) number.textContent = facture.id; set("#facture-devis", facture.devisId); set("#facture-statut", facture.statut || "impayee"); set("#facture-client", facture.client?.nom); set("#facture-email", facture.client?.email); set("#facture-telephone", facture.client?.telephone); set("#facture-conditions", facture.conditions); set("#facture-echeance", facture.dateEcheance); set("#facture-remise", facture.remiseEuro || 0); const lines = document.querySelector("#facture-lines"); if (lines) lines.innerHTML = ""; (facture.prestations || []).forEach((line) => addFactureLine(line)); if (!(facture.prestations || []).length) addFactureLine(); updateFactureTotal(); }
-async function createFactureStripePayment(factureId) {
-  if (!factureId) return;
+async function loadFactures() {
+  const list = document.querySelector("#factures-list");
+  if (!list || !auth.currentUser) return;
+
+  try {
+    const [factureSnap, paiementSnap] = await Promise.all([
+      getDocs(collection(db, "factures")),
+      getDocs(collection(db, "paiements"))
+    ]);
+
+    const docs = factureSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+
+    const payments = paiementSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+
+    const total = document.querySelector("#factures-total");
+    if (total) total.textContent = String(docs.length);
+
+    const paymentTotal = document.querySelector("#paiements-total");
+    if (paymentTotal) paymentTotal.textContent = String(payments.length);
+
+    startFactures.payments = payments;
+    renderFactures(docs);
+    renderFacturePayments(payments, docs);
+  } catch (error) {
+    showFactureStatus(`Impossible de charger les données financières : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
+function renderFactures(docs) {
+  const list = document.querySelector("#factures-list");
+  if (!list) return;
+
+  const filtered = docs.filter((facture) => {
+    const filter = startFactures.filter;
+    if (filter === "all") return facture.statut !== "avoir";
+    if (filter === "payee") return facture.statut === "payee";
+    if (filter === "impayee") return facture.statut === "impayee" || facture.statut === "paiement_demande";
+    if (filter === "avoir") return facture.statut === "avoir";
+    return Array.isArray(facture.historique) && facture.historique.length > 0;
+  });
+
+  list.innerHTML = "";
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▧</span><h3>Aucune facture</h3><p>Aucun document ne correspond au filtre sélectionné.</p></div>`;
+    return;
+  }
+
+  filtered.forEach((facture) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "lcc-facture-item";
+
+    const labels = {
+      payee: "Payée",
+      impayee: "Impayée",
+      paiement_demande: "Paiement demandé",
+      annulee: "Annulée",
+      avoir: "Avoir"
+    };
+
+    const badge =
+      facture.statut === "payee"
+        ? "lcc-facture-badge-payee"
+        : facture.statut === "avoir"
+          ? "lcc-facture-badge-avoir"
+          : facture.statut === "annulee"
+            ? "lcc-facture-badge-annulee"
+            : "";
+
+    item.innerHTML = `
+      <strong>${escapeHtml(facture.id)}</strong>
+      <span>${escapeHtml(facture.client?.nom || "Client sans nom")}</span>
+      <span class="lcc-facture-badge ${badge}">${escapeHtml(labels[facture.statut] || "Impayée")}</span>
+      <small>${escapeHtml(formatDate(facture.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(facture.total)))}</small>
+    `;
+
+    item.addEventListener("click", () => openFacture(facture));
+    list.appendChild(item);
+  });
+}
+
+function renderFacturePayments(payments, invoices) {
+  const list = document.querySelector("#paiements-list");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  if (!payments.length) {
+    list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">€</span><h3>Aucun paiement</h3><p>Aucun paiement enregistré pour le moment.</p></div>`;
+    return;
+  }
+
+  payments.forEach((payment) => {
+    const facture = invoices.find((item) => item.id === payment.factureId);
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "lcc-payment-row";
+
+    const statusClass = payment.statut === "paye" || payment.statut === "valide"
+      ? "lcc-payment-badge-paid"
+      : "";
+
+    row.innerHTML = `
+      <div class="lcc-payment-main">
+        <strong>${escapeHtml(payment.reference || payment.id || "Paiement")}</strong>
+        <small>${escapeHtml(payment.client?.nom || payment.clientNom || "Client non renseigné")} · ${escapeHtml(payment.mode || "Stripe")} · ${escapeHtml(payment.date || formatDate(payment.createdAt))}</small>
+        <span class="lcc-payment-badge ${statusClass}">${escapeHtml(payment.statut || "en_attente")}</span>
+        <small>${facture ? `Facture liée : ${escapeHtml(facture.id)}` : payment.factureId ? `Facture liée : ${escapeHtml(payment.factureId)}` : "Aucune facture liée"}</small>
+      </div>
+      <strong>${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney((Number(payment.montantCentimes || 0) / 100) || payment.montant || 0)))}</strong>
+    `;
+
+    row.addEventListener("click", () => openPaiementDetail(payment, facture));
+    list.appendChild(row);
+  });
+}
+
+function openPaiementDetail(payment, facture) {
+  const detail = document.querySelector("#paiement-detail");
+  if (!detail) return;
+
+  const amount = (Number(payment.montantCentimes || 0) / 100) || Number(payment.montant || 0);
+
+  detail.hidden = false;
+  detail.innerHTML = `
+    <div class="admin-section-heading compact">
+      <div>
+        <p class="admin-eyebrow">DÉTAIL DU PAIEMENT</p>
+        <h3>${escapeHtml(payment.reference || payment.id || "Paiement")}</h3>
+      </div>
+      <button type="button" class="btn btn-secondary" id="paiement-detail-close">Fermer</button>
+    </div>
+
+    <div class="admin-form-grid">
+      <div><strong>Statut</strong><br>${escapeHtml(payment.statut || "en_attente")}</div>
+      <div><strong>Montant</strong><br>${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount))}</div>
+      <div><strong>Client</strong><br>${escapeHtml(payment.client?.nom || payment.clientNom || facture?.client?.nom || "Non renseigné")}</div>
+      <div><strong>Stripe</strong><br>${escapeHtml(payment.stripePaymentIntentId || payment.stripeCheckoutSessionId || "—")}</div>
+    </div>
+
+    <div style="margin-top:1rem;padding:1rem;background:var(--color-cream);border-radius:12px;">
+      <strong>Facture correspondante</strong><br>
+      ${facture
+        ? `<span>${escapeHtml(facture.id)} — ${escapeHtml(facture.client?.nom || "Client")} — ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(facture.total)))}</span>
+           <div style="margin-top:.75rem;"><button type="button" class="btn btn-primary" id="paiement-open-facture">Ouvrir la facture</button></div>`
+        : `<span>La facture ${escapeHtml(payment.factureId || "liée")} n'est plus disponible.</span>`
+      }
+    </div>
+  `;
+
+  document.querySelector("#paiement-detail-close")?.addEventListener("click", () => {
+    detail.hidden = true;
+  });
+
+  document.querySelector("#paiement-open-facture")?.addEventListener("click", () => {
+    if (facture) openFacture(facture);
+  });
+}
+
+async function createFactureStripePayment(factureId = null) {
+  const id = factureId || startFactures.current?.id;
+
+  if (!id) {
+    showFactureStatus("Enregistrez d’abord la facture avant de créer son lien Stripe.", true);
+    return null;
+  }
+
   try {
     const response = await fetch("https://europe-west9-carnet-du-chef.cloudfunctions.net/createInvoicePayment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ factureId })
+      body: JSON.stringify({ factureId: id })
     });
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data.checkoutUrl) {
-      throw new Error(data.error || "Impossible de créer le paiement Stripe.");
+      throw new Error(data.message || data.error || "Impossible de créer le paiement Stripe.");
     }
 
+    if (startFactures.current?.id === id) {
+      startFactures.current = {
+        ...startFactures.current,
+        paiementId: data.paiementId || startFactures.current.paiementId,
+        checkoutUrl: data.checkoutUrl
+      };
+    }
+
+    showFactureStatus("Lien Stripe créé. Le paiement peut maintenant être effectué.");
     window.open(data.checkoutUrl, "_blank", "noopener");
+
+    await loadFactures();
+    return data;
   } catch (error) {
     showFactureStatus(error?.message || "Erreur Stripe.", true);
+    return null;
   }
 }
 
-function printFacture() { if (!startFactures.current) { showFactureStatus("Enregistrez d’abord la facture avant de générer son PDF.", true); return; } window.print(); }
-function sendFacture() { const email = document.querySelector("#facture-email")?.value.trim(); if (!email) { showFactureStatus("Aucune adresse email client n’est renseignée.", true); return; } const number = document.querySelector("#facture-number")?.textContent || "facture"; const subject = encodeURIComponent(`Facture ${number} — Le Carnet du Chef`); const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver votre facture ${number}.\n\nLe Carnet du Chef`); window.location.href = `mailto:${email}?subject=${subject}&body=${body}`; }
+async function sendFacturePaymentLink() {
+  const id = startFactures.current?.id;
+
+  if (!id) {
+    showFactureStatus("Enregistrez d’abord la facture avant d’envoyer le lien Stripe.", true);
+    return;
+  }
+
+  try {
+    const response = await fetch("https://europe-west9-carnet-du-chef.cloudfunctions.net/sendInvoicePaymentLink", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(auth.currentUser ? { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` } : {})
+      },
+      body: JSON.stringify({ factureId: id })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || "Impossible d’envoyer le lien Stripe.");
+    }
+
+    showFactureStatus(`Lien Stripe envoyé à ${data.recipient}.`);
+    await loadFactures();
+  } catch (error) {
+    showFactureStatus(error?.message || "Envoi du lien Stripe impossible.", true);
+  }
+}
+
+function printFacture() {
+  if (!startFactures.current) {
+    showFactureStatus("Enregistrez d’abord la facture avant de générer son PDF.", true);
+    return;
+  }
+  window.print();
+}
+
+async function sendFacture() {
+  if (!startFactures.current?.id) {
+    showFactureStatus("Enregistrez d’abord la facture avant de l’envoyer.", true);
+    return;
+  }
+
+  try {
+    const response = await fetch("https://europe-west9-carnet-du-chef.cloudfunctions.net/sendInvoiceEmail", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(auth.currentUser ? { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` } : {})
+      },
+      body: JSON.stringify({ factureId: startFactures.current.id })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || "Impossible d’envoyer la facture.");
+    }
+
+    showFactureStatus(`Facture envoyée à ${data.recipient}.`);
+  } catch (error) {
+    showFactureStatus(error?.message || "Envoi de la facture impossible.", true);
+  }
+}
+
+async function deleteFacture() {
+  const facture = startFactures.current;
+
+  if (!facture?.id) {
+    showFactureStatus("Sélectionnez une facture à supprimer.", true);
+    return;
+  }
+
+  const linkedPayments = (startFactures.payments || []).filter((payment) => payment.factureId === facture.id);
+
+  if (linkedPayments.length) {
+    showFactureStatus("Cette facture possède déjà un paiement enregistré. Elle ne peut pas être supprimée afin de préserver l’historique financier.", true);
+    return;
+  }
+
+  if (!window.confirm(`Supprimer définitivement la facture ${facture.id} ?`)) return;
+
+  try {
+    await deleteDoc(doc(db, "factures", facture.id));
+    showFactureStatus(`Facture ${facture.id} supprimée.`);
+    resetFactureForm();
+    await loadFactures();
+  } catch (error) {
+    showFactureStatus(`Suppression impossible : ${error?.message || "erreur inconnue"}`, true);
+  }
+}
+
 function showFactureStatus(message, isError = false) { const el = document.querySelector("#factures-status"); if (!el) return; el.textContent = message; el.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; el.hidden = false; }

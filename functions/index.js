@@ -98,6 +98,227 @@ const sendQuoteEmailHttp = onRequest({ region: "europe-west9", cors: true, secre
   }
 });
 
+
+const sendInvoiceEmailHttp = onRequest({
+  region: "europe-west9",
+  cors: true,
+  secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL]
+}, async (req, res) => {
+  if (req.method !== "POST") {
+    res.set("Allow", "POST");
+    return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" });
+  }
+
+  try {
+    await requireAuthenticatedUser(req);
+
+    const factureId = String(req.body?.factureId || "").trim();
+    if (!factureId) {
+      return res.status(400).json({ ok: false, code: "INVOICE_REQUIRED", message: "Facture manquante." });
+    }
+
+    const snap = await admin.firestore().collection("factures").doc(factureId).get();
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, code: "INVOICE_NOT_FOUND", message: "Facture introuvable." });
+    }
+
+    const facture = snap.data() || {};
+    const email = String(facture.clientEmail || facture.client?.email || "").trim();
+
+    if (!email) {
+      return res.status(400).json({ ok: false, code: "CLIENT_EMAIL_MISSING", message: "Aucune adresse email client n’est renseignée." });
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.RESEND_FROM_EMAIL;
+
+    if (!apiKey || !from) {
+      throw new Error("Configuration email Resend incomplète.");
+    }
+
+    const total = new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: String(facture.devise || "EUR").toUpperCase()
+    }).format(
+      Number(facture.totalCentimes ?? Math.round(Number(facture.total || 0) * 100)) / 100
+    );
+
+    const lines = Array.isArray(facture.prestations) ? facture.prestations : [];
+
+    const linesHtml = lines.map((line) => `
+      <tr>
+        <td>${String(line.label || "Prestation")}</td>
+        <td>${Number(line.quantity || 0)}</td>
+        <td>${Number(line.unitPrice || 0).toFixed(2)} €</td>
+        <td>${(Number(line.quantity || 0) * Number(line.unitPrice || 0)).toFixed(2)} €</td>
+      </tr>
+    `).join("");
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject: `Facture ${facture.numero || factureId} — Le Carnet du Chef`,
+        html: `
+          <p>Bonjour ${String(facture.client?.nom || "")},</p>
+          <p>Veuillez trouver ci-dessous les informations relatives à votre facture <strong>${String(facture.numero || factureId)}</strong>.</p>
+          <table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;">
+            <thead>
+              <tr><th>Prestation</th><th>Qté</th><th>Prix unitaire</th><th>Total</th></tr>
+            </thead>
+            <tbody>${linesHtml}</tbody>
+          </table>
+          <p><strong>Total : ${total}</strong></p>
+          ${facture.conditions ? `<p>Conditions : ${String(facture.conditions)}</p>` : ""}
+          ${facture.checkoutUrl && String(facture.statut || "").toLowerCase() !== "payee"
+            ? `<p><a href="${String(facture.checkoutUrl)}">Payer cette facture par Stripe</a></p>`
+            : ""}
+          <p>Merci pour votre confiance,<br>Le Carnet du Chef</p>
+        `
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(`Resend email error ${response.status}: ${JSON.stringify(data)}`);
+    }
+
+    await snap.ref.set({
+      email: {
+        status: "sent",
+        messageId: data?.id || null,
+        sentAt: admin.firestore.Timestamp.now(),
+        recipient: email
+      },
+      updatedAt: admin.firestore.Timestamp.now()
+    }, { merge: true });
+
+    return res.status(200).json({
+      ok: true,
+      emailId: data?.id || null,
+      recipient: email
+    });
+  } catch (error) {
+    console.error("Erreur envoi facture :", error);
+    const status = error?.message === "Authentification requise." ? 401 : 400;
+    return res.status(status).json({
+      ok: false,
+      code: status === 401 ? "UNAUTHENTICATED" : "INVOICE_EMAIL_ERROR",
+      message: status === 401
+        ? "Authentification administrateur requise."
+        : error?.message || "Envoi de la facture impossible."
+    });
+  }
+});
+
+const sendInvoicePaymentLinkHttp = onRequest({
+  region: "europe-west9",
+  cors: true,
+  secrets: [STRIPE_SECRET_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, SITE_URL]
+}, async (req, res) => {
+  if (req.method !== "POST") {
+    res.set("Allow", "POST");
+    return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" });
+  }
+
+  try {
+    await requireAuthenticatedUser(req);
+
+    const factureId = String(req.body?.factureId || "").trim();
+    if (!factureId) {
+      return res.status(400).json({ ok: false, code: "INVOICE_REQUIRED", message: "Facture manquante." });
+    }
+
+    const checkout = await createInvoiceCheckoutSession({ factureId });
+
+    const snap = await admin.firestore().collection("factures").doc(factureId).get();
+    if (!snap.exists) {
+      return res.status(404).json({ ok: false, code: "INVOICE_NOT_FOUND", message: "Facture introuvable." });
+    }
+
+    const facture = snap.data() || {};
+    const email = String(facture.clientEmail || facture.client?.email || "").trim();
+
+    if (!email) {
+      return res.status(400).json({ ok: false, code: "CLIENT_EMAIL_MISSING", message: "Aucune adresse email client n’est renseignée." });
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.RESEND_FROM_EMAIL;
+
+    if (!apiKey || !from) {
+      throw new Error("Configuration email Resend incomplète.");
+    }
+
+    const total = new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: String(facture.devise || "EUR").toUpperCase()
+    }).format(
+      Number(facture.totalCentimes ?? Math.round(Number(facture.total || 0) * 100)) / 100
+    );
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject: `Paiement de la facture ${facture.numero || factureId} — Le Carnet du Chef`,
+        html: `
+          <p>Bonjour ${String(facture.client?.nom || "")},</p>
+          <p>Votre facture <strong>${String(facture.numero || factureId)}</strong> d’un montant de <strong>${total}</strong> est prête à être réglée.</p>
+          <p><a href="${String(checkout.checkoutUrl)}" style="display:inline-block;padding:12px 18px;background:#6B7A5E;color:white;text-decoration:none;border-radius:8px;">Payer ma facture par Stripe</a></p>
+          <p>Vous pouvez effectuer votre paiement directement en ligne de manière sécurisée.</p>
+          <p>Merci pour votre confiance,<br>Le Carnet du Chef</p>
+        `
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(`Resend email error ${response.status}: ${JSON.stringify(data)}`);
+    }
+
+    await snap.ref.set({
+      paiementEmail: {
+        status: "sent",
+        messageId: data?.id || null,
+        sentAt: admin.firestore.Timestamp.now(),
+        recipient: email
+      },
+      updatedAt: admin.firestore.Timestamp.now()
+    }, { merge: true });
+
+    return res.status(200).json({
+      ok: true,
+      recipient: email,
+      checkoutUrl: checkout.checkoutUrl,
+      paiementId: checkout.paiementId,
+      emailId: data?.id || null
+    });
+  } catch (error) {
+    console.error("Erreur envoi lien paiement facture :", error);
+    const status = error?.message === "Authentification requise." ? 401 : 400;
+    return res.status(status).json({
+      ok: false,
+      code: status === 401 ? "UNAUTHENTICATED" : "INVOICE_PAYMENT_EMAIL_ERROR",
+      message: status === 401
+        ? "Authentification administrateur requise."
+        : error?.message || "Envoi du lien de paiement impossible."
+    });
+  }
+});
+
 const getPaymentStatusHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY] }, async (req, res) => {
   if (req.method !== "GET") { res.set("Allow", "GET"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
   try { return res.status(200).json({ ok: true, ...(await getCheckoutStatus(req.query?.session_id)) }); }
@@ -116,4 +337,4 @@ const getCatalogue = onRequest({ region: "europe-west9", cors: true }, async (re
   try { const [formules, produits] = await Promise.all([getFormules(), getProduits()]); return res.status(200).json({ formules: formules.map((f) => projectCatalogueItem(f)), produits: produits.map((p) => projectCatalogueItem(p, { product: true })) }); }
   catch (error) { console.error("Erreur de lecture du catalogue public :", error); return res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Le catalogue ne peut pas être chargé pour le moment." }); }
 });
-module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createInvoicePayment: createInvoicePaymentHttp, sendQuoteEmail: sendQuoteEmailHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };
+module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createInvoicePayment: createInvoicePaymentHttp, sendQuoteEmail: sendQuoteEmailHttp, sendInvoiceEmail: sendInvoiceEmailHttp, sendInvoicePaymentLink: sendInvoicePaymentLinkHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };

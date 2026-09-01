@@ -462,7 +462,7 @@ async function handleCheckoutCompleted(session) {
       session,
       transactionId,
       status: "paye",
-      invoiceId: null
+      invoiceId: factureId
     });
 
     await factureRef.set({
