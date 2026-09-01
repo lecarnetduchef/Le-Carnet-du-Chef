@@ -19,8 +19,29 @@ const money = (value) => {
     maximumFractionDigits: 2,
     useGrouping: true,
   });
-  return `${formatted.replace(/[\u202F\u00A0]/g, " ")} €`;
+
+  return formatted.replace(/[\u202F\u00A0]/g, " ");
 };
+
+function drawMoney(pdf, value, rightX, y, fontSize = 9) {
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(fontSize);
+
+  const numberText = money(value);
+  const euroText = "EUR";
+
+  const euroWidth = pdf.getTextWidth(euroText);
+  const gap = 2;
+
+  pdf.text(numberText, rightX - euroWidth - gap, y, {
+    align: "right"
+  });
+
+  pdf.setFontSize(Math.max(7, fontSize - 1));
+  pdf.text(euroText, rightX, y, {
+    align: "right"
+  });
+}
 
 function loadJsPdf() {
   if (!jsPdfPromise) jsPdfPromise = import(JSPDF_URL).then((module) => module.jsPDF || module.default?.jsPDF || module.default);
@@ -153,21 +174,18 @@ async function buildQuotePdf() {
       align: "right"
     });
 
-    const unitText = money(line.unitPrice);
-    const totalText = money(line.quantity * line.unitPrice);
-
-    pdf.text(
-      unitText,
-      Math.min(table.unitRight, table.totalRight - table.amountWidth - 4),
-      y + 5,
-      { align: "right" }
+    drawMoney(
+      pdf,
+      line.unitPrice,
+      Math.min(table.unitRight + 2, table.totalRight - table.amountWidth - 4),
+      y + 5
     );
 
-    pdf.text(
-      totalText,
-      table.totalRight,
-      y + 5,
-      { align: "right" }
+    drawMoney(
+      pdf,
+      line.quantity * line.unitPrice,
+      table.totalRight + 2,
+      y + 5
     );
 
     y += rowHeight;
