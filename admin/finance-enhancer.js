@@ -70,9 +70,13 @@ async function buildQuotePdf() {
   pdf.setFillColor(69, 88, 61); pdf.rect(0, 0, pageWidth, 10, "F");
   pdf.setTextColor(69, 88, 61); pdf.setFont("helvetica", "bold"); pdf.setFontSize(22);
   pdf.text("LE CARNET DU CHEF", margin, y + 7);
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5); pdf.setTextColor(75, 75, 75);
+  pdf.text("SIRET : 841 392 327 00034", margin, y + 13);
+  pdf.text("50 Rue Maréchal Foch · 42300 Roanne", margin, y + 18);
+  pdf.text("07 45 71 04 53 · lecarnetduchef@gmail.com", margin, y + 23);
   pdf.setFontSize(9); pdf.setTextColor(95, 95, 95); pdf.text("DEVIS", pageWidth - margin, y + 2, { align: "right" });
   pdf.setFontSize(13); pdf.setTextColor(35, 35, 35); pdf.text(quote.id, pageWidth - margin, y + 8, { align: "right" });
-  y += 25;
+  y += 32;
 
   const createdAt = meta.createdAt?.toMillis ? new Date(meta.createdAt.toMillis()) : new Date(meta.createdAt || Date.now());
   const issueDate = Number.isNaN(createdAt.getTime()) ? new Date() : createdAt;
@@ -92,28 +96,45 @@ async function buildQuotePdf() {
   y += 40;
 
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10); pdf.setTextColor(69, 88, 61); pdf.text("PRESTATIONS", margin, y); y += 5;
-  const cols = { label: margin, qty: pageWidth - 82, unit: pageWidth - 58, total: pageWidth - margin };
-  pdf.setFillColor(69, 88, 61); pdf.rect(margin, y, contentWidth, 8, "F"); pdf.setTextColor(255, 255, 255); pdf.setFontSize(8);
-  pdf.text("DÉSIGNATION", cols.label + 3, y + 5.3); pdf.text("QTÉ", cols.qty, y + 5.3, { align: "right" });
-  pdf.text("PRIX UNIT.", cols.unit, y + 5.3, { align: "right" }); pdf.text("TOTAL", cols.total - 3, y + 5.3, { align: "right" }); y += 8;
+  const table = {
+    x: margin,
+    width: contentWidth,
+    labelX: margin + 3,
+    labelWidth: 88,
+    qtyRight: margin + 106,
+    unitRight: margin + 140,
+    totalRight: margin + contentWidth - 3,
+  };
+  pdf.setFillColor(69, 88, 61); pdf.rect(table.x, y, table.width, 8, "F"); pdf.setTextColor(255, 255, 255); pdf.setFontSize(8);
+  pdf.text("DÉSIGNATION", table.labelX, y + 5.3);
+  pdf.text("QTÉ", table.qtyRight, y + 5.3, { align: "right" });
+  pdf.text("PRIX UNIT.", table.unitRight, y + 5.3, { align: "right" });
+  pdf.text("TOTAL", table.totalRight, y + 5.3, { align: "right" });
+  y += 8;
 
   pdf.setFont("helvetica", "normal");
   quote.lines.forEach((line, index) => {
-    const wrapped = splitText(pdf, line.label, 105); const rowHeight = Math.max(9, wrapped.length * 4.5 + 4);
+    const wrapped = splitText(pdf, line.label, table.labelWidth);
+    const rowHeight = Math.max(9, wrapped.length * 4.5 + 4);
     if (y + rowHeight > pageHeight - 55) { pdf.addPage(); y = 20; }
-    if (index % 2 === 0) { pdf.setFillColor(250, 249, 246); pdf.rect(margin, y, contentWidth, rowHeight, "F"); }
-    pdf.setTextColor(35, 35, 35); pdf.setFontSize(9); pdf.text(wrapped, cols.label + 3, y + 5);
-    pdf.text(String(line.quantity), cols.qty, y + 5, { align: "right" }); pdf.text(money(line.unitPrice), cols.unit, y + 5, { align: "right" });
-    pdf.text(money(line.quantity * line.unitPrice), cols.total - 3, y + 5, { align: "right" }); y += rowHeight;
-    pdf.setDrawColor(225, 225, 225); pdf.line(margin, y, margin + contentWidth, y);
+    if (index % 2 === 0) { pdf.setFillColor(250, 249, 246); pdf.rect(table.x, y, table.width, rowHeight, "F"); }
+    pdf.setTextColor(35, 35, 35); pdf.setFontSize(9); pdf.text(wrapped, table.labelX, y + 5);
+    pdf.text(String(line.quantity), table.qtyRight, y + 5, { align: "right" });
+    pdf.text(money(line.unitPrice), table.unitRight, y + 5, { align: "right" });
+    pdf.text(money(line.quantity * line.unitPrice), table.totalRight, y + 5, { align: "right" });
+    y += rowHeight;
+    pdf.setDrawColor(225, 225, 225); pdf.line(table.x, y, table.x + table.width, y);
   });
 
-  y += 9; const summaryX = pageWidth - 78; pdf.setFontSize(9); pdf.setTextColor(85, 85, 85);
-  pdf.text("Sous-total", summaryX, y); pdf.text(money(quote.subtotal), pageWidth - margin, y, { align: "right" }); y += 6;
-  if (quote.remisePct > 0) { pdf.text(`Remise ${quote.remisePct}%`, summaryX, y); pdf.text(`-${money(quote.subtotal * quote.remisePct / 100)}`, pageWidth - margin, y, { align: "right" }); y += 6; }
-  if (quote.remiseEuro > 0) { pdf.text("Remise", summaryX, y); pdf.text(`-${money(quote.remiseEuro)}`, pageWidth - margin, y, { align: "right" }); y += 6; }
-  pdf.setDrawColor(69, 88, 61); pdf.line(summaryX, y, pageWidth - margin, y); y += 8;
-  pdf.setFont("helvetica", "bold"); pdf.setFontSize(15); pdf.setTextColor(69, 88, 61); pdf.text("TOTAL", summaryX, y); pdf.text(money(quote.total), pageWidth - margin, y, { align: "right" }); y += 13;
+  y += 9;
+  const summaryLabelX = pageWidth - margin - 78;
+  const summaryValueX = pageWidth - margin;
+  pdf.setFontSize(9); pdf.setTextColor(85, 85, 85);
+  pdf.text("Sous-total", summaryLabelX, y); pdf.text(money(quote.subtotal), summaryValueX, y, { align: "right" }); y += 6;
+  if (quote.remisePct > 0) { pdf.text(`Remise ${quote.remisePct}%`, summaryLabelX, y); pdf.text(`-${money(quote.subtotal * quote.remisePct / 100)}`, summaryValueX, y, { align: "right" }); y += 6; }
+  if (quote.remiseEuro > 0) { pdf.text("Remise", summaryLabelX, y); pdf.text(`-${money(quote.remiseEuro)}`, summaryValueX, y, { align: "right" }); y += 6; }
+  pdf.setDrawColor(69, 88, 61); pdf.line(summaryLabelX, y, summaryValueX, y); y += 8;
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(15); pdf.setTextColor(69, 88, 61); pdf.text("TOTAL", summaryLabelX, y); pdf.text(money(quote.total), summaryValueX, y, { align: "right" }); y += 13;
 
   if (quote.conditions) {
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(10); pdf.text("CONDITIONS", margin, y); y += 6;
