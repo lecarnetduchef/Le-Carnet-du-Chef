@@ -1,6 +1,6 @@
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const MENU_IDS = [1, 2, 3];
 const CHEF_PRESENTATION_REF = doc(db, "siteContent", "chefPresentation");
@@ -329,14 +329,14 @@ async function saveFacture() {
       ? startFactures.current.historique.map((item) => ({
           action: factureText(item?.action),
           statut: factureText(item?.statut),
-          at: item?.at instanceof Timestamp ? item.at : Timestamp.now()
+          at: item?.at || new Date()
         }))
       : [];
 
     const entry = {
       action: startFactures.current ? "modification" : "creation",
       statut: payload.statut,
-      at: Timestamp.now()
+      at: new Date()
     };
 
     const documentData = {
