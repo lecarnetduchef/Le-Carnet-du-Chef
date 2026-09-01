@@ -177,8 +177,40 @@ function collectFactureForm() { const calc = updateFactureTotal(); return { devi
 function nextFactureId() { return `FAC-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`; }
 async function saveFacture() { if (!auth.currentUser) return; const payload = collectFactureForm(); if (!payload.client.nom) { showFactureStatus("Renseignez le client avant d’enregistrer la facture.", true); return; } const id = startFactures.current?.id || nextFactureId(); const history = Array.isArray(startFactures.current?.historique) ? startFactures.current.historique : []; const entry = { action: startFactures.current ? "modification" : "creation", statut: payload.statut, at: serverTimestamp() }; try { await setDoc(doc(db, "factures", id), { ...payload, createdAt: startFactures.current?.createdAt || serverTimestamp(), historique: [...history, entry] }, { merge: true }); startFactures.current = { id, ...payload, historique: [...history, entry] }; const number = document.querySelector("#facture-number"); if (number) number.textContent = id; const title = document.querySelector("#facture-editor-title"); if (title) title.textContent = `Facture ${id}`; showFactureStatus("Facture enregistrée dans Firestore."); await loadFactures(); } catch (error) { showFactureStatus(`Impossible d’enregistrer la facture : ${error?.message || "erreur inconnue"}`, true); } }
 async function loadFactures() { const list = document.querySelector("#factures-list"); if (!list || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "factures")); const docs = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); const total = document.querySelector("#factures-total"); if (total) total.textContent = String(docs.length); renderFactures(docs); } catch (error) { showFactureStatus(`Impossible de charger les factures : ${error?.message || "erreur inconnue"}`, true); } }
-function renderFactures(docs) { const list = document.querySelector("#factures-list"); if (!list) return; const filtered = docs.filter((facture) => { const filter = startFactures.filter; if (filter === "all") return facture.statut !== "avoir"; if (filter === "payee") return facture.statut === "payee"; if (filter === "impayee") return facture.statut === "impayee"; if (filter === "avoir") return facture.statut === "avoir"; return Array.isArray(facture.historique) && facture.historique.length > 0; }); list.innerHTML = ""; if (!filtered.length) { list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▧</span><h3>Aucune facture</h3><p>Aucun document ne correspond au filtre sélectionné.</p></div>`; return; } filtered.forEach((facture) => { const item = document.createElement("button"); item.type = "button"; item.className = "lcc-facture-item"; const labels = { payee: "Payée", impayee: "Impayée", annulee: "Annulée", avoir: "Avoir" }; const badge = facture.statut === "payee" ? "lcc-facture-badge-payee" : facture.statut === "avoir" ? "lcc-facture-badge-avoir" : facture.statut === "annulee" ? "lcc-facture-badge-annulee" : ""; item.innerHTML = `<strong>${escapeHtml(facture.id)}</strong><span>${escapeHtml(facture.client?.nom || "Client sans nom")}</span><span class="lcc-facture-badge ${badge}">${escapeHtml(labels[facture.statut] || "Impayée")}</span><small>${escapeHtml(formatDate(facture.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(facture.total)))}</small>`; item.addEventListener("click", () => openFacture(facture)); list.appendChild(item); }); }
+function renderFactures(docs) { const list = document.querySelector("#factures-list"); if (!list) return; const filtered = docs.filter((facture) => { const filter = startFactures.filter; if (filter === "all") return facture.statut !== "avoir"; if (filter === "payee") return facture.statut === "payee"; if (filter === "impayee") return facture.statut === "impayee"; if (filter === "avoir") return facture.statut === "avoir"; return Array.isArray(facture.historique) && facture.historique.length > 0; }); list.innerHTML = ""; if (!filtered.length) { list.innerHTML = `<div class="admin-empty-state compact"><span class="admin-empty-icon">▧</span><h3>Aucune facture</h3><p>Aucun document ne correspond au filtre sélectionné.</p></div>`; return; } filtered.forEach((facture) => { const item = document.createElement("button"); item.type = "button"; item.className = "lcc-facture-item"; const labels = { payee: "Payée", impayee: "Impayée", annulee: "Annulée", avoir: "Avoir" }; const badge = facture.statut === "payee" ? "lcc-facture-badge-payee" : facture.statut === "avoir" ? "lcc-facture-badge-avoir" : facture.statut === "annulee" ? "lcc-facture-badge-annulee" : ""; item.innerHTML = `<strong>${escapeHtml(facture.id)}</strong><span>${escapeHtml(facture.client?.nom || "Client sans nom")}</span><span class="lcc-facture-badge ${badge}">${escapeHtml(labels[facture.statut] || "Impayée")}</span><small>${escapeHtml(formatDate(facture.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(facture.total)))}</small>`; item.addEventListener("click", () => openFacture(facture));
+    if (facture.statut !== "payee") {
+      const pay = document.createElement("button");
+      pay.type = "button";
+      pay.className = "btn btn-primary";
+      pay.textContent = "💳 Payer par Stripe";
+      pay.addEventListener("click", (event) => {
+        event.stopPropagation();
+        void createFactureStripePayment(facture.id);
+      });
+      item.appendChild(pay);
+    } list.appendChild(item); }); }
 function openFacture(facture) { startFactures.current = facture; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value ?? ""; }; const title = document.querySelector("#facture-editor-title"); if (title) title.textContent = `Facture ${facture.id}`; const number = document.querySelector("#facture-number"); if (number) number.textContent = facture.id; set("#facture-devis", facture.devisId); set("#facture-statut", facture.statut || "impayee"); set("#facture-client", facture.client?.nom); set("#facture-email", facture.client?.email); set("#facture-telephone", facture.client?.telephone); set("#facture-conditions", facture.conditions); set("#facture-echeance", facture.dateEcheance); set("#facture-remise", facture.remiseEuro || 0); const lines = document.querySelector("#facture-lines"); if (lines) lines.innerHTML = ""; (facture.prestations || []).forEach((line) => addFactureLine(line)); if (!(facture.prestations || []).length) addFactureLine(); updateFactureTotal(); }
+async function createFactureStripePayment(factureId) {
+  if (!factureId) return;
+  try {
+    const response = await fetch("https://europe-west9-carnet-du-chef.cloudfunctions.net/createInvoicePayment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ factureId })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.checkoutUrl) {
+      throw new Error(data.error || "Impossible de créer le paiement Stripe.");
+    }
+
+    window.open(data.checkoutUrl, "_blank", "noopener");
+  } catch (error) {
+    showFactureStatus(error?.message || "Erreur Stripe.", true);
+  }
+}
+
 function printFacture() { if (!startFactures.current) { showFactureStatus("Enregistrez d’abord la facture avant de générer son PDF.", true); return; } window.print(); }
 function sendFacture() { const email = document.querySelector("#facture-email")?.value.trim(); if (!email) { showFactureStatus("Aucune adresse email client n’est renseignée.", true); return; } const number = document.querySelector("#facture-number")?.textContent || "facture"; const subject = encodeURIComponent(`Facture ${number} — Le Carnet du Chef`); const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver votre facture ${number}.\n\nLe Carnet du Chef`); window.location.href = `mailto:${email}?subject=${subject}&body=${body}`; }
 function showFactureStatus(message, isError = false) { const el = document.querySelector("#factures-status"); if (!el) return; el.textContent = message; el.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; el.hidden = false; }
