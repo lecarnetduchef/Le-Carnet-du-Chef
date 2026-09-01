@@ -100,12 +100,17 @@ async function buildQuotePdf() {
     x: margin,
     width: contentWidth,
     labelX: margin + 3,
-    labelWidth: 88,
-    qtyRight: margin + 106,
+    labelWidth: 82,
+    qtyRight: margin + 102,
     unitRight: margin + 140,
-    totalRight: margin + contentWidth - 3,
+    totalRight: pageWidth - margin - 3,
+    amountWidth: 31,
   };
-  pdf.setFillColor(69, 88, 61); pdf.rect(table.x, y, table.width, 8, "F"); pdf.setTextColor(255, 255, 255); pdf.setFontSize(8);
+
+  pdf.setFillColor(69, 88, 61);
+  pdf.rect(table.x, y, table.width, 8, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(8);
   pdf.text("DÉSIGNATION", table.labelX, y + 5.3);
   pdf.text("QTÉ", table.qtyRight, y + 5.3, { align: "right" });
   pdf.text("PRIX UNIT.", table.unitRight, y + 5.3, { align: "right" });
@@ -113,28 +118,102 @@ async function buildQuotePdf() {
   y += 8;
 
   pdf.setFont("helvetica", "normal");
+
   quote.lines.forEach((line, index) => {
     const wrapped = splitText(pdf, line.label, table.labelWidth);
     const rowHeight = Math.max(9, wrapped.length * 4.5 + 4);
-    if (y + rowHeight > pageHeight - 55) { pdf.addPage(); y = 20; }
-    if (index % 2 === 0) { pdf.setFillColor(250, 249, 246); pdf.rect(table.x, y, table.width, rowHeight, "F"); }
-    pdf.setTextColor(35, 35, 35); pdf.setFontSize(9); pdf.text(wrapped, table.labelX, y + 5);
-    pdf.text(String(line.quantity), table.qtyRight, y + 5, { align: "right" });
-    pdf.text(money(line.unitPrice), table.unitRight, y + 5, { align: "right" });
-    pdf.text(money(line.quantity * line.unitPrice), table.totalRight, y + 5, { align: "right" });
+
+    if (y + rowHeight > pageHeight - 55) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    if (index % 2 === 0) {
+      pdf.setFillColor(250, 249, 246);
+      pdf.rect(table.x, y, table.width, rowHeight, "F");
+    }
+
+    pdf.setTextColor(35, 35, 35);
+    pdf.setFontSize(9);
+    pdf.text(wrapped, table.labelX, y + 5);
+
+    pdf.text(String(line.quantity), table.qtyRight, y + 5, {
+      align: "right"
+    });
+
+    const unitText = money(line.unitPrice);
+    const totalText = money(line.quantity * line.unitPrice);
+
+    pdf.text(
+      unitText,
+      Math.min(table.unitRight, table.totalRight - table.amountWidth - 4),
+      y + 5,
+      { align: "right" }
+    );
+
+    pdf.text(
+      totalText,
+      table.totalRight,
+      y + 5,
+      { align: "right" }
+    );
+
     y += rowHeight;
-    pdf.setDrawColor(225, 225, 225); pdf.line(table.x, y, table.x + table.width, y);
+
+    pdf.setDrawColor(225, 225, 225);
+    pdf.line(table.x, y, table.x + table.width, y);
   });
 
   y += 9;
-  const summaryLabelX = pageWidth - margin - 78;
-  const summaryValueX = pageWidth - margin;
-  pdf.setFontSize(9); pdf.setTextColor(85, 85, 85);
-  pdf.text("Sous-total", summaryLabelX, y); pdf.text(money(quote.subtotal), summaryValueX, y, { align: "right" }); y += 6;
-  if (quote.remisePct > 0) { pdf.text(`Remise ${quote.remisePct}%`, summaryLabelX, y); pdf.text(`-${money(quote.subtotal * quote.remisePct / 100)}`, summaryValueX, y, { align: "right" }); y += 6; }
-  if (quote.remiseEuro > 0) { pdf.text("Remise", summaryLabelX, y); pdf.text(`-${money(quote.remiseEuro)}`, summaryValueX, y, { align: "right" }); y += 6; }
-  pdf.setDrawColor(69, 88, 61); pdf.line(summaryLabelX, y, summaryValueX, y); y += 8;
-  pdf.setFont("helvetica", "bold"); pdf.setFontSize(15); pdf.setTextColor(69, 88, 61); pdf.text("TOTAL", summaryLabelX, y); pdf.text(money(quote.total), summaryValueX, y, { align: "right" }); y += 13;
+
+  const summaryValueX = pageWidth - margin - 3;
+  const summaryLabelX = summaryValueX - 55;
+
+  pdf.setFontSize(9);
+  pdf.setTextColor(85, 85, 85);
+
+  pdf.text("Sous-total", summaryLabelX, y);
+  pdf.text(money(quote.subtotal), summaryValueX, y, {
+    align: "right"
+  });
+  y += 6;
+
+  if (quote.remisePct > 0) {
+    pdf.text(`Remise ${quote.remisePct}%`, summaryLabelX, y);
+    pdf.text(
+      `-${money(quote.subtotal * quote.remisePct / 100)}`,
+      summaryValueX,
+      y,
+      { align: "right" }
+    );
+    y += 6;
+  }
+
+  if (quote.remiseEuro > 0) {
+    pdf.text("Remise", summaryLabelX, y);
+    pdf.text(
+      `-${money(quote.remiseEuro)}`,
+      summaryValueX,
+      y,
+      { align: "right" }
+    );
+    y += 6;
+  }
+
+  pdf.setDrawColor(69, 88, 61);
+  pdf.line(summaryLabelX, y, summaryValueX, y);
+  y += 8;
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(15);
+  pdf.setTextColor(69, 88, 61);
+
+  pdf.text("TOTAL", summaryLabelX, y);
+  pdf.text(money(quote.total), summaryValueX, y, {
+    align: "right"
+  });
+
+  y += 13;
 
   if (quote.conditions) {
     pdf.setFont("helvetica", "bold"); pdf.setFontSize(10); pdf.text("CONDITIONS", margin, y); y += 6;
