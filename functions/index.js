@@ -11,7 +11,7 @@ const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
 if (!admin.apps.length) admin.initializeApp();
 const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { createPayment, CreatePaymentError } = require("./createPayment");
-const { createQuoteCheckoutSession, getCheckoutStatus, handleStripeWebhook } = require("./stripe");
+const { createInvoiceCheckoutSession, createQuoteCheckoutSession, getCheckoutStatus, handleStripeWebhook } = require("./stripe");
 const { refundPayment, deleteOrder } = require("./adminFinance");
 const { submitDemande } = require("./demandes");
 
@@ -28,15 +28,30 @@ const createPaymentHttp = onRequest({ region: "europe-west9", cors: true, secret
   catch (error) { if (error instanceof CreatePaymentError) return res.status(error.code === "INTERNAL_ERROR" ? 500 : 400).json({ ok: false, code: error.code, message: error.message }); console.error("Erreur createPayment non prévue :", error); return res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Une erreur interne est survenue." }); }
 });
 
-const createQuotePaymentHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY, SITE_URL] }, async (req, res) => {
-  if (req.method !== "POST") { res.set("Allow", "POST"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
+const createInvoicePaymentHttp = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY, SITE_URL] }, async (req, res) => {
+  if (req.method !== "POST") {
+    res.set("Allow", "POST");
+    return res.status(405).json({
+      ok: false,
+      code: "METHOD_NOT_ALLOWED",
+      message: "Method Not Allowed"
+    });
+  }
+
   try {
-    await requireAuthenticatedUser(req);
-    return res.status(200).json({ ok: true, ...(await createQuoteCheckoutSession({ devisId: req.body?.devisId })) });
+    return res.status(200).json({
+      ok: true,
+      ...(await createInvoiceCheckoutSession({
+        factureId: req.body?.factureId
+      }))
+    });
   } catch (error) {
-    console.error("Erreur paiement devis :", error);
-    const status = error?.message === "Authentification requise." ? 401 : 400;
-    return res.status(status).json({ ok: false, code: status === 401 ? "UNAUTHENTICATED" : "QUOTE_PAYMENT_ERROR", message: status === 401 ? "Authentification administrateur requise." : "Le paiement du devis ne peut pas être préparé." });
+    console.error("Erreur paiement facture :", error);
+    return res.status(400).json({
+      ok: false,
+      code: "INVOICE_PAYMENT_ERROR",
+      message: error?.message || "Le paiement de la facture ne peut pas être préparé."
+    });
   }
 });
 
@@ -101,4 +116,4 @@ const getCatalogue = onRequest({ region: "europe-west9", cors: true }, async (re
   try { const [formules, produits] = await Promise.all([getFormules(), getProduits()]); return res.status(200).json({ formules: formules.map((f) => projectCatalogueItem(f)), produits: produits.map((p) => projectCatalogueItem(p, { product: true })) }); }
   catch (error) { console.error("Erreur de lecture du catalogue public :", error); return res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Le catalogue ne peut pas être chargé pour le moment." }); }
 });
-module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createQuotePayment: createQuotePaymentHttp, sendQuoteEmail: sendQuoteEmailHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };
+module.exports = { getFormules, getProduits, getCommandesConfig, createPayment: createPaymentHttp, createInvoicePayment: createInvoicePaymentHttp, sendQuoteEmail: sendQuoteEmailHttp, getPaymentStatus: getPaymentStatusHttp, stripeWebhook, getCatalogue, submitDemande, refundPayment, deleteOrder };

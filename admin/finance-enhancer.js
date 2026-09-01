@@ -286,36 +286,6 @@ function replaceButton(selector, handler, text) {
   });
 }
 function enhanceQuoteButtons() { replaceButton("#devis-pdf", () => printQuotePdf(), "PDF / Imprimer"); replaceButton("#devis-send", () => sendQuoteEmail(), "Envoi par email"); }
-function ensureQuotePaymentButton() {
-  const section = document.querySelector("#quotes-section"); if (!section || section.dataset.quoteButtonEnhanced) return;
-  const observer = new MutationObserver(() => {
-    const actions = section.querySelector("#devis-save")?.parentElement; if (!actions || section.querySelector("#lcc-create-quote-payment")) return;
-    const button = document.createElement("button"); button.id = "lcc-create-quote-payment"; button.type = "button"; button.className = "btn btn-primary"; button.textContent = "Créer le lien de paiement Stripe"; actions.appendChild(button);
-  });
-  observer.observe(section, { childList: true, subtree: true }); section.dataset.quoteButtonEnhanced = "true";
-}
-function enhanceQuotePayment() {
-  const section = document.querySelector("#quotes-section"); if (!section || section.dataset.quotePaymentEnhanced) return;
-  const observer = new MutationObserver(() => {
-    const button = section.querySelector("#lcc-create-quote-payment"); if (!button || button.dataset.popupFixed === "true") return;
-    button.dataset.popupFixed = "true"; const replacement = button.cloneNode(true); button.replaceWith(replacement);
-    replacement.addEventListener("click", async () => {
-      const popup = window.open("about:blank", "_blank", "width=900,height=900,resizable=yes,scrollbars=yes");
-      if (!popup) { alert("La fenêtre Stripe a été bloquée par le navigateur."); return; }
-      replacement.disabled = true;
-      try {
-        const id = currentQuoteNumber(); if (!id || id === "Brouillon") throw new Error("Enregistrez d’abord le devis.");
-        if (currentQuoteStatus() !== "accepte") throw new Error("Le devis doit être accepté avant de créer le paiement.");
-        const user = auth.currentUser; if (!user) throw new Error("Session administrateur absente."); const token = await user.getIdToken();
-        const response = await fetch(`${FUNCTIONS_BASE}/createQuotePayment`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ devisId: id }) });
-        const data = await response.json().catch(() => ({})); if (!response.ok || !data.ok || !data.checkoutUrl) throw new Error(data.message || "Lien Stripe impossible.");
-        popup.location.href = data.checkoutUrl;
-      } catch (error) { popup.close(); alert(error?.message || "Lien Stripe impossible."); }
-      finally { replacement.disabled = false; }
-    });
-  });
-  observer.observe(section, { childList: true, subtree: true }); section.dataset.quotePaymentEnhanced = "true";
-}
 function enhanceOrderDetail() {
   const panel = document.querySelector("#order-detail-panel"); if (!panel || panel.dataset.orderEnhanced) return;
   const observer = new MutationObserver(() => {
@@ -333,7 +303,7 @@ function enhanceOrderDetail() {
 }
 function init() {
   const section = document.querySelector("#quotes-section");
-  if (section) { const observer = new MutationObserver(() => enhanceQuoteButtons()); observer.observe(section, { childList: true, subtree: true }); ensureQuotePaymentButton(); enhanceQuotePayment(); enhanceQuoteButtons(); }
+  if (section) { const observer = new MutationObserver(() => enhanceQuoteButtons()); observer.observe(section, { childList: true, subtree: true }); enhanceQuoteButtons(); }
   enhanceOrderDetail();
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true }); else init();

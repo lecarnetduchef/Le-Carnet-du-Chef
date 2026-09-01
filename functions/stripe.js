@@ -91,6 +91,145 @@ async function createCheckoutSession({ requestId, paymentAttempt }) {
   return { checkoutUrl: session.url, stripeCheckoutSessionId: session.id, alreadyCreated: false };
 }
 
+
+async function createInvoiceCheckoutSession({ factureId }) {
+  const id = requiredText(factureId, "Identifiant de la facture");
+
+  const factureRef = db.collection("factures").doc(id);
+  const snap = await factureRef.get();
+
+  if (!snap.exists) throw new Error("Facture introuvable.");
+
+  const facture = snap.data() || {};
+
+  if (String(facture.provider || "").toLowerCase() !== "stripe") {
+    throw new Error("Cette facture n'est pas compatible avec le paiement Stripe.");
+  }
+
+  if (String(facture.statut || "").toLowerCase() === "payee") {
+    throw new Error("Cette facture est déjà payée.");
+  }
+
+  const totalCentimes = Number(
+    facture.totalCentimes ??
+    facture.montantCentimes ??
+    Math.round(Number(facture.total || 0) * 100)
+  );
+
+  if (!Number.isFinite(totalCentimes) || totalCentimes <= 0) {
+    throw new Error("Montant de la facture invalide.");
+  }
+
+  const client = facture.client || {};
+  const email = String(
+    facture.clientEmail ||
+    client.email ||
+    ""
+  ).trim();
+
+  let paymentRef;
+
+  if (facture.paiementId) {
+    const existingPaymentRef = db.collection("paiements").doc(String(facture.paiementId));
+    const existingPaymentSnap = await existingPaymentRef.get();
+
+    if (existingPaymentSnap.exists) {
+      const existingPayment = existingPaymentSnap.data() || {};
+
+      if (
+        existingPayment.provider === "stripe" &&
+        existingPayment.statut === "en_attente" &&
+        existingPayment.checkoutUrl &&
+        existingPayment.stripeCheckoutSessionId
+      ) {
+        return {
+          checkoutUrl: existingPayment.checkoutUrl,
+          stripeCheckoutSessionId: existingPayment.stripeCheckoutSessionId,
+          paiementId: existingPaymentRef.id,
+          alreadyCreated: true
+        };
+      }
+    }
+  }
+
+  paymentRef = db.collection("paiements").doc();
+
+  const session = await getStripe().checkout.sessions.create({
+    mode: "payment",
+
+    line_items: [{
+      price_data: {
+        currency: String(facture.devise || "EUR").toLowerCase(),
+        product_data: {
+          name: `Facture ${facture.numero || id}`
+        },
+        unit_amount: Math.round(totalCentimes)
+      },
+      quantity: 1
+    }],
+
+    ...(email ? { customer_email: email } : {}),
+
+    success_url:
+      `${SITE_URL}/pages/confirmation.html?facture=${encodeURIComponent(id)}&session_id={CHECKOUT_SESSION_ID}`,
+
+    cancel_url:
+      `${SITE_URL}/pages/prestations.html?paiement=annule&facture=${encodeURIComponent(id)}`,
+
+    metadata: {
+      type: "facture",
+      factureId: id,
+      paiementId: paymentRef.id
+    },
+
+    payment_intent_data: {
+      metadata: {
+        type: "facture",
+        factureId: id,
+        paiementId: paymentRef.id
+      }
+    }
+  }, {
+    idempotencyKey: `invoice_${id}_${paymentRef.id}`
+  });
+
+  await paymentRef.set({
+    type: "facture",
+    factureId: id,
+    factureNumero: facture.numero || id,
+    statut: "en_attente",
+    provider: "stripe",
+    stripeCheckoutSessionId: session.id,
+    checkoutSessionId: session.id,
+    checkoutUrl: session.url || null,
+    stripePaymentIntentId: session.payment_intent
+      ? String(session.payment_intent)
+      : null,
+    transactionId: session.payment_intent
+      ? String(session.payment_intent)
+      : null,
+    montantCentimes: Math.round(totalCentimes),
+    devise: String(facture.devise || "EUR").toUpperCase(),
+    client,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now()
+  });
+
+  await factureRef.set({
+    statut: "paiement_demande",
+    paiementId: paymentRef.id,
+    stripeCheckoutSessionId: session.id,
+    checkoutUrl: session.url || null,
+    updatedAt: Timestamp.now()
+  }, { merge: true });
+
+  return {
+    checkoutUrl: session.url,
+    stripeCheckoutSessionId: session.id,
+    paiementId: paymentRef.id
+  };
+}
+
 async function createQuoteCheckoutSession({ devisId }) {
   const id = requiredText(devisId, "Identifiant du devis");
   const devisRef = db.collection("devis").doc(id);
@@ -306,6 +445,42 @@ async function handleCheckoutCompleted(session) {
 
   const metadata = session.metadata || {};
   const transactionId = requiredText(String(session.payment_intent || ""), "Référence de paiement Stripe");
+
+  if (metadata.type === "facture") {
+    const factureId = requiredText(String(metadata.factureId || ""), "Identifiant de la facture");
+
+    const factureRef = db.collection("factures").doc(factureId);
+    const factureSnap = await factureRef.get();
+
+    if (!factureSnap.exists) {
+      throw new Error("Facture introuvable pour ce paiement.");
+    }
+
+    const facture = factureSnap.data() || {};
+
+    const paiementId = await upsertStripePayment({
+      session,
+      transactionId,
+      status: "paye",
+      invoiceId: null
+    });
+
+    await factureRef.set({
+      statut: "payee",
+      paiementId,
+      stripeCheckoutSessionId: session.id,
+      stripePaymentIntentId: transactionId,
+      paidAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    }, { merge: true });
+
+    return {
+      handled: true,
+      type: "facture",
+      paiementId,
+      factureId
+    };
+  }
 
   if (metadata.type === "devis") {
     const paiementId = await upsertStripePayment({ session, transactionId, status: "paye", invoiceId: session.invoice || null });
@@ -603,7 +778,7 @@ async function handleStripeWebhook(rawBody, signature) {
   }
 }
 
-module.exports = {
+module.exports = { createInvoiceCheckoutSession,
   createCheckoutSession,
   createQuoteCheckoutSession,
   getCheckoutStatus,
