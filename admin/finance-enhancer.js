@@ -8,7 +8,19 @@ let jsPdfPromise = null;
 const esc = (v) => String(v ?? "").replace(/[&<>\"']/g, (c) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
 }[c]));
-const money = (value) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(Number(value || 0));
+
+// jsPDF's built-in Helvetica does not reliably render the narrow/non-breaking
+// grouping spaces produced by Intl.NumberFormat("fr-FR"). Convert those spaces
+// to ordinary spaces and add the euro sign explicitly.
+const money = (value) => {
+  const amount = Number(value || 0);
+  const formatted = amount.toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: true,
+  });
+  return `${formatted.replace(/[\u202F\u00A0]/g, " ")} €`;
+};
 
 function loadJsPdf() {
   if (!jsPdfPromise) jsPdfPromise = import(JSPDF_URL).then((module) => module.jsPDF || module.default?.jsPDF || module.default);
