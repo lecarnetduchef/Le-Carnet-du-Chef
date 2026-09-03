@@ -408,6 +408,52 @@ async function loadFactures() {
   }
 }
 
+function openFacture(facture) {
+  if (!facture || !facture.id) {
+    showFactureStatus("Impossible d’ouvrir cette facture.", true);
+    return;
+  }
+
+  startFactures.current = facture;
+
+  const setValue = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) element.value = value ?? "";
+  };
+
+  setValue("#facture-id", facture.id);
+  setValue("#facture-devis", facture.devisId || "");
+  setValue("#facture-statut", facture.statut || "impayee");
+  setValue("#facture-client-nom", facture.client?.nom || "");
+  setValue("#facture-client-email", facture.client?.email || "");
+  setValue("#facture-client-telephone", facture.client?.telephone || "");
+  setValue("#facture-conditions", facture.conditions || "");
+  setValue("#facture-echeance", facture.dateEcheance || "");
+
+  const linesContainer = document.querySelector("#facture-lines");
+
+  if (linesContainer) {
+    linesContainer.innerHTML = "";
+
+    (facture.prestations || []).forEach((line) => {
+      addFactureLine({
+        label: line.label || "",
+        quantity: Number(line.quantity ?? 1),
+        unitPrice: Number(line.unitPrice ?? 0)
+      });
+    });
+  }
+
+  updateFactureTotal();
+
+  document.querySelector("#facture-form")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+  showFactureStatus(`Facture ${facture.id} sélectionnée.`);
+}
+
 function renderFactures(docs) {
   const list = document.querySelector("#factures-list");
   if (!list) return;
