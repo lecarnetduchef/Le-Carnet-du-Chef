@@ -156,8 +156,8 @@ function startFactures() {
     <div class="admin-section-heading">
       <div>
         <p class="admin-eyebrow">COMPTABILITÉ · FACTURATION</p>
-        <h2>Factures / Paiements</h2>
-        <p class="muted">Créer, modifier, envoyer et suivre les factures et leurs paiements Stripe.</p>
+        <h2>Commercial</h2>
+        <p class="muted">Devis, factures et paiements : de la proposition au règlement.</p>
       </div>
       <div class="admin-orders-header-actions">
         <span class="admin-orders-total"><strong id="factures-total">0</strong> facture(s)</span>
@@ -307,7 +307,7 @@ function factureText(value) { return String(value ?? "").trim(); }
 function addFactureLine(item = {}) { const container = document.querySelector("#facture-lines"); if (!container) return; const row = document.createElement("div"); row.className = "lcc-facture-line"; row.innerHTML = `<input class="facture-line-label" type="text" placeholder="Prestation" value="${escapeAttr(item.label || "")}"><input class="facture-line-qty" type="number" min="0" step="1" value="${Number(item.quantity || 1)}"><input class="facture-line-price" type="number" min="0" step="0.01" value="${Number(item.unitPrice || 0)}"><output class="facture-line-total">0,00 €</output><button type="button" class="btn btn-secondary facture-line-remove">×</button>`; row.querySelectorAll("input").forEach((input) => input.addEventListener("input", updateFactureTotal)); row.querySelector(".facture-line-remove")?.addEventListener("click", () => { row.remove(); updateFactureTotal(); }); container.appendChild(row); updateFactureTotal(); }
 function getFactureLines() { return Array.from(document.querySelectorAll(".lcc-facture-line")).map((row) => ({ label: factureText(row.querySelector(".facture-line-label")?.value), quantity: factureMoney(row.querySelector(".facture-line-qty")?.value), unitPrice: factureMoney(row.querySelector(".facture-line-price")?.value) })).filter((line) => line.label || line.unitPrice); }
 function updateFactureTotal() { const lines = getFactureLines(); const subtotal = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0); const remise = Math.min(subtotal, factureMoney(document.querySelector("#facture-remise")?.value)); const total = Math.max(0, subtotal - remise); document.querySelectorAll(".lcc-facture-line").forEach((row) => { const q = factureMoney(row.querySelector(".facture-line-qty")?.value); const p = factureMoney(row.querySelector(".facture-line-price")?.value); const out = row.querySelector(".facture-line-total"); if (out) out.textContent = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(q * p); }); const totalEl = document.querySelector("#facture-total"); if (totalEl) totalEl.textContent = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(total); return { subtotal, remise, total, lines }; }
-async function loadFactureDevis() { const select = document.querySelector("#facture-devis"); if (!select || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "devis")); startFactures.devis = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); select.innerHTML = `<option value="">Sélectionner un devis…</option>`; startFactures.devis.forEach((devis) => { const client = devis.client || {}; const option = document.createElement("option"); option.value = devis.id; option.textContent = `${client.nom || "Client"} — ${devis.id}`; select.appendChild(option); }); } catch (error) { showFactureStatus(`Impossible de charger les devis : ${error?.message || "erreur inconnue"}`, true); } }
+async function loadFactureDevis() { const select = document.querySelector("#facture-devis"); if (!select || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "devis")); startFactures.devis = snap.docs.map((item) => ({ id: item.id, ...item.data() })).filter((devis) => devis.statut === "accepte").sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); select.innerHTML = `<option value="">Sélectionner un devis accepté…</option>`; startFactures.devis.forEach((devis) => { const client = devis.client || {}; const total = factureMoney(devis.total); const option = document.createElement("option"); option.value = devis.id; option.textContent = `${devis.id} — ${client.nom || "Client"} — ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(total)}`; select.appendChild(option); }); } catch (error) { showFactureStatus(`Impossible de charger les devis : ${error?.message || "erreur inconnue"}`, true); } }
 function applyFactureDevis() { const id = document.querySelector("#facture-devis")?.value; const devis = startFactures.devis.find((item) => item.id === id); if (!devis) return; startFactures.current = null; const set = (selector, value) => { const el = document.querySelector(selector); if (el) el.value = value ?? ""; }; const client = devis.client || {}; set("#facture-client", client.nom); set("#facture-email", client.email); set("#facture-telephone", client.telephone); set("#facture-conditions", devis.conditions || ""); const lines = document.querySelector("#facture-lines"); if (lines) lines.innerHTML = ""; (devis.prestations || []).forEach((line) => addFactureLine(line)); if (!(devis.prestations || []).length) addFactureLine({ label: "Prestation", quantity: 1, unitPrice: factureMoney(devis.total) }); const remise = document.querySelector("#facture-remise"); if (remise) remise.value = factureMoney(devis.remiseEuro || 0); updateFactureTotal(); }
 function resetFactureForm() { startFactures.current = null; const title = document.querySelector("#facture-editor-title"); if (title) title.textContent = "Nouvelle facture"; const number = document.querySelector("#facture-number"); if (number) number.textContent = "Brouillon"; ["#facture-devis","#facture-client","#facture-email","#facture-telephone","#facture-conditions"].forEach((selector) => { const el = document.querySelector(selector); if (el) el.value = ""; }); const status = document.querySelector("#facture-statut"); if (status) status.value = "impayee"; const remise = document.querySelector("#facture-remise"); if (remise) remise.value = "0"; const echeance = document.querySelector("#facture-echeance"); if (echeance) { const date = new Date(); date.setDate(date.getDate() + 30); echeance.value = date.toISOString().slice(0, 10); } const lines = document.querySelector("#facture-lines"); if (lines) lines.innerHTML = ""; addFactureLine(); updateFactureTotal(); }
 function collectFactureForm() { const calc = updateFactureTotal(); return { devisId: document.querySelector("#facture-devis")?.value || null, provider: "stripe", statut: document.querySelector("#facture-statut")?.value || "impayee", client: { nom: factureText(document.querySelector("#facture-client")?.value), email: factureText(document.querySelector("#facture-email")?.value), telephone: factureText(document.querySelector("#facture-telephone")?.value) }, prestations: calc.lines, sousTotal: calc.subtotal, remiseEuro: calc.remise, total: calc.total, conditions: factureText(document.querySelector("#facture-conditions")?.value), dateEcheance: document.querySelector("#facture-echeance")?.value || null, updatedAt: serverTimestamp() }; }
@@ -611,12 +611,262 @@ async function sendFacturePaymentLink() {
   }
 }
 
-function printFacture() {
+async function printFacture() {
   if (!startFactures.current) {
     showFactureStatus("Enregistrez d’abord la facture avant de générer son PDF.", true);
     return;
   }
-  window.print();
+
+  try {
+    const facture = startFactures.current;
+    const module = await import("https://cdn.jsdelivr.net/npm/jspdf@4.2.1/+esm");
+    const jsPDF = module.jsPDF || module.default?.jsPDF || module.default;
+
+    if (!jsPDF) {
+      throw new Error("Le générateur PDF est indisponible.");
+    }
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 18;
+    const right = pageWidth - margin;
+
+    const businessName = "Le Carnet du Chef";
+    const businessAddress = "50 Rue Maréchal Foch";
+    const businessCity = "42300 Roanne";
+    const businessPhone = "07 45 71 04 53";
+    const businessEmail = "lecarnetduchef@gmail.com";
+    const businessSiret = "841 392 327 00034";
+
+    const client = facture.client || {};
+    const lines = Array.isArray(facture.prestations) ? facture.prestations : [];
+
+    const money = (value) => {
+      const amount = Number(value || 0);
+      return amount.toLocaleString("fr-FR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + " EUR";
+    };
+
+    const text = (value) => String(value ?? "").trim();
+
+    const formatDate = (value) => {
+      if (!value) return "";
+      const date = value?.toDate ? value.toDate() : new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleDateString("fr-FR");
+    };
+
+    let y = 20;
+
+    // EN-TÊTE ENTREPRISE
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(20);
+    pdf.text(businessName, margin, y);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.text(businessAddress, margin, y + 7);
+    pdf.text(businessCity, margin, y + 12);
+    pdf.text(`SIRET : ${businessSiret}`, margin, y + 17);
+    pdf.text(`Tél. : ${businessPhone}`, margin, y + 22);
+    pdf.text(businessEmail, margin, y + 27);
+
+    // TITRE FACTURE
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(22);
+    pdf.text("FACTURE", right, 25, { align: "right" });
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(text(facture.id), right, 32, { align: "right" });
+
+    if (facture.createdAt) {
+      pdf.text(`Date : ${formatDate(facture.createdAt)}`, right, 38, { align: "right" });
+    }
+
+    if (facture.dateEcheance) {
+      pdf.text(`Échéance : ${formatDate(facture.dateEcheance)}`, right, 44, { align: "right" });
+    }
+
+    // SÉPARATION
+    pdf.line(margin, 55, right, 55);
+
+    // CLIENT
+    y = 68;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("FACTURÉ À", margin, y);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+
+    let clientY = y + 7;
+
+    if (text(client.nom)) {
+      pdf.text(text(client.nom), margin, clientY);
+      clientY += 5;
+    }
+
+    if (text(client.email)) {
+      pdf.text(text(client.email), margin, clientY);
+      clientY += 5;
+    }
+
+    if (text(client.telephone)) {
+      pdf.text(text(client.telephone), margin, clientY);
+    }
+
+    // TABLEAU DES PRESTATIONS
+    y = 105;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("PRESTATIONS", margin, y);
+
+    y += 8;
+
+    const colDescription = margin;
+    const colQty = 135;
+    const colUnit = 163;
+    const colTotal = right;
+
+    pdf.setFontSize(8);
+    pdf.setFont("helvetica", "bold");
+
+    pdf.text("Description", colDescription, y);
+    pdf.text("Qté", colQty, y, { align: "right" });
+    pdf.text("Prix unitaire", colUnit, y, { align: "right" });
+    pdf.text("Total", colTotal, y, { align: "right" });
+
+    pdf.line(margin, y + 3, right, y + 3);
+
+    y += 10;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+
+    if (!lines.length) {
+      pdf.text("Aucune prestation renseignée.", margin, y);
+      y += 8;
+    } else {
+      for (const line of lines) {
+        const description = text(line.description || line.nom || line.name || line.libelle || "Prestation");
+        const quantity = Number(line.quantite ?? line.quantity ?? 1);
+        const unitPrice = Number(line.prixUnitaire ?? line.unitPrice ?? line.prix ?? 0);
+        const total = Number(line.total ?? (quantity * unitPrice));
+
+        const wrapped = pdf.splitTextToSize(description, 105);
+
+        pdf.text(wrapped, colDescription, y);
+        pdf.text(String(quantity), colQty, y, { align: "right" });
+        pdf.text(money(unitPrice), colUnit, y, { align: "right" });
+        pdf.text(money(total), colTotal, y, { align: "right" });
+
+        y += Math.max(6, wrapped.length * 5);
+
+        if (y > 245) {
+          pdf.addPage();
+          y = 20;
+        }
+      }
+    }
+
+    pdf.line(margin, y + 2, right, y + 2);
+
+    // TOTAUX
+    y += 12;
+
+    const subtotal = Number(facture.sousTotal || 0);
+    const remise = Number(facture.remiseEuro || 0);
+    const total = Number(facture.total || 0);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+
+    pdf.text("Sous-total", 135, y, { align: "right" });
+    pdf.text(money(subtotal), right, y, { align: "right" });
+
+    if (remise > 0) {
+      y += 7;
+      pdf.text("Remise", 135, y, { align: "right" });
+      pdf.text(`- ${money(remise)}`, right, y, { align: "right" });
+    }
+
+    y += 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("TOTAL À PAYER", 135, y, { align: "right" });
+    pdf.text(money(total), right, y, { align: "right" });
+
+    // CONDITIONS
+    y += 18;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("CONDITIONS DE RÈGLEMENT", margin, y);
+
+    y += 7;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+
+    const conditions = text(facture.conditions);
+
+    if (conditions) {
+      const wrappedConditions = pdf.splitTextToSize(conditions, pageWidth - (margin * 2));
+      pdf.text(wrappedConditions, margin, y);
+      y += wrappedConditions.length * 5;
+    } else {
+      pdf.text("Paiement par lien sécurisé Stripe.", margin, y);
+      y += 5;
+    }
+
+    // RÉFÉRENCE DEVIS
+    if (facture.devisId) {
+      y += 7;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.text(`Devis source : ${facture.devisId}`, margin, y);
+    }
+
+    // PIED DE PAGE
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.text(
+      "Le Carnet du Chef · 50 Rue Maréchal Foch · 42300 Roanne",
+      pageWidth / 2,
+      pageHeight - 15,
+      { align: "center" }
+    );
+
+    pdf.text(
+      `SIRET ${businessSiret} · ${businessPhone} · ${businessEmail}`,
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: "center" }
+    );
+
+    const filename = `${text(facture.id) || "facture"}-Le-Carnet-du-Chef.pdf`;
+
+    pdf.save(filename);
+
+    showFactureStatus(`PDF de la facture ${text(facture.id)} généré avec succès.`);
+  } catch (error) {
+    console.error("Erreur génération PDF facture :", error);
+    showFactureStatus(
+      error?.message || "Impossible de générer le PDF de la facture.",
+      true
+    );
+  }
 }
 
 async function sendFacture() {
