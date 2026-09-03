@@ -105,46 +105,247 @@ async function loadDashboardStats() {
       devisSnap,
       facturesSnap,
       clientsSnap,
-      produitsSnap
+      produitsSnap,
+      paiementsSnap,
+      remboursementsSnap
     ] = await Promise.all([
       getDocs(collection(db, "commandes")),
       getDocs(collection(db, "demandes")),
       getDocs(collection(db, "devis")),
       getDocs(collection(db, "factures")),
       getDocs(collection(db, "clients")),
-      getDocs(collection(db, "produits"))
+      getDocs(collection(db, "produits")),
+      getDocs(collection(db, "paiements")),
+      getDocs(collection(db, "remboursements"))
     ]);
 
-    const commandes = commandesSnap.docs.map((item) => item.data());
-    const demandes = demandesSnap.docs.map((item) => item.data());
-    const devis = devisSnap.docs.map((item) => item.data());
-    const factures = facturesSnap.docs.map((item) => item.data());
-    const clients = clientsSnap.docs.map((item) => item.data());
-    const products = produitsSnap.docs.map((item) => item.data());
+    const commandes = commandesSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const demandes = demandesSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const devis = devisSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const factures = facturesSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const clients = clientsSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const products = produitsSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const paiements = paiementsSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
+
+    const remboursements = remboursementsSnap.docs.map((item) => ({
+      id: item.id,
+      ...item.data()
+    }));
 
     const activeProducts = products.filter((product) => product.actif !== false);
+
     const outOfStock = activeProducts.filter(
       (product) => Number(product.stockDisponible || 0) <= 0
     );
+
     const availableStock = activeProducts.reduce(
       (total, product) => total + Number(product.stockDisponible || 0),
       0
     );
 
-    const paidInvoices = factures.filter(
-      (facture) => facture.statut === "payee"
+    /*
+     * FINANCE
+     *
+     * Source du CA réel :
+     * paiements Stripe effectivement payés.
+     *
+     * Une commande catalogue et un paiement Commercial
+     * arrivent tous deux dans cette collection.
+     *
+     * On ne recompte donc jamais une facture ou une commande
+     * en parallèle : le paiement réussi est la source financière.
+     */
+    const paidPayments = paiements.filter(
+      (paiement) =>
+        String(paiement.provider || "").toLowerCase() === "stripe" &&
+        String(paiement.statut || "").toLowerCase() === "paye"
     );
 
-    const revenue = paidInvoices.reduce(
-      (total, facture) =>
-        total + Number(facture.total ?? facture.montantTotal ?? 0),
+    const successfulRefunds = remboursements.filter(
+      (remboursement) =>
+        String(remboursement.provider || "").toLowerCase() === "stripe" &&
+        String(remboursement.statut || "").toLowerCase() === "rembourse"
+    );
+
+    const refundAmount = (remboursement) =>
+      Number(remboursement.montantCentimes || 0) / 100;
+
+    const refundTotal = successfulRefunds.reduce(
+      (total, remboursement) =>
+        total + refundAmount(remboursement),
       0
     );
+
+    const paymentAmount = (paiement) => {
+      if (paiement.montant != null) {
+        return Number(paiement.montant || 0);
+      }
+
+      if (paiement.montantCentimes != null) {
+        return Number(paiement.montantCentimes || 0) / 100;
+      }
+
+      return 0;
+    };
+
+    const paymentDate = (paiement) => {
+      const value =
+        paiement.paidAt ||
+        paiement.date ||
+        paiement.createdAt ||
+        paiement.updatedAt;
+
+      if (!value) return null;
+
+      if (typeof value === "object" && typeof value.toDate === "function") {
+        return value.toDate();
+      }
+
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const grossRevenue = paidPayments.reduce(
+      (total, paiement) => total + paymentAmount(paiement),
+      0
+    );
+
+    const netRevenue = Math.max(0, grossRevenue - refundTotal);
+
+    /*
+     * Micro-BIC sans versement libératoire :
+     * pour la vente de denrées, l'abattement forfaitaire est de 71 %.
+     * La base imposable théorique correspond donc à 29 % du CA.
+     *
+     * Ce n'est PAS l'impôt réellement dû.
+     */
+    const taxableBase = netRevenue * 0.29;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const monthStart = new Date(currentYear, currentMonth, 1);
+    const nextMonthStart = new Date(currentYear, currentMonth + 1, 1);
+
+    const monthPayments = paidPayments.filter((paiement) => {
+      const date = paymentDate(paiement);
+      return date && date >= monthStart && date < nextMonthStart;
+    });
+
+    const monthRefunds = successfulRefunds.filter((remboursement) => {
+      const value =
+        remboursement.paidAt ||
+        remboursement.date ||
+        remboursement.createdAt ||
+        remboursement.updatedAt;
+
+      if (!value) return false;
+
+      const date =
+        typeof value === "object" && typeof value.toDate === "function"
+          ? value.toDate()
+          : new Date(value);
+
+      return !Number.isNaN(date.getTime()) &&
+        date >= monthStart &&
+        date < nextMonthStart;
+    });
+
+    const monthGrossRevenue = monthPayments.reduce(
+      (total, paiement) => total + paymentAmount(paiement),
+      0
+    );
+
+    const monthRefundTotal = monthRefunds.reduce(
+      (total, remboursement) =>
+        total + refundAmount(remboursement),
+      0
+    );
+
+    const monthRevenue = Math.max(
+      0,
+      monthGrossRevenue - monthRefundTotal
+    );
+
+    /*
+     * Prévision :
+     * rythme journalier réel du mois en cours.
+     * On projette ce rythme sur le mois complet.
+     */
+    const elapsedDays = Math.max(
+      1,
+      Math.min(
+        now.getDate(),
+        Math.ceil((now - monthStart) / 86400000)
+      )
+    );
+
+    const daysInMonth = Math.round(
+      (nextMonthStart - monthStart) / 86400000
+    );
+
+    const dailyRunRate = monthRevenue / elapsedDays;
+    const monthlyForecast = dailyRunRate * daysInMonth;
+
+    /*
+     * Potentiel commercial :
+     * les devis qui ne sont pas encore payés.
+     * Ce montant n'entre JAMAIS dans le CA réel.
+     */
+    const commercialPipeline = devis.reduce((total, devisItem) => {
+      const status = String(devisItem.statut || "").toLowerCase();
+
+      if (["paye", "annule", "refuse"].includes(status)) {
+        return total;
+      }
+
+      const amount = Number(
+        devisItem.total ??
+        devisItem.montantTotal ??
+        devisItem.totalTTC ??
+        devisItem.montant ??
+        0
+      );
+
+      return total + (Number.isFinite(amount) ? amount : 0);
+    }, 0);
 
     const revenueFormatter = new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "EUR"
     });
+
+    const formatEUR = (value) => revenueFormatter.format(
+      Number.isFinite(Number(value)) ? Number(value) : 0
+    );
 
     if (els.statOrders) {
       els.statOrders.textContent = String(commandes.length);
@@ -182,14 +383,36 @@ async function loadDashboardStats() {
     const revenueOrders = document.querySelector("#dashboard-revenue-orders");
 
     if (revenueValue) {
-      revenueValue.textContent = revenueFormatter.format(revenue);
+      revenueValue.textContent = formatEUR(netRevenue);
     }
 
     if (revenueOrders) {
-      revenueOrders.textContent =
-        paidInvoices.length === 1
-          ? "1 facture payée"
-          : `${paidInvoices.length} factures payées`;
+      revenueOrders.innerHTML = `
+        <strong>CA du mois : ${formatEUR(monthRevenue)}</strong>
+        <br>
+        Base imposable estimée : ${formatEUR(taxableBase)}
+        <br>
+        Prévision mensuelle : ${formatEUR(monthlyForecast)}
+        <br>
+        Potentiel devis : ${formatEUR(commercialPipeline)}
+      `;
+    }
+
+    const revenueTitle = document.querySelector("#dashboard-revenue-title");
+
+    if (revenueTitle) {
+      revenueTitle.textContent = "CA encaissé";
+    }
+
+    const revenueDescription = document.querySelector(
+      "#dashboard-revenue-card .lcc-panel-description"
+    );
+
+    if (revenueDescription) {
+      revenueDescription.textContent =
+        `${paidPayments.length} paiement(s) Stripe encaissé(s) · ` +
+        `${formatEUR(refundTotal)} remboursé(s) · ` +
+        `base imposable estimée à 29 %`;
     }
 
     updateDashboardStockAlert(products);
@@ -198,7 +421,10 @@ async function loadDashboardStats() {
       els.dashboardStatus.hidden = true;
     }
   } catch (error) {
-    console.error("Impossible de charger les indicateurs du tableau de bord :", error);
+    console.error(
+      "Impossible de charger les indicateurs du tableau de bord :",
+      error
+    );
 
     [
       els.statOrders,
@@ -221,7 +447,7 @@ async function loadDashboardStats() {
     }
 
     if (revenueOrders) {
-      revenueOrders.textContent = "Indisponible actuellement";
+      revenueOrders.textContent = "Finance indisponible actuellement";
     }
 
     if (els.dashboardStatus) {
