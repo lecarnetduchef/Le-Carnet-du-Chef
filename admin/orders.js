@@ -1,6 +1,6 @@
 import { auth, db } from "../js/firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import "./commandes-config.js";
 
 const STATUS_VALUES = ["nouvelle", "en_preparation", "prete", "terminee", "annulee"];
@@ -33,6 +33,8 @@ function init() {
   elements.detailStatus = document.querySelector("#order-detail-status");
   elements.detailSave = document.querySelector("#order-detail-save");
   elements.detailStatusMessage = document.querySelector("#order-detail-status-message");
+  elements.detailDelete = document.querySelector("#order-detail-delete");
+  elements.detailDelete = document.querySelector("#order-detail-delete");
 
   document.querySelectorAll("[data-order-filter]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -44,6 +46,8 @@ function init() {
   elements.refresh?.addEventListener("click", () => void loadOrders());
   elements.detailClose?.addEventListener("click", closeDetail);
   elements.detailSave?.addEventListener("click", () => void saveSelectedStatus());
+  elements.detailDelete?.addEventListener("click", () => void deleteSelectedOrder());
+  elements.detailDelete?.addEventListener("click", () => void deleteSelectedOrder());
   onAuthStateChanged(auth, (user) => { if (user) void loadOrders(); });
 }
 
@@ -136,6 +140,69 @@ function renderDetail(order) {
 }
 
 function closeDetail() { selectedOrder = null; if (elements.detailPanel) elements.detailPanel.hidden = true; if (elements.detailStatusMessage) elements.detailStatusMessage.textContent = ""; }
+
+async function deleteSelectedOrder() {
+  if (!selectedOrder || !isPaidOrder(selectedOrder) || !auth.currentUser) return;
+
+  const orderNumber = selectedOrder.numeroCommande || selectedOrder.id;
+
+  if (!window.confirm(`Supprimer définitivement la commande ${orderNumber} ?\\n\\nCette action est irréversible.`)) {
+    return;
+  }
+
+  if (elements.detailDelete) elements.detailDelete.disabled = true;
+  showStatusMessage("Suppression…", false);
+
+  try {
+    await deleteDoc(doc(db, "commandes", selectedOrder.id));
+
+    const deletedId = selectedOrder.id;
+    orders = orders.filter((order) => order.id !== deletedId);
+    selectedOrder = null;
+
+    if (elements.detailPanel) elements.detailPanel.hidden = true;
+
+    elements.total.textContent = String(orders.filter(isPaidOrder).length);
+    renderList();
+    setListStatus("Commande supprimée.", false);
+  } catch (error) {
+    console.error("Erreur de suppression de la commande :", error);
+    showStatusMessage(`Impossible de supprimer la commande : ${error?.message || "erreur inconnue"}`, true);
+  } finally {
+    if (elements.detailDelete) elements.detailDelete.disabled = false;
+  }
+}
+
+async function deleteSelectedOrder() {
+  if (!selectedOrder || !isPaidOrder(selectedOrder) || !auth.currentUser) return;
+
+  const orderNumber = selectedOrder.numeroCommande || selectedOrder.id;
+
+  if (!window.confirm(`Supprimer définitivement la commande ${orderNumber} ?\\n\\nCette action est irréversible.`)) {
+    return;
+  }
+
+  if (elements.detailDelete) elements.detailDelete.disabled = true;
+  showStatusMessage("Suppression…", false);
+
+  try {
+    await deleteDoc(doc(db, "commandes", selectedOrder.id));
+
+    const deletedId = selectedOrder.id;
+    orders = orders.filter((order) => order.id !== deletedId);
+    selectedOrder = null;
+
+    if (elements.detailPanel) elements.detailPanel.hidden = true;
+    elements.total.textContent = String(orders.filter(isPaidOrder).length);
+    renderList();
+    setListStatus("Commande supprimée.", false);
+  } catch (error) {
+    console.error("Erreur de suppression de la commande :", error);
+    showStatusMessage(`Impossible de supprimer la commande : ${error?.message || "erreur inconnue"}`, true);
+  } finally {
+    if (elements.detailDelete) elements.detailDelete.disabled = false;
+  }
+}
 
 async function saveSelectedStatus() {
   if (!selectedOrder || !isPaidOrder(selectedOrder) || !auth.currentUser || !elements.detailStatus) return;
