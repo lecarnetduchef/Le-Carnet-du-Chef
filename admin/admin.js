@@ -649,10 +649,18 @@ async function printFacture() {
 
     const money = (value) => {
       const amount = Number(value || 0);
-      return amount.toLocaleString("fr-FR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).replace(/[\u202F\u00A0]/g, " ") + " €";
+      const fixed = amount.toFixed(2);
+      const parts = fixed.split(".");
+      const integer = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return `${integer},${parts[1]} EUR`;
+    };
+
+    const moneyFontSize = (value, base = 8) => {
+      const length = money(value).length;
+      if (length >= 15) return 6;
+      if (length >= 13) return 6.5;
+      if (length >= 11) return 7;
+      return base;
     };
 
     const text = (value) => String(value ?? "").trim();
@@ -734,8 +742,8 @@ async function printFacture() {
     y += 8;
 
     const colDescription = margin;
-    const colQty = 125;
-    const colUnit = 160;
+    const colQty = 122;
+    const colUnit = 157;
     const colTotal = right;
 
     pdf.setFontSize(8);
@@ -759,22 +767,45 @@ async function printFacture() {
     } else {
       for (const line of lines) {
         const description = text(
+          line.label ||
           line.description ||
           line.libelle ||
           line.nom ||
           line.name ||
           "Prestation"
         );
-        const quantity = Number(line.quantite ?? line.quantity ?? 1);
-        const unitPrice = Number(line.prixUnitaire ?? line.unitPrice ?? line.prix ?? 0);
-        const total = Number(line.total ?? (quantity * unitPrice));
 
-        const wrapped = pdf.splitTextToSize(description, 95);
+        const quantity = Number(
+          line.quantity ??
+          line.quantite ??
+          1
+        );
 
+        const unitPrice = Number(
+          line.unitPrice ??
+          line.prixUnitaire ??
+          line.prix ??
+          0
+        );
+
+        const total = quantity * unitPrice;
+
+        const wrapped = pdf.splitTextToSize(description, 92);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
         pdf.text(wrapped, colDescription, y);
+
+        pdf.setFontSize(8);
         pdf.text(String(quantity), colQty, y, { align: "right" });
+
+        pdf.setFontSize(moneyFontSize(unitPrice));
         pdf.text(money(unitPrice), colUnit, y, { align: "right" });
+
+        pdf.setFontSize(moneyFontSize(total));
         pdf.text(money(total), colTotal, y, { align: "right" });
+
+        pdf.setFontSize(9);
 
         y += Math.max(6, wrapped.length * 5);
 
@@ -811,7 +842,11 @@ async function printFacture() {
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(13);
     pdf.text("TOTAL À PAYER", 145, y, { align: "right" });
+
+    pdf.setFontSize(moneyFontSize(total, 10));
     pdf.text(money(total), right, y, { align: "right" });
+
+    pdf.setFontSize(10);
 
     // CONDITIONS
     y += 18;
@@ -911,10 +946,17 @@ async function deleteFacture() {
     return;
   }
 
-  const linkedPayments = (startFactures.payments || []).filter((payment) => payment.factureId === facture.id);
+  const linkedPaidPayments = (startFactures.payments || []).filter(
+    (payment) =>
+      payment.factureId === facture.id &&
+      String(payment.statut || payment.status || "").toLowerCase() === "paye"
+  );
 
-  if (linkedPayments.length) {
-    showFactureStatus("Cette facture possède déjà un paiement enregistré. Elle ne peut pas être supprimée afin de préserver l’historique financier.", true);
+  if (linkedPaidPayments.length) {
+    showFactureStatus(
+      "Cette facture possède un paiement déjà encaissé. Elle ne peut pas être supprimée afin de préserver l’historique financier.",
+      true
+    );
     return;
   }
 
