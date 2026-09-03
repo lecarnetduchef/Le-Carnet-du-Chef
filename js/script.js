@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const mobileNavStyle = document.createElement("style");
     mobileNavStyle.textContent = `
       @media (max-width: 600px) {
+        html,
+        body {
+          overflow-x: hidden;
+        }
+
         .site-header { z-index: 100; }
         .site-header .nav-backdrop {
           display: block;
@@ -35,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
           bottom: 0;
           left: auto;
           width: min(88vw, 380px);
+          max-width: 100vw;
           min-height: 100dvh;
           padding: calc(var(--header-height) + 1.5rem) var(--space-3) var(--space-4);
           background: var(--color-white);
@@ -66,6 +72,18 @@ document.addEventListener("DOMContentLoaded", () => {
         body.nav-open .nav-toggle::after { transform: translateY(-8px) rotate(-45deg); }
         body.nav-open .nav-toggle span { opacity: 0; }
         body.nav-open { overflow: hidden; }
+      }
+
+      /* Les règles générales des champs de formulaire ne doivent pas
+         transformer les boutons radio en champs de largeur 100 %. */
+      .checkout-choice input[type="radio"] {
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        padding: 0;
+        margin: 0;
+        flex: 0 0 auto;
       }
     `;
     document.head.appendChild(mobileNavStyle);
