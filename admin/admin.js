@@ -40,7 +40,142 @@ function updateChefPresentationPreview() { if (!els.chefPresentationPreview || !
 function setChefPresentationStatus(message, isError = false) { if (!els.chefPresentationStatus) return; els.chefPresentationStatus.textContent = message; els.chefPresentationStatus.style.color = isError ? "#a33" : ""; }
 
 function updateDashboardStockAlert(products) { const alert = document.querySelector("#dashboard-stock-alert"); const count = document.querySelector("#dashboard-stock-alert-count"); const summary = document.querySelector("#dashboard-stock-alert-summary"); const list = document.querySelector("#dashboard-stock-alert-list"); if (!alert || !count || !summary || !list) return; const activeProducts = products.filter((product) => product.actif !== false); const lowStock = activeProducts.filter((product) => { const stock = Number(product.stockDisponible || 0); const seuil = Number(product.seuilAlerte || 0); return seuil > 0 && stock > 0 && stock <= seuil; }).map((product) => ({ ...product, type: "low", stock: Number(product.stockDisponible || 0), seuil: Number(product.seuilAlerte || 0) })); const outOfStock = activeProducts.filter((product) => Number(product.stockDisponible || 0) <= 0).map((product) => ({ ...product, type: "out", stock: 0, seuil: Number(product.seuilAlerte || 0) })); const alerts = [...outOfStock, ...lowStock].sort((a, b) => a.stock - b.stock); if (!alerts.length) { alert.hidden = true; count.textContent = "0"; summary.textContent = "Aucun produit à surveiller"; list.innerHTML = ""; return; } alert.hidden = false; count.textContent = String(alerts.length); summary.textContent = alerts.length === 1 ? "1 produit nécessite votre attention" : `${alerts.length} produits nécessitent votre attention`; const visibleAlerts = alerts.slice(0, 5); list.innerHTML = visibleAlerts.map((product) => { const isOut = product.type === "out"; return `<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.65rem 0;border-top:1px solid rgba(0,0,0,0.08);"><div style="min-width:0;"><strong style="display:block;">${isOut ? "🔴" : "🟠"} ${escapeHtml(product.nom || "Produit sans nom")}</strong><small>${isOut ? "Rupture de stock" : `Stock disponible : ${product.stock} · Seuil : ${product.seuil}`}</small></div><span style="white-space:nowrap;font-weight:600;">${isOut ? "RUPTURE" : "STOCK FAIBLE"}</span></div>`; }).join(""); if (alerts.length > 5) list.insertAdjacentHTML("beforeend", `<small style="display:block;margin-top:0.75rem;font-weight:600;">+ ${alerts.length - 5} autre${alerts.length - 5 > 1 ? "s" : ""} alerte${alerts.length - 5 > 1 ? "s" : ""}</small>`); }
-async function loadDashboardStats() { if (!els.statActiveProducts || !auth.currentUser) return; try { const snap = await getDocs(collection(db, "produits")); const products = snap.docs.map((item) => item.data()); updateDashboardStockAlert(products); const active = products.filter((product) => product.actif !== false); const out = active.filter((product) => Number(product.stockDisponible || 0) <= 0); const available = active.reduce((total, product) => total + Number(product.stockDisponible || 0), 0); els.statActiveProducts.textContent = String(active.length); els.statOutProducts.textContent = String(out.length); els.statStock.textContent = String(available); if (els.dashboardStatus) els.dashboardStatus.hidden = true; } catch (error) { els.statActiveProducts.textContent = els.statOutProducts.textContent = els.statStock.textContent = "—"; if (els.dashboardStatus) { els.dashboardStatus.textContent = "Les indicateurs produits ne sont pas disponibles actuellement."; els.dashboardStatus.hidden = false; } console.error(error); } }
+async function loadDashboardStats() {
+  if (!auth.currentUser) return;
+
+  try {
+    const [
+      commandesSnap,
+      demandesSnap,
+      devisSnap,
+      facturesSnap,
+      clientsSnap,
+      produitsSnap
+    ] = await Promise.all([
+      getDocs(collection(db, "commandes")),
+      getDocs(collection(db, "demandes")),
+      getDocs(collection(db, "devis")),
+      getDocs(collection(db, "factures")),
+      getDocs(collection(db, "clients")),
+      getDocs(collection(db, "produits"))
+    ]);
+
+    const commandes = commandesSnap.docs.map((item) => item.data());
+    const demandes = demandesSnap.docs.map((item) => item.data());
+    const devis = devisSnap.docs.map((item) => item.data());
+    const factures = facturesSnap.docs.map((item) => item.data());
+    const clients = clientsSnap.docs.map((item) => item.data());
+    const products = produitsSnap.docs.map((item) => item.data());
+
+    const activeProducts = products.filter((product) => product.actif !== false);
+    const outOfStock = activeProducts.filter(
+      (product) => Number(product.stockDisponible || 0) <= 0
+    );
+    const availableStock = activeProducts.reduce(
+      (total, product) => total + Number(product.stockDisponible || 0),
+      0
+    );
+
+    const paidInvoices = factures.filter(
+      (facture) => facture.statut === "payee"
+    );
+
+    const revenue = paidInvoices.reduce(
+      (total, facture) =>
+        total + Number(facture.total ?? facture.montantTotal ?? 0),
+      0
+    );
+
+    const revenueFormatter = new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR"
+    });
+
+    if (els.statOrders) {
+      els.statOrders.textContent = String(commandes.length);
+    }
+
+    if (els.statDemandes) {
+      els.statDemandes.textContent = String(demandes.length);
+    }
+
+    if (els.statDevis) {
+      els.statDevis.textContent = String(devis.length);
+    }
+
+    if (els.statFactures) {
+      els.statFactures.textContent = String(factures.length);
+    }
+
+    if (els.statClients) {
+      els.statClients.textContent = String(clients.length);
+    }
+
+    if (els.statActiveProducts) {
+      els.statActiveProducts.textContent = String(activeProducts.length);
+    }
+
+    if (els.statOutProducts) {
+      els.statOutProducts.textContent = String(outOfStock.length);
+    }
+
+    if (els.statStock) {
+      els.statStock.textContent = String(availableStock);
+    }
+
+    const revenueValue = document.querySelector("#dashboard-revenue-value");
+    const revenueOrders = document.querySelector("#dashboard-revenue-orders");
+
+    if (revenueValue) {
+      revenueValue.textContent = revenueFormatter.format(revenue);
+    }
+
+    if (revenueOrders) {
+      revenueOrders.textContent =
+        paidInvoices.length === 1
+          ? "1 facture payée"
+          : `${paidInvoices.length} factures payées`;
+    }
+
+    updateDashboardStockAlert(products);
+
+    if (els.dashboardStatus) {
+      els.dashboardStatus.hidden = true;
+    }
+  } catch (error) {
+    console.error("Impossible de charger les indicateurs du tableau de bord :", error);
+
+    [
+      els.statOrders,
+      els.statDemandes,
+      els.statDevis,
+      els.statFactures,
+      els.statClients,
+      els.statActiveProducts,
+      els.statOutProducts,
+      els.statStock
+    ].forEach((element) => {
+      if (element) element.textContent = "—";
+    });
+
+    const revenueValue = document.querySelector("#dashboard-revenue-value");
+    const revenueOrders = document.querySelector("#dashboard-revenue-orders");
+
+    if (revenueValue) {
+      revenueValue.textContent = "—";
+    }
+
+    if (revenueOrders) {
+      revenueOrders.textContent = "Indisponible actuellement";
+    }
+
+    if (els.dashboardStatus) {
+      els.dashboardStatus.textContent =
+        "Les indicateurs du tableau de bord ne sont pas disponibles actuellement.";
+      els.dashboardStatus.hidden = false;
+    }
+  }
+}
 async function renderStocks() { if (!els.stocksTableBody || !auth.currentUser) return; els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>"; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0)); if (!products.length) { els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>"; return; } els.stocksTableBody.innerHTML = ""; products.forEach((product) => { const row = document.createElement("tr"); const values = [product.nom || "Produit sans nom", Number(product.stockInitial || 0), Number(product.stockDisponible || 0), Number(product.stockReserve || 0), Number(product.stockVendu || 0), product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"]; values.forEach((value) => { const cell = document.createElement("td"); cell.textContent = String(value); row.appendChild(cell); }); els.stocksTableBody.appendChild(row); }); } catch (error) { console.error("Impossible de charger les stocks :", error); els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>"; } }
 function startDemandes() { if (!auth.currentUser || !els.requestsSection || demandesInitialized) return; demandesInitialized = true; demandesFilter = "all"; if (els.demandesRefresh) els.demandesRefresh.addEventListener("click", () => { void loadDemandes(); }); els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => button.addEventListener("click", () => { demandesFilter = button.dataset.demandeFilter || "all"; els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderDemandes(); })); if (els.demandeDetailClose) els.demandeDetailClose.addEventListener("click", closeDemandeDetail); if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); }); els.demandeDetailDelete?.addEventListener("click", () => { void deleteSelectedDemande(); }); if (els.qualificationSave) els.qualificationSave.addEventListener("click", () => { void saveDemandeQualification(); }); void loadDemandes(); }
 async function loadDemandes() { if (!auth.currentUser || !els.demandesList) return; setDemandesState("loading"); try { const snap = await getDocs(collection(db, "demandes")); demandesCache = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length); renderDemandes(); setDemandesState(demandesCache.length ? "ready" : "empty"); } catch (error) { console.error("Impossible de charger les demandes :", error); setDemandesState("error", `Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`); } }

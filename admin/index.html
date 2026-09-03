@@ -39,22 +39,77 @@
               <div><p class="admin-eyebrow">COCKPIT ADMINISTRATEUR</p><h2>Bonjour 👋</h2><p>Voici l’état actuel de l’activité du Carnet du Chef.</p></div><div class="lcc-dashboard-live"><span class="lcc-live-dot"></span> Données Firestore en direct</div>
             </div>
             <article id="dashboard-revenue-card" class="lcc-dashboard-panel lcc-revenue-card" aria-labelledby="dashboard-revenue-title">
-              <div class="lcc-panel-heading"><div><p class="admin-eyebrow">FINANCE</p><h3 id="dashboard-revenue-title">Chiffre d’affaires</h3></div><span class="lcc-panel-icon">€</span></div>
-              <div class="lcc-revenue-value" id="dashboard-revenue-value">—</div>
-              <p class="lcc-panel-description">Total des commandes validées, hors commandes annulées.</p>
-              <div class="lcc-revenue-meta"><span id="dashboard-revenue-orders">0 commande validée</span><span>Firestore</span></div>
-            </article>
+  <div class="lcc-panel-heading">
+    <div>
+      <p class="admin-eyebrow">FINANCE</p>
+      <h3 id="dashboard-revenue-title">Paiements encaissés</h3>
+    </div>
+    <span class="lcc-panel-icon">€</span>
+  </div>
+  <div class="lcc-revenue-value" id="dashboard-revenue-value">—</div>
+  <p class="lcc-panel-description">Total des factures réellement enregistrées comme payées.</p>
+  <div class="lcc-revenue-meta">
+    <span id="dashboard-revenue-orders">—</span>
+    <span>Factures payées</span>
+  </div>
+</article>
             <div class="admin-dashboard-grid lcc-kpi-grid">
-              <article class="admin-stat-card lcc-kpi lcc-kpi-green"><span>Commandes</span><strong id="stat-orders">0</strong><small>Commandes actuellement ouvertes dans le suivi</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-purple"><span>Demandes</span><strong id="stat-demandes">0</strong><small>Demandes enregistrées dans Firestore</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-blue"><span>Devis</span><strong id="stat-devis">0</strong><small>Devis enregistrés</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-sage"><span>Factures</span><strong id="stat-factures">0</strong><small>Factures enregistrées</small></article><article class="admin-stat-card lcc-kpi"><span>Produits actifs</span><strong id="stat-active-products">—</strong><small>Produits actuellement actifs</small></article><article class="admin-stat-card lcc-kpi lcc-kpi-warning"><span>Ruptures</span><strong id="stat-out-products">—</strong><small>Produits actifs avec stock à zéro</small></article><article class="admin-stat-card lcc-kpi"><span>Stock disponible</span><strong id="stat-stock">—</strong><small>Quantité disponible cumulée</small></article><article class="admin-stat-card lcc-kpi"><span>Clients</span><strong id="stat-clients">0</strong><small>Clients enregistrés</small></article>
-            </div>
-            <div id="dashboard-status" class="admin-alert" hidden></div>
+  <article class="admin-stat-card lcc-kpi lcc-kpi-green">
+    <span>Commandes</span>
+    <strong id="stat-orders">—</strong>
+    <small>Commandes enregistrées dans Firestore</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi lcc-kpi-purple">
+    <span>Demandes</span>
+    <strong id="stat-demandes">—</strong>
+    <small>Demandes enregistrées</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi lcc-kpi-blue">
+    <span>Devis</span>
+    <strong id="stat-devis">—</strong>
+    <small>Devis enregistrés</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi lcc-kpi-sage">
+    <span>Factures</span>
+    <strong id="stat-factures">—</strong>
+    <small>Factures enregistrées</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi">
+    <span>Clients</span>
+    <strong id="stat-clients">—</strong>
+    <small>Clients enregistrés</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi">
+    <span>Produits actifs</span>
+    <strong id="stat-active-products">—</strong>
+    <small>Produits actuellement actifs</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi lcc-kpi-warning">
+    <span>Ruptures</span>
+    <strong id="stat-out-products">—</strong>
+    <small>Produits actifs en rupture</small>
+  </article>
+
+  <article class="admin-stat-card lcc-kpi">
+    <span>Stock disponible</span>
+    <strong id="stat-stock">—</strong>
+    <small>Quantité disponible cumulée</small>
+  </article>
+</div>
+<div id="dashboard-status" class="admin-alert" hidden></div>
             <div class="lcc-dashboard-main-grid">
-              <section class="lcc-dashboard-panel lcc-service-panel" aria-labelledby="dashboard-service-title"><div class="lcc-panel-heading"><div><p class="admin-eyebrow">SERVICE</p><h3 id="dashboard-service-title">État des commandes</h3></div><span class="lcc-panel-icon">◷</span></div><p class="lcc-panel-description">Le contrôle existant des horaires et de l’ouverture/fermeture reste prioritaire.</p><div id="dashboard-service-placeholder" class="lcc-service-placeholder">Le contrôle détaillé est chargé automatiquement ici.</div></section>
-              <section class="lcc-dashboard-panel" aria-labelledby="dashboard-catalogue-title"><div class="lcc-panel-heading"><div><p class="admin-eyebrow">CATALOGUE</p><h3 id="dashboard-catalogue-title">État du catalogue</h3></div><span class="lcc-panel-icon">🍽️</span></div><div class="lcc-catalogue-metrics"><div><strong id="dashboard-catalogue-active">—</strong><span>actifs</span></div><div><strong id="dashboard-catalogue-out">—</strong><span>en rupture</span></div><div><strong id="dashboard-catalogue-stock">—</strong><span>en stock</span></div></div><a class="lcc-dashboard-link" href="plats.html">Gérer les produits <span>→</span></a></section>
+
+
             </div>
             <div class="lcc-dashboard-lower-grid">
               <article id="dashboard-stock-alert" class="lcc-dashboard-panel lcc-alert-panel" hidden><div class="lcc-panel-heading"><div><p class="admin-eyebrow">À SURVEILLER</p><h3>Alertes stock</h3></div><strong id="dashboard-stock-alert-count" class="lcc-alert-count">—</strong></div><p id="dashboard-stock-alert-summary" class="lcc-panel-description">Produits nécessitant une surveillance</p><div id="dashboard-stock-alert-list" class="lcc-alert-list"></div><a class="lcc-dashboard-link" href="#" data-admin-target="stocks-section">Voir les stocks <span>→</span></a></article>
-              <article class="lcc-dashboard-panel"><div class="lcc-panel-heading"><div><p class="admin-eyebrow">ACTIVITÉ CLIENT</p><h3>Demandes</h3></div><span class="lcc-panel-icon">✉</span></div><div class="lcc-demandes-summary"><strong id="dashboard-demandes-total">0</strong><span>demandes enregistrées</span></div><div class="lcc-demandes-status-row"><span>Accès à la gestion</span><button type="button" class="btn btn-secondary" data-admin-target="requests-section">Voir les demandes</button></div></article>
+
               <article class="lcc-dashboard-panel"><div class="lcc-panel-heading"><div><p class="admin-eyebrow">ACCÈS RAPIDE</p><h3>Catalogue</h3></div><span class="lcc-panel-icon">↗</span></div><div class="lcc-quick-links"><a href="formules.html">Formules <span>→</span></a><a href="plats.html">Plats <span>→</span></a><a href="boissons.html">Boissons <span>→</span></a><a href="desserts.html">Desserts <span>→</span></a></div></article>
             </div>
             <div id="dashboard-order-control-anchor" class="lcc-dashboard-service-anchor" aria-hidden="true"></div>
@@ -85,16 +140,6 @@
     </div>
   </div>
   <script type="module" src="admin.js"></script><script type="module" src="products.js"></script><script type="module" src="orders.js"></script><script type="module" src="counters.js"></script>
-  <script type="module">
-    import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
-    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-    const revenueValue = document.querySelector("#dashboard-revenue-value");
-    const revenueOrders = document.querySelector("#dashboard-revenue-orders");
-    function parseOrderAmount(value) { if (typeof value === "number" && Number.isFinite(value)) return value; if (typeof value === "string") { const normalized = value.replace(/\s/g, "").replace("€", "").replace(",", "."); const amount = Number(normalized); return Number.isFinite(amount) ? amount : 0; } return 0; }
-    function updateRevenue(amount, count) { if (revenueValue) revenueValue.textContent = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(amount); if (revenueOrders) revenueOrders.textContent = `${count} commande${count > 1 ? "s" : ""} validée${count > 1 ? "s" : ""}`; }
-    async function loadRevenue() { if (!FIREBASE_READY || !auth.currentUser || !revenueValue) return; revenueValue.textContent = "…"; try { const snapshot = await getDocs(collection(db, "commandes")); let total = 0; let count = 0; snapshot.forEach((item) => { const data = item.data() || {}; const status = String(data.statut || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); if (status === "annulee" || status === "cancelled") return; const amount = parseOrderAmount(data.montantTotal); if (amount > 0) { total += amount; count += 1; } }); updateRevenue(total, count); } catch (error) { console.error("Impossible de calculer le chiffre d’affaires :", error); if (revenueValue) revenueValue.textContent = "—"; if (revenueOrders) revenueOrders.textContent = "Données indisponibles"; } }
-    if (FIREBASE_READY) auth.onAuthStateChanged((user) => { if (user) void loadRevenue(); else updateRevenue(0, 0); });
-  </script>
   <script type="module">
     import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
     import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
