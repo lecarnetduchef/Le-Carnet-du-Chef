@@ -31,7 +31,62 @@ function closeMobileNavigation() { if (!els.sidebar || !els.mobileMenu) return; 
 function resetAdminToLogin() { if (els.dashboard) els.dashboard.hidden = true; if (els.loginScreen) els.loginScreen.hidden = false; pendingUrls.clear(); closeMobileNavigation(); const views = document.querySelectorAll("[data-admin-view]"); views.forEach((view) => { view.hidden = true; view.classList.remove("active"); }); if (els.dashboardSection) { els.dashboardSection.hidden = false; els.dashboardSection.classList.add("active"); } const navItems = document.querySelectorAll("[data-admin-target]"); navItems.forEach((item) => item.classList.toggle("active", item.dataset.adminTarget === "dashboard-section")); if (els.adminPageTitle) els.adminPageTitle.textContent = "Tableau de bord"; if (els.userEmail) els.userEmail.textContent = ""; selectedDemandeId = null; devisSelectedId = null; devisCurrent = null; }
 function initAuth() { onAuthStateChanged(auth, async (user) => { if (user) { els.loginScreen.hidden = true; els.dashboard.hidden = false; els.userEmail.textContent = user.email || "administrateur"; await loadChefPresentation(); await loadDashboardStats(); await renderStocks(); await loadOrdersState(); startDemandes(); startFactures(); } else resetAdminToLogin(); }); els.loginForm.addEventListener("submit", async (e) => { e.preventDefault(); els.loginError.hidden = true; try { await signInWithEmailAndPassword(auth, els.loginForm.email.value.trim(), els.loginForm.password.value); } catch (err) { els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code); els.loginError.hidden = false; } }); if (els.logoutBtn) els.logoutBtn.addEventListener("click", async (event) => { event.preventDefault(); els.logoutBtn.disabled = true; try { await signOut(auth); resetAdminToLogin(); } catch (error) { console.error("Erreur de déconnexion Firebase :", error); } finally { els.logoutBtn.disabled = false; } }); if (els.saveChefPresentationButton) els.saveChefPresentationButton.addEventListener("click", (event) => { event.preventDefault(); void saveChefPresentation(); }); if (els.chefPresentation) els.chefPresentation.addEventListener("input", updateChefPresentationPreview); if (els.closeOrdersButton) els.closeOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ferme", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🔴 Commandes forcées fermées.", false); updateOrdersStateUI("ferme"); } catch (error) { showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.openOrdersButton) els.openOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ouvert", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🟢 Commandes forcées ouvertes.", false); updateOrdersStateUI("ouvert"); } catch (error) { showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.automaticOrdersButton) els.automaticOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: null, fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🕐 Mode automatique rétabli.", false); updateOrdersStateUI("aucun"); } catch (error) { showOrderStatus(`Impossible de rétablir le mode automatique : ${error?.message || "erreur inconnue"}`, true); } }); }
 async function loadOrdersState() { if (!auth.currentUser || !els.ordersStateLabel || !els.ordersStateBadge) return; try { const snapshot = await getDoc(doc(db, "siteContent", "commandes")); const data = snapshot.exists() ? snapshot.data() : {}; const mode = data.modeManuel === "ouvert" || data.modeManuel === "ferme" ? data.modeManuel : "aucun"; updateOrdersStateUI(mode); } catch (error) { console.error("Impossible de lire l’état des commandes :", error); els.ordersStateLabel.textContent = "État indisponible"; els.ordersStateBadge.textContent = "Erreur de lecture"; els.ordersStateBadge.className = "admin-order-state admin-order-state-unknown"; } }
-function updateOrdersStateUI(mode) { if (!els.ordersStateLabel || !els.ordersStateBadge) return; const labels = { ouvert: ["🟢 Commandes forcées ouvertes", "OUVERTES"], ferme: ["🔴 Commandes forcées fermées", "FERMÉES"], aucun: ["🕐 Commandes en mode automatique", "AUTOMATIQUE"] }; const [label, badge] = labels[mode] || labels.aucun; els.ordersStateLabel.textContent = label; els.ordersStateBadge.textContent = badge; els.ordersStateBadge.className = `admin-order-state ${mode === "ferme" ? "admin-order-state-closed" : mode === "ouvert" ? "admin-order-state-open" : "admin-order-state-unknown"}`; }
+function updateOrdersStateUI(mode) {
+  if (!els.ordersStateLabel || !els.ordersStateBadge) return;
+
+  const labels = {
+    ouvert: ["🟢 Commandes forcées ouvertes", "OUVERTES"],
+    ferme: ["🔴 Commandes forcées fermées", "FERMÉES"],
+    aucun: ["🕐 Commandes en mode automatique", "AUTOMATIQUE"]
+  };
+
+  const [label, badge] = labels[mode] || labels.aucun;
+
+  els.ordersStateLabel.textContent = label;
+  els.ordersStateBadge.textContent = badge;
+  els.ordersStateBadge.className =
+    `admin-order-state ${
+      mode === "ferme"
+        ? "admin-order-state-closed"
+        : mode === "ouvert"
+          ? "admin-order-state-open"
+          : "admin-order-state-unknown"
+    }`;
+
+  const serviceBadge = document.querySelector("#dashboard-service-badge");
+  const serviceSummary = document.querySelector("#dashboard-service-summary");
+  const serviceDetails = document.querySelector("#dashboard-service-details");
+
+  if (serviceBadge) {
+    serviceBadge.textContent = badge;
+  }
+
+  if (serviceSummary) {
+    serviceSummary.textContent =
+      mode === "ouvert"
+        ? "Les commandes sont actuellement forcées ouvertes."
+        : mode === "ferme"
+          ? "Les commandes sont actuellement forcées fermées."
+          : "Les commandes suivent automatiquement les horaires définis.";
+  }
+
+  if (serviceDetails) {
+    serviceDetails.innerHTML = "";
+
+    const detail = document.createElement("div");
+    detail.style.cssText =
+      "display:flex;align-items:center;gap:.6rem;padding:.65rem 0;border-top:1px solid rgba(0,0,0,.08);";
+
+    detail.innerHTML =
+      mode === "aucun"
+        ? "<span>🕐</span><span>Mode automatique actif</span>"
+        : mode === "ouvert"
+          ? "<span>🟢</span><span>Ouverture forcée active</span>"
+          : "<span>🔴</span><span>Fermeture forcée active</span>";
+
+    serviceDetails.appendChild(detail);
+  }
+}
 function showOrderStatus(message, isError) { if (!els.ordersStatus) return; els.ordersStatus.textContent = message; els.ordersStatus.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; els.ordersStatus.hidden = false; }
 function traduireErreur(code) { return { "auth/invalid-email": "adresse email invalide.", "auth/user-not-found": "aucun compte avec cet email.", "auth/wrong-password": "mot de passe incorrect.", "auth/invalid-credential": "identifiants incorrects.", "auth/too-many-requests": "trop de tentatives, réessayez plus tard." }[code] || "veuillez réessayer."; }
 async function loadChefPresentation() { if (!els.chefPresentation) return; const fallback = "[Texte à compléter : présentation personnelle du chef — parcours, expériences, ce qui l'anime au quotidien.]"; els.chefPresentation.value = fallback; updateChefPresentationPreview(); setChefPresentationStatus(""); try { const snap = await getDoc(CHEF_PRESENTATION_REF); const texte = snap.exists() && typeof snap.data().texte === "string" ? snap.data().texte : ""; if (texte.trim()) { els.chefPresentation.value = texte; updateChefPresentationPreview(); } } catch (error) { console.error("Erreur de lecture Firestore de la présentation du chef :", error); setChefPresentationStatus("Impossible de charger le texte enregistré. Le texte actuel est conservé.", true); } }
@@ -178,7 +233,60 @@ async function loadDashboardStats() {
 }
 async function renderStocks() { if (!els.stocksTableBody || !auth.currentUser) return; els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>"; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0)); if (!products.length) { els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>"; return; } els.stocksTableBody.innerHTML = ""; products.forEach((product) => { const row = document.createElement("tr"); const values = [product.nom || "Produit sans nom", Number(product.stockInitial || 0), Number(product.stockDisponible || 0), Number(product.stockReserve || 0), Number(product.stockVendu || 0), product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"]; values.forEach((value) => { const cell = document.createElement("td"); cell.textContent = String(value); row.appendChild(cell); }); els.stocksTableBody.appendChild(row); }); } catch (error) { console.error("Impossible de charger les stocks :", error); els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>"; } }
 function startDemandes() { if (!auth.currentUser || !els.requestsSection || demandesInitialized) return; demandesInitialized = true; demandesFilter = "all"; if (els.demandesRefresh) els.demandesRefresh.addEventListener("click", () => { void loadDemandes(); }); els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => button.addEventListener("click", () => { demandesFilter = button.dataset.demandeFilter || "all"; els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderDemandes(); })); if (els.demandeDetailClose) els.demandeDetailClose.addEventListener("click", closeDemandeDetail); if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); }); els.demandeDetailDelete?.addEventListener("click", () => { void deleteSelectedDemande(); }); if (els.qualificationSave) els.qualificationSave.addEventListener("click", () => { void saveDemandeQualification(); }); void loadDemandes(); }
-async function loadDemandes() { if (!auth.currentUser || !els.demandesList) return; setDemandesState("loading"); try { const snap = await getDocs(collection(db, "demandes")); demandesCache = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length); renderDemandes(); setDemandesState(demandesCache.length ? "ready" : "empty"); } catch (error) { console.error("Impossible de charger les demandes :", error); setDemandesState("error", `Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`); } }
+function updateDashboardClientActivity(demandes) {
+  const count = document.querySelector("#dashboard-client-activity-count");
+  const summary = document.querySelector("#dashboard-client-activity-summary");
+  const list = document.querySelector("#dashboard-client-activity-list");
+
+  if (!count || !summary || !list) return;
+
+  const rows = Array.isArray(demandes) ? demandes.slice(0, 5) : [];
+
+  count.textContent = String(demandes.length);
+
+  if (!demandes.length) {
+    summary.textContent = "Aucune demande enregistrée.";
+    list.innerHTML = "";
+    return;
+  }
+
+  summary.textContent =
+    demandes.length === 1
+      ? "1 demande enregistrée dans l’activité client."
+      : `${demandes.length} demandes enregistrées dans l’activité client.`;
+
+  list.innerHTML = rows.map((demande) => {
+    const client =
+      demande.client && typeof demande.client === "object"
+        ? demande.client
+        : {};
+
+    const nom =
+      `${client.prenom || ""} ${client.nom || ""}`.trim() ||
+      "Demande sans nom";
+
+    const type = getDemandeTypeLabel(demande.type);
+    const date = formatDate(demande.createdAt);
+
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.65rem 0;border-top:1px solid rgba(0,0,0,.08);">
+      <div style="min-width:0;">
+        <strong style="display:block;">${escapeHtml(nom)}</strong>
+        <small>${escapeHtml(type)} · ${escapeHtml(date)}</small>
+      </div>
+      <span style="white-space:nowrap;font-weight:600;">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span>
+    </div>`;
+  }).join("");
+
+  if (demandes.length > 5) {
+    list.insertAdjacentHTML(
+      "beforeend",
+      `<small style="display:block;margin-top:.75rem;font-weight:600;">+ ${demandes.length - 5} autre${demandes.length - 5 > 1 ? "s" : ""}</small>`
+    );
+  }
+}
+
+async function loadDemandes() { if (!auth.currentUser || !els.demandesList) return; setDemandesState("loading"); try { const snap = await getDocs(collection(db, "demandes")); demandesCache = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length);
+    updateDashboardClientActivity(demandesCache); renderDemandes(); setDemandesState(demandesCache.length ? "ready" : "empty"); } catch (error) { console.error("Impossible de charger les demandes :", error); setDemandesState("error", `Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`); } }
 function renderDemandes() { if (!els.demandesList) return; const rows = demandesCache.filter((demande) => { if (demandesFilter === "all") return true; if (demandesFilter === "particulier" || demandesFilter === "professionnel") { const client = demande.client && typeof demande.client === "object" ? demande.client : {}; return client.particulierProfessionnel === demandesFilter; } return normalizeDemandeStatus(demande.statut) === demandesFilter; }); els.demandesList.innerHTML = ""; if (!rows.length) { if (els.demandesEmpty) els.demandesEmpty.hidden = false; return; } if (els.demandesEmpty) els.demandesEmpty.hidden = true; rows.forEach((demande) => { const client = demande.client && typeof demande.client === "object" ? demande.client : {}; const profil = client.particulierProfessionnel === "professionnel" ? "Professionnel" : client.particulierProfessionnel === "particulier" ? "Particulier" : "Non renseigné"; const row = document.createElement("article"); row.className = "admin-order-row"; row.innerHTML = `<div class="admin-order-main"><div class="admin-order-title-line"><strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong><span class="admin-order-status">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span></div><div class="admin-order-meta"><span>${escapeHtml(getDemandeTypeLabel(demande.type))}</span><span>${escapeHtml(profil)}</span><span>Événement : ${escapeHtml(getDemandeEventDate(demande) || "Non renseignée")}</span><span>${escapeHtml(demande.nombrePersonnes ? `${demande.nombrePersonnes} personne(s)` : "Personnes : non renseigné")}</span><span>Reçue : ${escapeHtml(formatDate(demande.createdAt))}</span></div></div><div class="admin-order-view"><button type="button" class="btn btn-secondary" data-demande-open="${escapeAttr(demande.id)}">Voir le détail</button></div>`; row.querySelector("[data-demande-open]").addEventListener("click", () => renderDemandeDetail(demande.id)); els.demandesList.appendChild(row); }); }
 function renderDemandeDetail(id) { const demande = demandesCache.find((item) => item.id === id); if (!demande || !els.demandeDetailPanel) return; selectedDemandeId = id; if (els.demandeDetailTitle) els.demandeDetailTitle.textContent = `${getDemandeTypeLabel(demande.type)} — ${((demande.client || {}).prenom || "")} ${((demande.client || {}).nom || "")}`.trim(); if (els.demandeDetailContent) els.demandeDetailContent.innerHTML = buildDemandeDetailHtml(demande); if (els.demandeDetailStatus) els.demandeDetailStatus.value = normalizeDemandeStatus(demande.statut); const qualification = demande.qualification || {}; if (els.qualificationCategorie) els.qualificationCategorie.value = qualification.categorie || "a_qualifier"; if (els.qualificationSousCategorie) els.qualificationSousCategorie.value = qualification.sousCategorie || ""; if (els.qualificationPriorite) els.qualificationPriorite.value = qualification.priorite || "normale"; if (els.qualificationPotentiel) els.qualificationPotentiel.value = qualification.potentiel || "non_evalue"; if (els.qualificationBesoinPrecision) els.qualificationBesoinPrecision.checked = Boolean(qualification.besoinPrecision); if (els.qualificationCommentaire) els.qualificationCommentaire.value = qualification.commentaireInterne || ""; if (els.qualificationMessage) els.qualificationMessage.textContent = ""; if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = ""; els.demandeDetailPanel.hidden = false; }
 function buildDemandeDetailHtml(demande) { const rows = []; Object.entries(demande).forEach(([key, value]) => { if (key === "id" || value === undefined || value === null || value === "") return; appendDemandeDetailRows(rows, key, value); }); return `<div class="admin-order-detail-grid">${rows.join("")}</div>`; }
