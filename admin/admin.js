@@ -652,7 +652,7 @@ async function printFacture() {
       return amount.toLocaleString("fr-FR", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-      }) + " EUR";
+      }).replace(/[\u202F\u00A0]/g, " ") + " €";
     };
 
     const text = (value) => String(value ?? "").trim();
@@ -734,8 +734,8 @@ async function printFacture() {
     y += 8;
 
     const colDescription = margin;
-    const colQty = 135;
-    const colUnit = 163;
+    const colQty = 125;
+    const colUnit = 160;
     const colTotal = right;
 
     pdf.setFontSize(8);
@@ -758,12 +758,18 @@ async function printFacture() {
       y += 8;
     } else {
       for (const line of lines) {
-        const description = text(line.description || line.nom || line.name || line.libelle || "Prestation");
+        const description = text(
+          line.description ||
+          line.libelle ||
+          line.nom ||
+          line.name ||
+          "Prestation"
+        );
         const quantity = Number(line.quantite ?? line.quantity ?? 1);
         const unitPrice = Number(line.prixUnitaire ?? line.unitPrice ?? line.prix ?? 0);
         const total = Number(line.total ?? (quantity * unitPrice));
 
-        const wrapped = pdf.splitTextToSize(description, 105);
+        const wrapped = pdf.splitTextToSize(description, 95);
 
         pdf.text(wrapped, colDescription, y);
         pdf.text(String(quantity), colQty, y, { align: "right" });
@@ -791,12 +797,12 @@ async function printFacture() {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
 
-    pdf.text("Sous-total", 135, y, { align: "right" });
+    pdf.text("Sous-total", 145, y, { align: "right" });
     pdf.text(money(subtotal), right, y, { align: "right" });
 
     if (remise > 0) {
       y += 7;
-      pdf.text("Remise", 135, y, { align: "right" });
+      pdf.text("Remise", 145, y, { align: "right" });
       pdf.text(`- ${money(remise)}`, right, y, { align: "right" });
     }
 
@@ -804,7 +810,7 @@ async function printFacture() {
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(13);
-    pdf.text("TOTAL À PAYER", 135, y, { align: "right" });
+    pdf.text("TOTAL À PAYER", 145, y, { align: "right" });
     pdf.text(money(total), right, y, { align: "right" });
 
     // CONDITIONS
