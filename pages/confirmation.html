@@ -23,10 +23,11 @@
       const title = document.querySelector("#title");
       const message = document.querySelector("#message");
       const params = new URLSearchParams(window.location.search);
-      const sessionId = params.get("session_id");
+      const sessionId = params.get("session_id") || params.get("sessionId");
+      const devisId = params.get("devis");
       const endpoint = "https://europe-west9-carnet-du-chef.cloudfunctions.net/getPaymentStatus";
 
-      if (!sessionId) {
+      if (!sessionId && !devisId) {
         result.textContent = "Aucune session de paiement n’a été fournie.";
         return;
       }
@@ -36,7 +37,10 @@
       async function check() {
         attempts += 1;
         try {
-          const response = await fetch(`${endpoint}?session_id=${encodeURIComponent(sessionId)}`);
+          const query = sessionId
+            ? `session_id=${encodeURIComponent(sessionId)}`
+            : `devis_id=${encodeURIComponent(devisId)}`;
+          const response = await fetch(`${endpoint}?${query}`);
           const data = await response.json();
 
           if (response.ok && data?.ok && data.status === "paid") {
