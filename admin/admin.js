@@ -1492,20 +1492,17 @@ async function sendFacture() {
   try {
     const facture = startFactures.current;
 
-    /*
-     * Le générateur PDF existant est volontairement réutilisé.
-     * On crée le PDF avec la même fonction que "Imprimer facture",
-     * mais on intercepte pdf.save() afin de récupérer le document
-     * en base64 sans changer le rendu du PDF.
-     */
-    const originalSave = window.jspdf?.jsPDF?.prototype?.save;
-    if (!originalSave) {
+    const module = await import("https://cdn.jsdelivr.net/npm/jspdf@4.2.1/+esm");
+    const jsPDF = module.jsPDF || module.default?.jsPDF || module.default;
+
+    if (!jsPDF) {
       throw new Error("Le générateur PDF de facture est indisponible.");
     }
 
+    const originalSave = jsPDF.prototype.save;
     let pdfBase64 = null;
 
-    window.jspdf.jsPDF.prototype.save = function () {
+    jsPDF.prototype.save = function () {
       const dataUri = this.output("datauristring");
       pdfBase64 = dataUri.split(",")[1];
       return this;
@@ -1514,7 +1511,7 @@ async function sendFacture() {
     try {
       await printFacture();
     } finally {
-      window.jspdf.jsPDF.prototype.save = originalSave;
+      jsPDF.prototype.save = originalSave;
     }
 
     if (!pdfBase64) {
