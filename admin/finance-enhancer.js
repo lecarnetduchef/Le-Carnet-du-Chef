@@ -296,7 +296,58 @@ function enhanceOrderDetail() {
     const address = [order.adresse, order.codePostal, order.ville].filter(Boolean).join(", ");
     const actions = document.createElement("div"); actions.id = "lcc-order-print-enhancer"; actions.className = "admin-form-actions";
     const print = document.createElement("button"); print.type = "button"; print.className = "btn btn-secondary"; print.textContent = "🖨️ Bon / commande";
-    print.addEventListener("click", () => { const popup = window.open("", "_blank", "width=850,height=850,resizable=yes,scrollbars=yes"); if (!popup) { alert("La fenêtre du bon de commande a été bloquée par le navigateur."); return; } popup.document.open(); popup.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bon / commande ${esc(order.numeroCommande)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#222;line-height:1.45}h1{margin:0}h2{margin:8px 0 24px}.box{border:1px solid #ddd;border-radius:8px;padding:16px;margin-top:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.label{font-weight:bold;font-size:12px;color:#666;text-transform:uppercase}p{margin:.3rem 0}@media print{body{margin:15mm}}</style></head><body><h1>LE CARNET DU CHEF</h1><h2>BON / COMMANDE</h2><div class="box"><div class="label">Numéro</div><p>${esc(order.numeroCommande)}</p><div class="label">Date / heure</div><p>${esc(order.createdAt)}</p></div><div class="grid"><div class="box"><div class="label">Client</div><p>${esc(order.clientName)}</p><p>${esc(order.telephone)}</p><p>${esc(order.email)}</p></div><div class="box"><div class="label">Réception</div><p>${esc(order.mode)}</p><p>${esc(order.dateCommande)}</p><p>${esc(order.creneau)}</p><p>${esc(address)}</p></div></div><div class="box"><div class="label">Montant total</div><p>${esc(order.total)}</p><div class="label">Paiement</div><p>${esc(order.payment)}</p></div><p style="margin-top:35px">Document opérationnel — ce document n’est pas une facture.</p></body></html>`); popup.document.close(); popup.focus(); popup.onload = () => popup.print(); });
+    print.addEventListener("click", () => { const popup = window.open("", "_blank", "width=850,height=850,resizable=yes,scrollbars=yes"); if (!popup) { alert("La fenêtre du bon de commande a été bloquée par le navigateur."); return; } popup.document.open(); popup.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bon / commande ${esc(order.numeroCommande)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#222;line-height:1.45}h1{margin:0}h2{margin:8px 0 24px}.box{border:1px solid #ddd;border-radius:8px;padding:16px;margin-top:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.label{font-weight:bold;font-size:12px;color:#666;text-transform:uppercase}p{margin:.3rem 0}@media print{body{margin:15mm}}</style></head><body><h1>LE CARNET DU CHEF</h1><h2>BON / COMMANDE</h2><div class="box"><div class="label">Numéro</div><p>${esc(order.numeroCommande)}</p><div class="label">Date / heure</div><p>${esc(order.createdAt)}</p></div><div class="grid"><div class="box"><div class="label">Client</div><p>${esc(order.clientName)}</p><p>${esc(order.telephone)}</p><p>${esc(order.email)}</p></div><div class="box"><div class="label">Réception</div><p>${esc(order.mode)}</p><p>${esc(order.dateCommande)}</p><p>${esc(order.creneau)}</p><p>${esc(address)}</p></div></div><div class="box">
+  <div class="label">Détail de la commande</div>
+  ${(Array.isArray(order.lignes) && order.lignes.length
+    ? order.lignes.map((ligne) => {
+        const quantiteFormule = Number(ligne.quantite || 0);
+        const prixUnitaire = Number(ligne.prixUnitaireCentimes || 0) / 100;
+        const sousTotal = Number(ligne.sousTotalCentimes || 0) / 100;
+        const composants = Array.isArray(ligne.composants) ? ligne.composants : [];
+
+        const plats = composants.filter((c) => String(c.categorie || "").toLowerCase() === "plat");
+        const boissons = composants.filter((c) => String(c.categorie || "").toLowerCase() === "boisson");
+        const desserts = composants.filter((c) => String(c.categorie || "").toLowerCase() === "dessert");
+
+        const renderComponents = (titre, items) => items.length
+          ? `<p><strong>${titre}</strong></p>
+             <ul>
+               ${items.map((c) => {
+                 const parFormule = Number(c.quantiteParFormule || 0);
+                 const totalPreparation = quantiteFormule * parFormule;
+                 const quantiteTexte = totalPreparation > 0
+                   ? ` — ${totalPreparation} unité${totalPreparation > 1 ? "s" : ""} à préparer`
+                   : "";
+                 return `<li>${esc(c.produitNom || "")}${quantiteTexte}</li>`;
+               }).join("")}
+             </ul>`
+          : "";
+
+        return `
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid #ddd">
+            <p><strong>${esc(ligne.formuleNom || "Formule")}</strong></p>
+            <p>Quantité : ${quantiteFormule}</p>
+            <p>Prix unitaire : ${prixUnitaire.toFixed(2).replace(".", ",")} €</p>
+            <p>Sous-total : ${sousTotal.toFixed(2).replace(".", ",")} €</p>
+            ${renderComponents("Plats", plats)}
+            ${renderComponents("Boissons", boissons)}
+            ${renderComponents("Desserts", desserts)}
+          </div>
+        `;
+      }).join("")
+    : "<p>Aucun détail de composition disponible.</p>")}
+</div>
+
+<div class="box">
+  <div class="label">Montant total</div>
+  <p>${esc(
+    Number(order?.montants?.totalCentimes) >= 0
+      ? (Number(order.montants.totalCentimes) / 100).toFixed(2).replace(".", ",") + " €"
+      : (order.total || "")
+  )}</p>
+  <div class="label">Paiement</div>
+  <p>${esc(order.payment || "")}</p>
+</div><p style="margin-top:35px">Document opérationnel — ce document n’est pas une facture.</p></body></html>`); popup.document.close(); popup.focus(); popup.onload = () => popup.print(); });
     actions.appendChild(print); content.appendChild(actions);
   });
   observer.observe(panel, { childList: true, subtree: true }); panel.dataset.orderEnhanced = "true";
