@@ -113,8 +113,26 @@ const sendInvoiceEmailHttp = onRequest({
     await requireAuthenticatedUser(req);
 
     const factureId = String(req.body?.factureId || "").trim();
+    const pdfBase64 = String(req.body?.pdfBase64 || "").trim();
+
     if (!factureId) {
       return res.status(400).json({ ok: false, code: "INVOICE_REQUIRED", message: "Facture manquante." });
+    }
+
+    if (!pdfBase64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(pdfBase64)) {
+      return res.status(400).json({
+        ok: false,
+        code: "PDF_REQUIRED",
+        message: "PDF de la facture manquant ou invalide."
+      });
+    }
+
+    if (pdfBase64.length > 7_000_000) {
+      return res.status(413).json({
+        ok: false,
+        code: "PDF_TOO_LARGE",
+        message: "Le PDF de la facture est trop volumineux."
+      });
     }
 
     const snap = await admin.firestore().collection("factures").doc(factureId).get();
@@ -179,7 +197,12 @@ const sendInvoiceEmailHttp = onRequest({
             ? `<p><a href="${String(facture.checkoutUrl)}">Payer cette facture par Stripe</a></p>`
             : ""}
           <p>Merci pour votre confiance,<br>Le Carnet du Chef</p>
-        `
+        `,
+        attachments: [{
+          content: pdfBase64,
+          filename: `${String(facture.numero || factureId)}.pdf`,
+          content_type: "application/pdf"
+        }]
       })
     });
 

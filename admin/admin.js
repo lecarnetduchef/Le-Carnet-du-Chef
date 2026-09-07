@@ -1490,14 +1490,53 @@ async function sendFacture() {
   }
 
   try {
-    const response = await fetch("https://europe-west9-carnet-du-chef.cloudfunctions.net/sendInvoiceEmail", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auth.currentUser ? { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` } : {})
-      },
-      body: JSON.stringify({ factureId: startFactures.current.id })
-    });
+    const facture = startFactures.current;
+
+    /*
+     * Le générateur PDF existant est volontairement réutilisé.
+     * On crée le PDF avec la même fonction que "Imprimer facture",
+     * mais on intercepte pdf.save() afin de récupérer le document
+     * en base64 sans changer le rendu du PDF.
+     */
+    const originalSave = window.jspdf?.jsPDF?.prototype?.save;
+    if (!originalSave) {
+      throw new Error("Le générateur PDF de facture est indisponible.");
+    }
+
+    let pdfBase64 = null;
+
+    window.jspdf.jsPDF.prototype.save = function () {
+      const dataUri = this.output("datauristring");
+      pdfBase64 = dataUri.split(",")[1];
+      return this;
+    };
+
+    try {
+      await printFacture();
+    } finally {
+      window.jspdf.jsPDF.prototype.save = originalSave;
+    }
+
+    if (!pdfBase64) {
+      throw new Error("Impossible de récupérer le PDF de la facture.");
+    }
+
+    const response = await fetch(
+      "https://europe-west9-carnet-du-chef.cloudfunctions.net/sendInvoiceEmail",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(auth.currentUser
+            ? { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` }
+            : {})
+        },
+        body: JSON.stringify({
+          factureId: facture.id,
+          pdfBase64
+        })
+      }
+    );
 
     const data = await response.json().catch(() => ({}));
 
@@ -1507,7 +1546,11 @@ async function sendFacture() {
 
     showFactureStatus(`Facture envoyée à ${data.recipient}.`);
   } catch (error) {
-    showFactureStatus(error?.message || "Envoi de la facture impossible.", true);
+    console.error("Erreur envoi facture :", error);
+    showFactureStatus(
+      error?.message || "Envoi de la facture impossible.",
+      true
+    );
   }
 }
 
