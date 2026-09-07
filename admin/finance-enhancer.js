@@ -287,70 +287,422 @@ function replaceButton(selector, handler, text) {
 }
 function enhanceQuoteButtons() { replaceButton("#devis-pdf", () => printQuotePdf(), "PDF / Imprimer"); replaceButton("#devis-send", () => sendQuoteEmail(), "Envoi par email"); }
 function enhanceOrderDetail() {
-  const panel = document.querySelector("#order-detail-panel"); if (!panel || panel.dataset.orderEnhanced) return;
+  const panel = document.querySelector("#order-detail-panel");
+  if (!panel || panel.dataset.orderEnhanced) return;
+
   const observer = new MutationObserver(() => {
-    const content = panel.querySelector("#order-detail-content"); if (!content || panel.querySelector("#lcc-order-print-enhancer")) return;
-    const rows = panel.querySelector(".admin-order-detail-grid"); if (!rows) return;
-    const get = (label) => Array.from(rows.querySelectorAll(".admin-detail-row")).find((row) => row.querySelector("strong")?.textContent === label)?.querySelector("span")?.textContent || "";
-    const order = { numeroCommande: get("Numéro de commande"), createdAt: get("Date / heure"), clientName: get("Client"), telephone: get("Téléphone"), email: get("Email"), mode: get("Mode de réception"), creneau: get("Créneau"), dateCommande: get("Date souhaitée"), adresse: get("Adresse"), codePostal: get("Code postal"), ville: get("Ville"), total: get("Montant total"), payment: get("Paiement") };
-    const address = [order.adresse, order.codePostal, order.ville].filter(Boolean).join(", ");
-    const actions = document.createElement("div"); actions.id = "lcc-order-print-enhancer"; actions.className = "admin-form-actions";
-    const print = document.createElement("button"); print.type = "button"; print.className = "btn btn-secondary"; print.textContent = "🖨️ Bon / commande";
-    print.addEventListener("click", () => { const popup = window.open("", "_blank", "width=850,height=850,resizable=yes,scrollbars=yes"); if (!popup) { alert("La fenêtre du bon de commande a été bloquée par le navigateur."); return; } popup.document.open(); popup.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bon / commande ${esc(order.numeroCommande)}</title><style>body{font-family:Arial,sans-serif;margin:40px;color:#222;line-height:1.45}h1{margin:0}h2{margin:8px 0 24px}.box{border:1px solid #ddd;border-radius:8px;padding:16px;margin-top:18px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.label{font-weight:bold;font-size:12px;color:#666;text-transform:uppercase}p{margin:.3rem 0}@media print{body{margin:15mm}}</style></head><body><h1>LE CARNET DU CHEF</h1><h2>BON / COMMANDE</h2><div class="box"><div class="label">Numéro</div><p>${esc(order.numeroCommande)}</p><div class="label">Date / heure</div><p>${esc(order.createdAt)}</p></div><div class="grid"><div class="box"><div class="label">Client</div><p>${esc(order.clientName)}</p><p>${esc(order.telephone)}</p><p>${esc(order.email)}</p></div><div class="box"><div class="label">Réception</div><p>${esc(order.mode)}</p><p>${esc(order.dateCommande)}</p><p>${esc(order.creneau)}</p><p>${esc(address)}</p></div></div><div class="box">
-  <div class="label">Détail de la commande</div>
-  ${(Array.isArray(order.lignes) && order.lignes.length
-    ? order.lignes.map((ligne) => {
-        const quantiteFormule = Number(ligne.quantite || 0);
-        const prixUnitaire = Number(ligne.prixUnitaireCentimes || 0) / 100;
-        const sousTotal = Number(ligne.sousTotalCentimes || 0) / 100;
-        const composants = Array.isArray(ligne.composants) ? ligne.composants : [];
+    const content = panel.querySelector("#order-detail-content");
+    if (!content || panel.querySelector("#lcc-order-print-enhancer")) return;
 
-        const plats = composants.filter((c) => String(c.categorie || "").toLowerCase() === "plat");
-        const boissons = composants.filter((c) => String(c.categorie || "").toLowerCase() === "boisson");
-        const desserts = composants.filter((c) => String(c.categorie || "").toLowerCase() === "dessert");
+    const rows = panel.querySelector(".admin-order-detail-grid");
+    if (!rows) return;
 
-        const renderComponents = (titre, items) => items.length
-          ? `<p><strong>${titre}</strong></p>
-             <ul>
-               ${items.map((c) => {
-                 const parFormule = Number(c.quantiteParFormule || 0);
-                 const totalPreparation = quantiteFormule * parFormule;
-                 const quantiteTexte = totalPreparation > 0
-                   ? ` — ${totalPreparation} unité${totalPreparation > 1 ? "s" : ""} à préparer`
-                   : "";
-                 return `<li>${esc(c.produitNom || "")}${quantiteTexte}</li>`;
-               }).join("")}
-             </ul>`
-          : "";
+    const get = (label) =>
+      Array.from(rows.querySelectorAll(".admin-detail-row"))
+        .find((row) => row.querySelector("strong")?.textContent === label)
+        ?.querySelector("span")?.textContent || "";
 
-        return `
-          <div style="margin-top:14px;padding-top:12px;border-top:1px solid #ddd">
-            <p><strong>${esc(ligne.formuleNom || "Formule")}</strong></p>
-            <p>Quantité : ${quantiteFormule}</p>
-            <p>Prix unitaire : ${prixUnitaire.toFixed(2).replace(".", ",")} €</p>
-            <p>Sous-total : ${sousTotal.toFixed(2).replace(".", ",")} €</p>
-            ${renderComponents("Plats", plats)}
-            ${renderComponents("Boissons", boissons)}
-            ${renderComponents("Desserts", desserts)}
-          </div>
-        `;
-      }).join("")
-    : "<p>Aucun détail de composition disponible.</p>")}
-</div>
+    const orderMeta = {
+      numeroCommande: get("Numéro de commande"),
+      createdAt: get("Date / heure"),
+      clientName: get("Client"),
+      telephone: get("Téléphone"),
+      email: get("Email"),
+      mode: get("Mode de réception"),
+      creneau: get("Créneau"),
+      dateCommande: get("Date souhaitée"),
+      adresse: get("Adresse"),
+      codePostal: get("Code postal"),
+      ville: get("Ville"),
+      total: get("Montant total"),
+      payment: get("Paiement")
+    };
 
-<div class="box">
-  <div class="label">Montant total</div>
-  <p>${esc(
-    Number(order?.montants?.totalCentimes) >= 0
-      ? (Number(order.montants.totalCentimes) / 100).toFixed(2).replace(".", ",") + " €"
-      : (order.total || "")
-  )}</p>
-  <div class="label">Paiement</div>
-  <p>${esc(order.payment || "")}</p>
-</div><p style="margin-top:35px">Document opérationnel — ce document n’est pas une facture.</p></body></html>`); popup.document.close(); popup.focus(); popup.onload = () => popup.print(); });
-    actions.appendChild(print); content.appendChild(actions);
+    const address = [
+      orderMeta.adresse,
+      orderMeta.codePostal,
+      orderMeta.ville
+    ].filter(Boolean).join(", ");
+
+    const actions = document.createElement("div");
+    actions.id = "lcc-order-print-enhancer";
+    actions.className = "admin-form-actions";
+
+    const print = document.createElement("button");
+    print.type = "button";
+    print.className = "btn btn-secondary";
+    print.textContent = "🖨️ Bon / commande";
+
+    print.addEventListener("click", async () => {
+      print.disabled = true;
+
+      try {
+        const commandeId = content.dataset.commandeId ||
+          panel.dataset.commandeId ||
+          orderMeta.numeroCommande;
+
+        let fullOrder = null;
+
+        if (commandeId) {
+          const candidates = [
+            commandeId,
+            orderMeta.numeroCommande
+          ].filter(Boolean);
+
+          for (const id of [...new Set(candidates)]) {
+            try {
+              const snap = await getDoc(doc(db, "commandes", id));
+              if (snap.exists()) {
+                fullOrder = { id: snap.id, ...snap.data() };
+                break;
+              }
+            } catch (error) {
+              console.warn("Lecture commande impossible :", error);
+            }
+          }
+        }
+
+        if (!fullOrder) {
+          throw new Error("Impossible de récupérer les détails complets de la commande.");
+        }
+
+        const lignes = Array.isArray(fullOrder.lignes)
+          ? fullOrder.lignes
+          : [];
+
+        const totalCentimes = Number(fullOrder?.montants?.totalCentimes);
+
+        const formatEuro = (centimes) => {
+          const value = Number(centimes || 0) / 100;
+          return value.toFixed(2).replace(".", ",") + " €";
+        };
+
+        const renderComponents = (ligne) => {
+          const composants = Array.isArray(ligne.composants)
+            ? ligne.composants
+            : [];
+
+          if (!composants.length) {
+            return `<p style="margin:6px 0;color:#777">
+              Composition non disponible
+            </p>`;
+          }
+
+          const quantiteFormule = Number(ligne.quantite || 0);
+
+          const groups = [
+            ["Plat", "Plat"],
+            ["Boisson", "Boisson"],
+            ["Dessert", "Dessert"]
+          ];
+
+          return groups.map(([categorie, titre]) => {
+            const items = composants.filter(
+              (c) =>
+                String(c.categorie || "").toLowerCase() ===
+                categorie.toLowerCase()
+            );
+
+            if (!items.length) return "";
+
+            return `
+              <div style="margin-top:8px">
+                <strong>${titre}</strong>
+                <ul style="margin:4px 0 0 20px;padding:0">
+                  ${items.map((c) => {
+                    const parFormule =
+                      Number(c.quantiteParFormule || 0);
+
+                    const totalPreparation =
+                      quantiteFormule * parFormule;
+
+                    const preparation =
+                      totalPreparation > 0
+                        ? ` — ${totalPreparation} unité${totalPreparation > 1 ? "s" : ""} à préparer`
+                        : "";
+
+                    return `
+                      <li>
+                        ${esc(c.produitNom || "Produit")}
+                        ${preparation}
+                      </li>
+                    `;
+                  }).join("")}
+                </ul>
+              </div>
+            `;
+          }).join("");
+        };
+
+        const detailHtml = lignes.length
+          ? lignes.map((ligne) => `
+              <div style="
+                margin-top:14px;
+                padding-top:12px;
+                border-top:1px solid #ddd
+              ">
+                <p>
+                  <strong>${esc(ligne.formuleNom || "Formule")}</strong>
+                </p>
+
+                <p>
+                  Quantité :
+                  <strong>${Number(ligne.quantite || 0)}</strong>
+                </p>
+
+                <p>
+                  Prix unitaire :
+                  ${formatEuro(ligne.prixUnitaireCentimes)}
+                </p>
+
+                <p>
+                  Sous-total :
+                  <strong>${formatEuro(ligne.sousTotalCentimes)}</strong>
+                </p>
+
+                ${renderComponents(ligne)}
+              </div>
+            `).join("")
+          : `
+              <p>
+                Aucun détail de commande disponible.
+              </p>
+            `;
+
+        const client = fullOrder.client || {};
+
+        const numero =
+          fullOrder.numeroCommande ||
+          orderMeta.numeroCommande ||
+          fullOrder.id;
+
+        const createdAt =
+          orderMeta.createdAt ||
+          fullOrder.createdAt ||
+          "";
+
+        const mode =
+          fullOrder.modeReception ||
+          orderMeta.mode ||
+          "";
+
+        const dateCommande =
+          fullOrder.dateCommande ||
+          orderMeta.dateCommande ||
+          "";
+
+        const creneau =
+          fullOrder.creneau ||
+          orderMeta.creneau ||
+          "";
+
+        const paymentStatus =
+          fullOrder?.paiement?.statut === "paye"
+            ? "Stripe — payé"
+            : orderMeta.payment ||
+              fullOrder?.paiement?.statut ||
+              "";
+
+        const popup = window.open(
+          "",
+          "_blank",
+          "width=850,height=900,resizable=yes,scrollbars=yes"
+        );
+
+        if (!popup) {
+          alert("La fenêtre du bon de commande a été bloquée par le navigateur.");
+          return;
+        }
+
+        popup.document.open();
+        popup.document.write(`
+          <!doctype html>
+          <html lang="fr">
+          <head>
+            <meta charset="utf-8">
+            <title>Bon / commande ${esc(numero)}</title>
+
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                margin: 40px;
+                color: #222;
+                line-height: 1.45;
+              }
+
+              h1 {
+                margin: 0;
+                color: #45583d;
+              }
+
+              h2 {
+                margin: 8px 0 24px;
+              }
+
+              .box {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 16px;
+                margin-top: 18px;
+              }
+
+              .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+              }
+
+              .label {
+                font-weight: bold;
+                font-size: 12px;
+                color: #666;
+                text-transform: uppercase;
+              }
+
+              p {
+                margin: .3rem 0;
+              }
+
+              ul {
+                margin-bottom: 8px;
+              }
+
+              .formula {
+                background: #f8f7f3;
+                padding: 12px;
+                border-radius: 6px;
+              }
+
+              .total {
+                font-size: 20px;
+                font-weight: bold;
+              }
+
+              @media print {
+                body {
+                  margin: 15mm;
+                }
+              }
+            </style>
+          </head>
+
+          <body>
+
+            <h1>LE CARNET DU CHEF</h1>
+            <h2>BON / COMMANDE</h2>
+
+            <div class="box">
+              <div class="label">Numéro</div>
+              <p>${esc(numero)}</p>
+
+              <div class="label">Date / heure</div>
+              <p>${esc(createdAt)}</p>
+            </div>
+
+            <div class="grid">
+
+              <div class="box">
+                <div class="label">Client</div>
+                <p>
+                  ${esc(
+                    [client.prenom, client.nom]
+                      .filter(Boolean)
+                      .join(" ") ||
+                    orderMeta.clientName
+                  )}
+                </p>
+
+                <p>${esc(client.telephone || orderMeta.telephone)}</p>
+                <p>${esc(client.email || orderMeta.email)}</p>
+              </div>
+
+              <div class="box">
+                <div class="label">Réception</div>
+                <p>${esc(mode)}</p>
+                <p>${esc(dateCommande)}</p>
+                <p>${esc(creneau)}</p>
+                ${address ? `<p>${esc(address)}</p>` : ""}
+              </div>
+
+            </div>
+
+            <div class="box">
+
+              <div class="label">
+                Détail de la commande
+              </div>
+
+              ${detailHtml}
+
+            </div>
+
+            <div class="box">
+
+              <div class="label">
+                Montant total
+              </div>
+
+              <p class="total">
+                ${
+                  Number.isFinite(totalCentimes)
+                    ? formatEuro(totalCentimes)
+                    : esc(orderMeta.total)
+                }
+              </p>
+
+              <div class="label">
+                Paiement
+              </div>
+
+              <p>${esc(paymentStatus)}</p>
+
+              ${
+                fullOrder?.paiement?.transactionId
+                  ? `
+                    <div class="label">
+                      Transaction Stripe
+                    </div>
+                    <p>${esc(fullOrder.paiement.transactionId)}</p>
+                  `
+                  : ""
+              }
+
+            </div>
+
+            <p style="margin-top:35px">
+              Document opérationnel — ce document n’est pas une facture.
+            </p>
+
+          </body>
+          </html>
+        `);
+
+        popup.document.close();
+        popup.focus();
+
+        popup.onload = () => popup.print();
+
+      } catch (error) {
+        console.error("Génération du bon de commande impossible :", error);
+        alert(
+          error?.message ||
+          "Impossible de générer le bon de commande."
+        );
+      } finally {
+        print.disabled = false;
+      }
+    });
+
+    actions.appendChild(print);
+    content.appendChild(actions);
   });
-  observer.observe(panel, { childList: true, subtree: true }); panel.dataset.orderEnhanced = "true";
+
+  observer.observe(panel, {
+    childList: true,
+    subtree: true
+  });
+
+  panel.dataset.orderEnhanced = "true";
 }
 function init() {
   const section = document.querySelector("#quotes-section");
