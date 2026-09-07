@@ -122,6 +122,8 @@ function openDetail(orderId) {
   if (!order || !isPaidOrder(order) || !elements.detailPanel) return;
   selectedOrder = order;
   renderDetail(order);
+  elements.detailPanel.dataset.commandeId = order.id;
+  elements.detailContent.dataset.commandeId = order.id;
   elements.detailPanel.hidden = false;
   elements.detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
