@@ -175,36 +175,7 @@ async function deleteSelectedOrder() {
   }
 }
 
-async function deleteSelectedOrder() {
-  if (!selectedOrder || !isPaidOrder(selectedOrder) || !auth.currentUser) return;
 
-  const orderNumber = selectedOrder.numeroCommande || selectedOrder.id;
-
-  if (!window.confirm(`Supprimer définitivement la commande ${orderNumber} ?\\n\\nCette action est irréversible.`)) {
-    return;
-  }
-
-  if (elements.detailDelete) elements.detailDelete.disabled = true;
-  showStatusMessage("Suppression…", false);
-
-  try {
-    await deleteDoc(doc(db, "commandes", selectedOrder.id));
-
-    const deletedId = selectedOrder.id;
-    orders = orders.filter((order) => order.id !== deletedId);
-    selectedOrder = null;
-
-    if (elements.detailPanel) elements.detailPanel.hidden = true;
-    elements.total.textContent = String(orders.filter(isPaidOrder).length);
-    renderList();
-    setListStatus("Commande supprimée.", false);
-  } catch (error) {
-    console.error("Erreur de suppression de la commande :", error);
-    showStatusMessage(`Impossible de supprimer la commande : ${error?.message || "erreur inconnue"}`, true);
-  } finally {
-    if (elements.detailDelete) elements.detailDelete.disabled = false;
-  }
-}
 
 async function saveSelectedStatus() {
   if (!selectedOrder || !isPaidOrder(selectedOrder) || !auth.currentUser || !elements.detailStatus) return;
