@@ -951,9 +951,9 @@ function openFacture(facture) {
   setValue("#facture-id", facture.id);
   setValue("#facture-devis", facture.devisId || "");
   setValue("#facture-statut", facture.statut || "impayee");
-  setValue("#facture-client-nom", facture.client?.nom || "");
-  setValue("#facture-client-email", facture.client?.email || "");
-  setValue("#facture-client-telephone", facture.client?.telephone || "");
+  setValue("#facture-client", facture.client?.nom || "");
+  setValue("#facture-email", facture.client?.email || "");
+  setValue("#facture-telephone", facture.client?.telephone || "");
   setValue("#facture-conditions", facture.conditions || "");
   setValue("#facture-echeance", facture.dateEcheance || "");
 
@@ -1184,7 +1184,7 @@ async function sendFacturePaymentLink() {
   }
 }
 
-async function printFacture() {
+async function buildFacturePdf() {
   if (!startFactures.current) {
     showFactureStatus("Enregistrez d’abord la facture avant de générer son PDF.", true);
     return;
@@ -1471,9 +1471,29 @@ async function printFacture() {
 
     const filename = `${text(facture.id) || "facture"}-Le-Carnet-du-Chef.pdf`;
 
-    pdf.save(filename);
+    return {
+      pdf,
+      filename
+    };
+  } catch (error) {
+    console.error("Erreur génération PDF facture :", error);
+    throw error;
+  }
+}
 
-    showFactureStatus(`PDF de la facture ${text(facture.id)} généré avec succès.`);
+async function printFacture() {
+  try {
+    const result = await buildFacturePdf();
+
+    if (!result?.pdf) {
+      throw new Error("Impossible de générer le PDF de la facture.");
+    }
+
+    result.pdf.save(result.filename);
+
+    showFactureStatus(
+      `PDF de la facture ${text(startFactures.current?.id)} généré avec succès.`
+    );
   } catch (error) {
     console.error("Erreur génération PDF facture :", error);
     showFactureStatus(
@@ -1490,33 +1510,37 @@ async function sendFacture() {
   }
 
   try {
-    const facture = startFactures.current;
+    showFactureStatus("Génération du PDF et préparation de l’envoi…");
 
-    const module = await import("https://cdn.jsdelivr.net/npm/jspdf@4.2.1/+esm");
-    const jsPDF = module.jsPDF || module.default?.jsPDF || module.default;
+    const result = await buildFacturePdf();
 
-    if (!jsPDF) {
-      throw new Error("Le générateur PDF de facture est indisponible.");
+    if (!result?.pdf) {
+      throw new Error("Impossible de générer le PDF de la facture.");
     }
 
-    const originalSave = jsPDF.prototype.save;
-    let pdfBase64 = null;
+    const blob = result.pdf.output("blob");
 
-    jsPDF.prototype.save = function () {
-      const dataUri = this.output("datauristring");
-      pdfBase64 = dataUri.split(",")[1];
-      return this;
-    };
+    const pdfBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
 
-    try {
-      await printFacture();
-    } finally {
-      jsPDF.prototype.save = originalSave;
-    }
+      reader.onloadend = () => {
+        const dataUrl = String(reader.result || "");
+        const base64 = dataUrl.split(",")[1];
 
-    if (!pdfBase64) {
-      throw new Error("Impossible de récupérer le PDF de la facture.");
-    }
+        if (!base64) {
+          reject(new Error("Impossible de récupérer le contenu du PDF."));
+          return;
+        }
+
+        resolve(base64);
+      };
+
+      reader.onerror = () => {
+        reject(new Error("Impossible de lire le PDF généré."));
+      };
+
+      reader.readAsDataURL(blob);
+    });
 
     const response = await fetch(
       "https://europe-west9-carnet-du-chef.cloudfunctions.net/sendInvoiceEmail",
@@ -1525,11 +1549,13 @@ async function sendFacture() {
         headers: {
           "Content-Type": "application/json",
           ...(auth.currentUser
-            ? { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` }
+            ? {
+                Authorization: `Bearer ${await auth.currentUser.getIdToken()}`
+              }
             : {})
         },
         body: JSON.stringify({
-          factureId: facture.id,
+          factureId: startFactures.current.id,
           pdfBase64
         })
       }
@@ -1538,7 +1564,9 @@ async function sendFacture() {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data.ok) {
-      throw new Error(data.message || "Impossible d’envoyer la facture.");
+      throw new Error(
+        data.message || "Impossible d’envoyer la facture."
+      );
     }
 
     showFactureStatus(`Facture envoyée à ${data.recipient}.`);
