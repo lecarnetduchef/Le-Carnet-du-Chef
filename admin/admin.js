@@ -872,8 +872,8 @@ function startFactures() {
 
         <div class="admin-form-grid">
           <label>Remise (€)<input id="facture-remise" type="number" min="0" step="0.01" value="0"></label>
-          <label>Conditions<textarea id="facture-conditions" rows="6" placeholder="Conditions de règlement…"></textarea></label>
         </div>
+        <label class="lcc-facture-full-label">Conditions<textarea id="facture-conditions" rows="5" placeholder="Conditions de règlement…"></textarea></label>
 
         <div class="lcc-facture-total">
           <span>Total</span>
@@ -923,7 +923,7 @@ function startFactures() {
       .lcc-facture-badge-annulee{background:#f3d9d5;color:#7e302a}
       .lcc-facture-line{display:grid;grid-template-columns:minmax(0,1fr) 90px 120px 120px auto;gap:.5rem;align-items:center;margin-bottom:.55rem}
       .lcc-facture-line input{width:100%;box-sizing:border-box}
-      .lcc-facture-total{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm)}
+      .lcc-facture-full-label{display:block;margin-top:1rem}.lcc-facture-full-label textarea{width:100%;box-sizing:border-box}..lcc-facture-total{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm)}
       .lcc-facture-total strong{font-family:var(--font-display);font-size:1.8rem;color:var(--color-sage-dark)}
       .lcc-payment-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;align-items:center;width:100%;text-align:left;padding:.9rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}
       .lcc-payment-row:hover{border-color:var(--color-sage-dark)}
