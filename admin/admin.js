@@ -787,7 +787,7 @@ function startFactures() {
     <div class="admin-section-heading">
       <div>
         <p class="admin-eyebrow">COMPTABILITÉ · FACTURATION</p>
-        <h2>Commercial</h2>
+        <h2>Facturation</h2>
         <p class="muted">Devis, factures et paiements : de la proposition au règlement.</p>
       </div>
       <div class="admin-orders-header-actions">
