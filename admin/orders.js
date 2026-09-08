@@ -130,17 +130,101 @@ function openDetail(orderId) {
 
 function renderDetail(order) {
   if (!elements.detailContent || !elements.detailStatus || !isPaidOrder(order)) return;
+
   const client = order.client && typeof order.client === "object" ? order.client : {};
+  const lignes = Array.isArray(order.lignes) ? order.lignes : [];
+
   const rows = [
-    ["Numéro de commande", order.numeroCommande || order.id], ["Date / heure", formatDate(order.createdAt || order.horodateur)], ["Client", [client.prenom, client.nom].filter(Boolean).join(" ") || order.nomUtilisateur], ["Téléphone", client.telephone], ["Email", client.email], ["Mode de réception", order.modeReception], ["Créneau", order.creneau], ["Date souhaitée", order.dateCommande], ["Adresse", order.adresse], ["Code postal", order.codePostal], ["Ville", order.ville], ["Précisions", order.precisions], ["Allergies / informations alimentaires", order.allergies], ["Paiement", "Stripe — payé"], ["Transaction Stripe", order.paiement?.transactionId], ["Facture", order.paiement?.invoiceStripeId], ["Montant total", order.montantTotal ?? (Number(order.montants?.totalCentimes || 0) / 100)],
+    ["Numéro de commande", order.numeroCommande || order.id],
+    ["Date / heure", formatDate(order.createdAt || order.horodateur)],
+    ["Client", [client.prenom, client.nom].filter(Boolean).join(" ") || order.nomUtilisateur],
+    ["Téléphone", client.telephone],
+    ["Email", client.email],
+    ["Mode de réception", order.modeReception],
+    ["Créneau", order.creneau],
+    ["Date souhaitée", order.dateCommande],
+    ["Adresse", order.adresse],
+    ["Code postal", order.codePostal],
+    ["Ville", order.ville],
+    ["Précisions", order.precisions],
+    ["Allergies / informations alimentaires", order.allergies],
+    ["Paiement", "Stripe — payé"],
+    ["Transaction Stripe", order.paiement?.transactionId],
+    ["Facture", order.paiement?.invoiceStripeId],
+    ["Montant total", order.montantTotal ?? (Number(order.montants?.totalCentimes || 0) / 100)],
   ].filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== "");
+
+  const detailRows = rows.map(([label, value]) => `
+    <div class="admin-detail-row">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(label === "Montant total" ? formatAmount(value) : displayValue(value))}</span>
+    </div>
+  `).join("");
+
+  let orderLinesHtml = "";
+
+  if (lignes.length) {
+    orderLinesHtml = `
+      <div class="admin-order-composition" style="margin-top:20px;">
+        <h3>Détail des formules</h3>
+        ${lignes.map((ligne) => {
+          const quantite = Number(ligne.quantite || 0);
+          const prixUnitaire = Number(ligne.prixUnitaireCentimes || 0) / 100;
+          const sousTotal = Number(ligne.sousTotalCentimes || 0) / 100;
+          const composants = Array.isArray(ligne.composants) ? ligne.composants : [];
+
+          const composantsHtml = composants.length
+            ? `
+              <div style="margin-top:10px;">
+                ${composants.map((composant) => {
+                  const categorie = composant.categorie || "Produit";
+                  const nom = composant.produitNom || composant.produitId || "Produit";
+                  const parFormule = Number(composant.quantiteParFormule || 0);
+                  const totalPreparation = quantite * parFormule;
+
+                  return `
+                    <div style="margin:5px 0 5px 12px;">
+                      <strong>${escapeHtml(categorie)}</strong> :
+                      ${escapeHtml(nom)}
+                      — ${escapeHtml(String(totalPreparation || parFormule))} unité${(totalPreparation || parFormule) > 1 ? "s" : ""} à préparer
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            `
+            : `<div style="margin-top:10px;" class="muted">Aucune composition enregistrée.</div>`;
+
+          return `
+            <div style="margin:15px 0;padding:12px;border:1px solid #ddd;border-radius:8px;">
+              <div><strong>${escapeHtml(ligne.formuleNom || ligne.formuleId || "Formule")}</strong></div>
+              <div style="margin-top:6px;">Quantité : <strong>${escapeHtml(String(quantite))}</strong></div>
+              <div>Prix unitaire : ${escapeHtml(formatAmount(prixUnitaire))}</div>
+              <div>Sous-total : <strong>${escapeHtml(formatAmount(sousTotal))}</strong></div>
+              ${composantsHtml}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  } else {
+    orderLinesHtml = `
+      <div class="admin-order-composition" style="margin-top:20px;">
+        <h3>Détail des formules</h3>
+        <div class="muted">Aucune ligne de commande enregistrée.</div>
+      </div>
+    `;
+  }
+
   elements.detailTitle.textContent = order.numeroCommande || order.id;
-  elements.detailContent.innerHTML = `<div class="admin-order-detail-grid">${rows.map(([label, value]) => `<div class="admin-detail-row"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(label === "Montant total" ? formatAmount(value) : displayValue(value))}</span></div>`).join("")}</div>`;
+  elements.detailContent.innerHTML = `
+    <div class="admin-order-detail-grid">${detailRows}</div>
+    ${orderLinesHtml}
+  `;
+
   const status = normalizeStatus(order.statut);
   elements.detailStatus.value = STATUS_VALUES.includes(status) ? status : "nouvelle";
   elements.detailStatusMessage.textContent = "";
 }
-
 function closeDetail() { selectedOrder = null; if (elements.detailPanel) elements.detailPanel.hidden = true; if (elements.detailStatusMessage) elements.detailStatusMessage.textContent = ""; }
 
 async function deleteSelectedOrder() {
