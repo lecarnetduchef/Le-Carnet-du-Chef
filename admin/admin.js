@@ -1,6 +1,6 @@
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 const MENU_IDS = [1, 2, 3];
 const CHEF_PRESENTATION_REF = doc(db, "siteContent", "chefPresentation");
@@ -514,8 +514,23 @@ function updateDashboardClientActivity(demandes) {
 async function loadDemandes() { if (!auth.currentUser || !els.demandesList) return; setDemandesState("loading"); try { const snap = await getDocs(collection(db, "demandes")); demandesCache = snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)); if (els.demandesCount) els.demandesCount.textContent = String(demandesCache.length);
     updateDashboardClientActivity(demandesCache); renderDemandes(); setDemandesState(demandesCache.length ? "ready" : "empty"); } catch (error) { console.error("Impossible de charger les demandes :", error); setDemandesState("error", `Impossible de charger les demandes : ${error?.message || "erreur inconnue"}`); } }
 function renderDemandes() { if (!els.demandesList) return; const rows = demandesCache.filter((demande) => { if (demandesFilter === "all") return true; if (demandesFilter === "particulier" || demandesFilter === "professionnel") { const client = demande.client && typeof demande.client === "object" ? demande.client : {}; return client.particulierProfessionnel === demandesFilter; } return normalizeDemandeStatus(demande.statut) === demandesFilter; }); els.demandesList.innerHTML = ""; if (!rows.length) { if (els.demandesEmpty) els.demandesEmpty.hidden = false; return; } if (els.demandesEmpty) els.demandesEmpty.hidden = true; rows.forEach((demande) => { const client = demande.client && typeof demande.client === "object" ? demande.client : {}; const profil = client.particulierProfessionnel === "professionnel" ? "Professionnel" : client.particulierProfessionnel === "particulier" ? "Particulier" : "Non renseigné"; const row = document.createElement("article"); row.className = "admin-order-row"; row.innerHTML = `<div class="admin-order-main"><div class="admin-order-title-line"><strong>${escapeHtml(`${client.prenom || ""} ${client.nom || ""}`.trim() || "Demande sans nom")}</strong><span class="admin-order-status">${escapeHtml(getDemandeStatusLabel(demande.statut))}</span></div><div class="admin-order-meta"><span>${escapeHtml(getDemandeTypeLabel(demande.type))}</span><span>${escapeHtml(profil)}</span><span>Événement : ${escapeHtml(getDemandeEventDate(demande) || "Non renseignée")}</span><span>${escapeHtml(demande.nombrePersonnes ? `${demande.nombrePersonnes} personne(s)` : "Personnes : non renseigné")}</span><span>Reçue : ${escapeHtml(formatDate(demande.createdAt))}</span></div></div><div class="admin-order-view"><button type="button" class="btn btn-secondary" data-demande-open="${escapeAttr(demande.id)}">Voir le détail</button></div>`; row.querySelector("[data-demande-open]").addEventListener("click", () => renderDemandeDetail(demande.id)); els.demandesList.appendChild(row); }); }
-function renderDemandeDetail(id) { const demande = demandesCache.find((item) => item.id === id); if (!demande || !els.demandeDetailPanel) return; selectedDemandeId = id; if (els.demandeDetailTitle) els.demandeDetailTitle.textContent = `${getDemandeTypeLabel(demande.type)} — ${((demande.client || {}).prenom || "")} ${((demande.client || {}).nom || "")}`.trim(); if (els.demandeDetailContent) els.demandeDetailContent.innerHTML = buildDemandeDetailHtml(demande); if (els.demandeDetailStatus) els.demandeDetailStatus.value = normalizeDemandeStatus(demande.statut); const qualification = demande.qualification || {}; if (els.qualificationCategorie) els.qualificationCategorie.value = qualification.categorie || "a_qualifier"; if (els.qualificationSousCategorie) els.qualificationSousCategorie.value = qualification.sousCategorie || ""; if (els.qualificationPriorite) els.qualificationPriorite.value = qualification.priorite || "normale"; if (els.qualificationPotentiel) els.qualificationPotentiel.value = qualification.potentiel || "non_evalue"; if (els.qualificationBesoinPrecision) els.qualificationBesoinPrecision.checked = Boolean(qualification.besoinPrecision); if (els.qualificationCommentaire) els.qualificationCommentaire.value = qualification.commentaireInterne || ""; if (els.qualificationMessage) els.qualificationMessage.textContent = ""; if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = ""; els.demandeDetailPanel.hidden = false; }
-function buildDemandeDetailHtml(demande) { const rows = []; Object.entries(demande).forEach(([key, value]) => { if (key === "id" || value === undefined || value === null || value === "") return; appendDemandeDetailRows(rows, key, value); }); return `<div class="admin-order-detail-grid">${rows.join("")}</div>`; }
+function renderDemandeDetail(id) { const demande = demandesCache.find((item) => item.id === id); if (!demande || !els.demandeDetailPanel) return; selectedDemandeId = id; if (els.demandeDetailTitle) els.demandeDetailTitle.textContent = `${getDemandeTypeLabel(demande.type)} — ${((demande.client || {}).prenom || "")} ${((demande.client || {}).nom || "")}`.trim(); if (els.demandeDetailContent) {
+      els.demandeDetailContent.innerHTML = buildDemandeDetailHtml(demande);
+      const saveClientButton = els.demandeDetailContent.querySelector("[data-demande-save-client]");
+      if (saveClientButton) {
+        saveClientButton.addEventListener("click", () => {
+          void saveDemandeAsClient(demande.id);
+        });
+      }
+    } if (els.demandeDetailStatus) els.demandeDetailStatus.value = normalizeDemandeStatus(demande.statut); const qualification = demande.qualification || {}; if (els.qualificationCategorie) els.qualificationCategorie.value = qualification.categorie || "a_qualifier"; if (els.qualificationSousCategorie) els.qualificationSousCategorie.value = qualification.sousCategorie || ""; if (els.qualificationPriorite) els.qualificationPriorite.value = qualification.priorite || "normale"; if (els.qualificationPotentiel) els.qualificationPotentiel.value = qualification.potentiel || "non_evalue"; if (els.qualificationBesoinPrecision) els.qualificationBesoinPrecision.checked = Boolean(qualification.besoinPrecision); if (els.qualificationCommentaire) els.qualificationCommentaire.value = qualification.commentaireInterne || ""; if (els.qualificationMessage) els.qualificationMessage.textContent = ""; if (els.demandeDetailMessage) els.demandeDetailMessage.textContent = ""; els.demandeDetailPanel.hidden = false; }
+function buildDemandeDetailHtml(demande) { const rows = []; Object.entries(demande).forEach(([key, value]) => { if (key === "id" || value === undefined || value === null || value === "") return; appendDemandeDetailRows(rows, key, value); }); return `
+      <div class="admin-order-detail-grid">${rows.join("")}</div>
+      <div class="admin-form-actions" style="margin-top:1rem;">
+        <button type="button" class="btn btn-primary" data-demande-save-client>
+          Enregistrer client
+        </button>
+      </div>
+    `; }
 function appendDemandeDetailRows(rows, key, value) { if (value && typeof value === "object" && !Array.isArray(value) && typeof value.toMillis !== "function" && !(value instanceof Date)) { Object.entries(value).forEach(([childKey, childValue]) => { if (childValue !== undefined && childValue !== null && childValue !== "") appendDemandeDetailRows(rows, `${key}.${childKey}`, childValue); }); return; } const label = formatDemandeFieldLabel(key); const displayValue = key === "createdAt" ? formatDate(value) : formatDemandeValue(value); if (!displayValue) return; rows.push(`<div><span class="admin-detail-label">${escapeHtml(label)}</span><div style="white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(displayValue)}</div></div>`); }
 function formatDemandeFieldLabel(key) { const labels = { type: "Type", statut: "Statut", createdAt: "Date de réception", updatedAt: "Dernière modification", prenom: "Prénom", nom: "Nom", telephone: "Téléphone", email: "Email", typePrestation: "Type de prestation", description: "Description du projet", dateEvenement: "Date de l’événement", dateSouhaitee: "Date souhaitée", heure: "Heure", heureDebut: "Heure de début", heureFin: "Heure de fin", duree: "Durée", nombrePersonnes: "Nombre de personnes", service: "Service", demande: "Demande", preferencesMenu: "Préférences menu", budget: "Budget", contraintesAlimentaires: "Contraintes alimentaires", precisionsContraintes: "Précisions contraintes", adresse: "Adresse", codePostal: "Code postal", ville: "Ville", besoinsParticuliers: "Besoins particuliers", informationsComplementaires: "Informations complémentaires", description: "Description", services: "Services", ordreComposition: "Ordre / composition", alimentsPrioriser: "Aliments à privilégier", alimentsEviter: "Aliments à éviter", allergies: "Allergies", equipements: "Équipements", informations: "Informations", client: "Client", projet: "Projet", lieu: "Lieu", repas: "Repas", preferences: "Préférences", cuisine: "Cuisine" }; const parts = String(key).split("."); return parts.map((part) => labels[part] || part.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase())).join(" · "); }
 function formatDemandeValue(value) { if (Array.isArray(value)) return value.map((item) => typeof item === "object" ? JSON.stringify(item) : String(item)).join(", "); if (value instanceof Date) return formatDate(value); if (value && typeof value.toMillis === "function") return formatDate(value); return String(value); }
@@ -528,6 +543,95 @@ function formatDate(value) { const millis = toMillis(value); if (!millis) return
 function setDemandesState(state, message = "") { if (els.demandesLoading) els.demandesLoading.hidden = state !== "loading"; if (els.demandesError) { els.demandesError.hidden = state !== "error"; els.demandesError.textContent = message; } if (els.demandesEmpty) els.demandesEmpty.hidden = state !== "empty"; if (els.demandesList) els.demandesList.hidden = state === "loading" || state === "error"; }
 function closeDemandeDetail() { selectedDemandeId = null; if (els.demandeDetailPanel) els.demandeDetailPanel.hidden = true; }
 async function saveDemandeQualification() { if (!auth.currentUser || !selectedDemandeId) return; const qualification = { categorie: els.qualificationCategorie?.value || "a_qualifier", sousCategorie: (els.qualificationSousCategorie?.value || "").trim(), priorite: els.qualificationPriorite?.value || "normale", potentiel: els.qualificationPotentiel?.value || "non_evalue", besoinPrecision: Boolean(els.qualificationBesoinPrecision?.checked), commentaireInterne: (els.qualificationCommentaire?.value || "").trim() }; if (els.qualificationSave) els.qualificationSave.disabled = true; if (els.qualificationMessage) els.qualificationMessage.textContent = "Enregistrement…"; try { await updateDoc(doc(db, "demandes", selectedDemandeId), { qualification, updatedAt: serverTimestamp() }); const local = demandesCache.find((item) => item.id === selectedDemandeId); if (local) local.qualification = qualification; if (els.qualificationMessage) els.qualificationMessage.textContent = "Qualification enregistrée."; } catch (error) { console.error("Impossible d’enregistrer la qualification :", error); if (els.qualificationMessage) els.qualificationMessage.textContent = `Impossible d’enregistrer la qualification : ${error?.message || "erreur inconnue"}`; } finally { if (els.qualificationSave) els.qualificationSave.disabled = false; } }
+async function saveDemandeAsClient(id) {
+  if (!auth.currentUser) return;
+
+  const demande = demandesCache.find((item) => item.id === id);
+  if (!demande) return;
+
+  const client = demande.client || {};
+
+  const prenom = String(client.prenom || demande.prenom || "").trim();
+  const nom = String(client.nom || demande.nom || "").trim();
+  const nomComplet = `${prenom} ${nom}`.trim();
+
+  const email = String(
+    client.email ||
+    demande.email ||
+    ""
+  ).trim();
+
+  const telephone = String(
+    client.telephone ||
+    demande.telephone ||
+    ""
+  ).trim();
+
+  const adresseBase = String(
+    client.adresse ||
+    demande.adresse ||
+    demande.lieu?.adresse ||
+    ""
+  ).trim();
+
+  const codePostal = String(
+    client.codePostal ||
+    demande.codePostal ||
+    demande.lieu?.codePostal ||
+    ""
+  ).trim();
+
+  const ville = String(
+    client.ville ||
+    demande.ville ||
+    demande.lieu?.ville ||
+    ""
+  ).trim();
+
+  const adresse = [adresseBase, codePostal, ville]
+    .filter(Boolean)
+    .join(", ");
+
+  if (!nomComplet) {
+    alert("Impossible d’enregistrer le client : le nom du client est manquant.");
+    return;
+  }
+
+  const button = els.demandeDetailContent?.querySelector("[data-demande-save-client]");
+  if (button) button.disabled = true;
+
+  try {
+    await addDoc(collection(db, "clients"), {
+      nom: nomComplet,
+      email,
+      telephone,
+      adresse,
+      notes: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    if (button) {
+      button.textContent = "✓ Client enregistré";
+      button.disabled = true;
+    }
+
+    if (els.demandeDetailMessage) {
+      els.demandeDetailMessage.textContent = "✓ Client enregistré dans la base Clients.";
+      els.demandeDetailMessage.hidden = false;
+    }
+  } catch (error) {
+    console.error("Erreur lors de l’enregistrement du client :", error);
+
+    if (button) button.disabled = false;
+
+    alert(
+      "Impossible d’enregistrer le client : " +
+      (error?.message || "erreur inconnue")
+    );
+  }
+}
+
 async function deleteSelectedDemande() {
   if (!auth.currentUser || !selectedDemandeId) return;
 
