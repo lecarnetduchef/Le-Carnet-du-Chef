@@ -872,7 +872,7 @@ function startFactures() {
 
         <div class="admin-form-grid">
           <label>Remise (€)<input id="facture-remise" type="number" min="0" step="0.01" value="0"></label>
-          <label>Conditions<textarea id="facture-conditions" rows="3" placeholder="Conditions de règlement…"></textarea></label>
+          <label>Conditions<textarea id="facture-conditions" rows="6" placeholder="Conditions de règlement…"></textarea></label>
         </div>
 
         <div class="lcc-facture-total">
