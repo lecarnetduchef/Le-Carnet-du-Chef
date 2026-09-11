@@ -18,13 +18,25 @@ function bearer(req) {
   if (!match) throw new Error("Authentification requise.");
   return match[1];
 }
-async function requireAuth(req) { return admin.auth().verifyIdToken(bearer(req)); }
+async function requireAuth(req) {
+  return admin.auth().verifyIdToken(bearer(req));
+}
+
+async function requireAdmin(req) {
+  const decoded = await requireAuth(req);
+  if (decoded.admin !== true) {
+    const error = new Error("Accès administrateur requis.");
+    error.status = 403;
+    throw error;
+  }
+  return decoded;
+}
 function errorResponse(res, status, code, message) { return res.status(status).json({ ok: false, code, message }); }
 
 const refundPayment = onRequest({ region: "europe-west9", cors: true, secrets: [STRIPE_SECRET_KEY] }, async (req, res) => {
   if (req.method !== "POST") return errorResponse(res, 405, "METHOD_NOT_ALLOWED", "Method Not Allowed");
   let decoded;
-  try { decoded = await requireAuth(req); } catch (_) { return errorResponse(res, 401, "UNAUTHENTICATED", "Authentification administrateur requise."); }
+  try { decoded = await requireAdmin(req); } catch (error) { const status = error?.status === 403 ? 403 : 401; const code = status === 403 ? "FORBIDDEN" : "UNAUTHENTICATED"; const message = status === 403 ? "Accès administrateur requis." : "Authentification administrateur requise."; return errorResponse(res, status, code, message); }
   try {
     const paiementId = String(req.body?.paiementId || "").trim();
     const requestedAmount = Number(req.body?.montantCentimes);
@@ -69,7 +81,7 @@ const refundPayment = onRequest({ region: "europe-west9", cors: true, secrets: [
 const deleteOrder = onRequest({ region: "europe-west9", cors: true }, async (req, res) => {
   if (req.method !== "POST") return errorResponse(res, 405, "METHOD_NOT_ALLOWED", "Method Not Allowed");
   let decoded;
-  try { decoded = await requireAuth(req); } catch (_) { return errorResponse(res, 401, "UNAUTHENTICATED", "Authentification administrateur requise."); }
+  try { decoded = await requireAdmin(req); } catch (error) { const status = error?.status === 403 ? 403 : 401; const code = status === 403 ? "FORBIDDEN" : "UNAUTHENTICATED"; const message = status === 403 ? "Accès administrateur requis." : "Authentification administrateur requise."; return errorResponse(res, status, code, message); }
   try {
     const commandeId = String(req.body?.commandeId || "").trim();
     if (!commandeId) return errorResponse(res, 400, "ORDER_REQUIRED", "Commande manquante.");
