@@ -168,6 +168,7 @@ function renderProductOptions(select, category, previewContainer) {
 
   select.addEventListener("change", () => {
     previewContainer.innerHTML = "";
+    previewContainer.parentElement?.querySelectorAll(".product-description-details").forEach((el) => el.remove());
     const product = products.find((item) => item.id === select.value);
     if (!product) return;
 
