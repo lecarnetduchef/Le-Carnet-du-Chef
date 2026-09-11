@@ -29,6 +29,13 @@
     .product-photo-preview{width:84px;height:64px;border-radius:10px;overflow:hidden;background:#edf0ea;display:grid;place-items:center}
     .product-photo{width:100%;height:100%;object-fit:cover;display:block}
     .product-photo-placeholder{width:100%;height:100%;display:grid;place-items:center;text-align:center;padding:.35rem;box-sizing:border-box;color:#66706a;font-size:.7rem;background:#edf0ea}
+    .product-description-details{grid-column:2 / -1;margin-top:.15rem}
+    .product-description-details summary{cursor:pointer;list-style:none;color:#66706a;font-size:.78rem;font-weight:600;letter-spacing:.01em}
+    .product-description-details summary::-webkit-details-marker{display:none}
+    .product-description-details summary::before{content:"✦ ";opacity:.8}
+    .product-description-details[open] summary{margin-bottom:.35rem}
+    .product-description-details p{margin:0;padding:.55rem .7rem;border-left:2px solid rgba(49,76,64,.18);font-size:.82rem;line-height:1.5;color:#66706a}
+    @media(max-width:620px){.product-description-details{grid-column:1}.product-description-details p{padding:.55rem .65rem}}
     .quantity-control{display:flex;align-items:center;gap:.6rem;margin-top:1rem}.quantity-control button{width:38px;height:38px;border:1px solid rgba(49,76,64,.25);border-radius:50%;background:#fff;cursor:pointer}.quantity-control output{min-width:2rem;text-align:center;font-weight:700}
     .add-button{margin-top:1rem}.status{margin:0 0 1rem}.error{color:#8b2e2e}.success{color:#315f43}
     .cart-card{position:sticky;top:1rem}.cart-lines{display:grid;gap:1rem;margin:1rem 0}.cart-line{border-top:1px solid rgba(49,76,64,.12);padding-top:1rem}.cart-line:first-child{border-top:0;padding-top:0}.cart-line-title{display:flex;justify-content:space-between;gap:.75rem;font-weight:700}.cart-components{margin:.45rem 0;color:#59635d;font-size:.9rem}.cart-actions{display:flex;align-items:center;gap:.5rem}.cart-actions button{border:0;background:transparent;cursor:pointer;padding:.2rem .35rem}.cart-total{border-top:1px solid rgba(49,76,64,.18);padding-top:1rem;display:flex;justify-content:space-between;font-weight:700;font-size:1.1rem}.empty{color:#66706a}.notice{padding:.9rem 1rem;border-radius:12px;background:#f4ead8;color:#314c40;margin-bottom:1rem}

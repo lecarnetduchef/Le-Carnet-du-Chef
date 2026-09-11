@@ -180,6 +180,20 @@ function renderProductOptions(select, category, previewContainer) {
       placeholderImage.textContent = "Aucune image";
       previewContainer.appendChild(placeholderImage);
     }
+
+    if (product.description?.trim()) {
+      const details = document.createElement("details");
+      details.className = "product-description-details";
+
+      const summary = document.createElement("summary");
+      summary.textContent = "En quelques mots";
+
+      const description = document.createElement("p");
+      description.textContent = product.description.trim();
+
+      details.append(summary, description);
+      previewContainer.parentElement.appendChild(details);
+    }
   });
 }
 
