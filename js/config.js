@@ -25,8 +25,8 @@ const CDC_CONFIG = {
   contact: {
     telephone: "07 45 71 04 53",
     telephoneHref: "tel:+33745710453",
-    email: "lecarnetduchef@gmail.com",
-    emailHref: "mailto:lecarnetduchef@gmail.com",
+    email: "contact@lecarnetduchef.fr",
+    emailHref: "mailto:contact@lecarnetduchef.fr",
   },
   zones: {
     emporter: "Roanne et son secteur",
