@@ -170,6 +170,12 @@ function afficherMotifFermeture() {
   }
 }
 
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 document.addEventListener("DOMContentLoaded", async () => {
   afficherMotifFermeture();
   await loadCatalogueFermeture();
