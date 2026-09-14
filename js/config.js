@@ -63,6 +63,9 @@ const CDC_CONFIG = {
   },
 };
 
+const commandeLayout = document.querySelector(".order-layout");
+if (commandeLayout) commandeLayout.style.display = "none";
+
 function calculerEtatCommandes() {
   const c = CDC_CONFIG.commandes;
   const mode = c.modeManuel === "ouvert" ? "ouvert" : c.modeManuel === "ferme" ? "ferme" : "aucun";
@@ -109,11 +112,42 @@ async function synchroniserFermetureGlobale() {
     const fields = data.fields || {};
     const modeManuel = fields.modeManuel?.stringValue;
     const legacyClosed = fields.fermetureManuelleGlobale?.booleanValue === true;
+
+    const fermetureExceptionnelle = fields.fermetureExceptionnelle?.mapValue?.fields || {};
+    CDC_CONFIG.commandes.fermetureExceptionnelle = {
+      ...CDC_CONFIG.commandes.fermetureExceptionnelle,
+      active: fermetureExceptionnelle.active?.booleanValue === true,
+      message: fermetureExceptionnelle.motif?.stringValue || "",
+      dateDebut: fermetureExceptionnelle.dateDebut?.timestampValue || null,
+      dateFin: fermetureExceptionnelle.dateFin?.timestampValue || null
+    };
+
     if (modeManuel === "ouvert" || modeManuel === "ferme") CDC_CONFIG.commandes.modeManuel = modeManuel;
     else if (legacyClosed) CDC_CONFIG.commandes.modeManuel = "ferme";
     else CDC_CONFIG.commandes.modeManuel = null;
     calculerEtatCommandes();
-  } catch (error) { console.error("Impossible de lire l'état global des commandes :", error); }
+
+    const pathname = window.location.pathname;
+
+    if (
+      pathname.endsWith("/commande.html") &&
+      CDC_CONFIG.commandes.fermetureExceptionnelle.active
+    ) {
+      window.location.replace("catalogue-fermeture.html");
+      return;
+    }
+
+    if (pathname.endsWith("/commande.html")) {
+      const commandeLayout = document.querySelector(".order-layout");
+      if (commandeLayout) commandeLayout.style.display = "";
+    }
+  } catch (error) {
+    console.error("Impossible de lire l'état global des commandes :", error);
+    if (window.location.pathname.endsWith("/commande.html")) {
+      const commandeLayout = document.querySelector(".order-layout");
+      if (commandeLayout) commandeLayout.style.display = "";
+    }
+  }
 }
 
 calculerEtatCommandes();
