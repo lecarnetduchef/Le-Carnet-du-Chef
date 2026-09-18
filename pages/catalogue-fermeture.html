@@ -52,13 +52,20 @@
     }
 
     .closure-photo {
+      position: relative;
       min-height: 620px;
-      background-color: #e9e6df;
-      background-image: url("../images/fermeture/chef-fermeture.jpg");
-      background-size: cover;
-      background-position: center center;
-      background-repeat: no-repeat;
+      overflow: hidden;
+      background: #e9e6df;
       border-left: 1px solid rgba(210, 171, 98, .18);
+    }
+
+    .closure-photo img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 620px;
+      object-fit: cover;
+      object-position: center center;
     }
 
     .closure-eyebrow {
@@ -415,7 +422,12 @@
           <div class="closure-divider" aria-hidden="true"></div>
         </div>
 
-        <div class="closure-photo" aria-label="Emplacement réservé pour la photo du chef"></div>
+        <div class="closure-photo">
+          <img
+            src="/Le-Carnet-du-Chef/images/fermeture/chef-fermeture.jpg"
+            alt="Le chef en train de dresser une assiette"
+          >
+        </div>
       </div>
     </section>
 
