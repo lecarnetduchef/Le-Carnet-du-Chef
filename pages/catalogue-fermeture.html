@@ -27,43 +27,168 @@
     .closure-hero {
       background: var(--color-sage-dark);
       color: var(--color-gold);
-      padding: clamp(3.5rem, 8vw, 6rem) 0;
+      padding: 0;
     }
 
     .closure-hero-inner {
-      max-width: 820px;
-      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      max-width: none;
+      margin: 0;
       text-align: center;
+      min-height: 620px;
+    }
+
+    .closure-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: clamp(3rem, 6vw, 5.5rem) clamp(2rem, 5vw, 5rem);
+      background:
+        radial-gradient(circle at 15% 15%, rgba(255,255,255,.035), transparent 34%),
+        radial-gradient(circle at 85% 80%, rgba(255,255,255,.025), transparent 38%),
+        var(--color-sage-dark);
+    }
+
+    .closure-photo {
+      min-height: 620px;
+      background: #e9e6df;
+      border-left: 1px solid rgba(210, 171, 98, .18);
     }
 
     .closure-eyebrow {
-      margin: 0 0 .75rem;
+      margin: 0 0 .9rem;
       color: var(--color-gold);
-      font-size: .78rem;
+      font-size: .76rem;
       font-weight: 700;
-      letter-spacing: .14em;
+      letter-spacing: .18em;
       text-transform: uppercase;
     }
 
     .closure-hero h1 {
+      max-width: 620px;
       margin: 0;
+      color: #f7f4ec;
+      font-family: Fraunces, serif;
+      font-size: clamp(3rem, 5vw, 5.4rem);
+      line-height: .98;
+      letter-spacing: -.035em;
+    }
+
+    .closure-hero h1 span {
       color: var(--color-gold);
     }
 
     .closure-message {
-      max-width: 680px;
-      margin: 1rem auto 0;
+      max-width: 570px;
+      margin: 1.5rem auto 0;
+      color: #f1eee6;
+      font-size: clamp(.98rem, 1.25vw, 1.08rem);
+      line-height: 1.75;
+    }
+
+    .closure-values {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: min(100%, 590px);
+      margin: 2.4rem auto 0;
+      border-top: 1px solid rgba(210, 171, 98, .35);
+      border-bottom: 1px solid rgba(210, 171, 98, .35);
+    }
+
+    .closure-value {
+      padding: 1.1rem .75rem 1.2rem;
+      color: #f1eee6;
+    }
+
+    .closure-value + .closure-value {
+      border-left: 1px solid rgba(210, 171, 98, .25);
+    }
+
+    .closure-value-icon {
+      display: block;
+      margin-bottom: .45rem;
       color: var(--color-gold);
-      font-size: 1.05rem;
-      line-height: 1.7;
+      font-size: 1.45rem;
+      line-height: 1;
+    }
+
+    .closure-value strong {
+      display: block;
+      color: #f7f4ec;
+      font-family: Work Sans, sans-serif;
+      font-size: .82rem;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .closure-signature {
+      margin: 2rem 0 0;
+      color: var(--color-gold);
+      font-family: Fraunces, serif;
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      font-style: italic;
+      line-height: 1.1;
     }
 
     .closure-divider {
       width: 54px;
       height: 1px;
-      margin: 1.75rem auto 0;
+      margin: 1.2rem auto 0;
       background: var(--color-gold);
       opacity: .7;
+    }
+
+    @media (max-width: 900px) {
+      .closure-hero-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .closure-copy {
+        min-height: 560px;
+      }
+
+      .closure-photo {
+        min-height: 420px;
+        border-left: 0;
+        border-top: 1px solid rgba(210, 171, 98, .18);
+      }
+    }
+
+    @media (max-width: 620px) {
+      .closure-copy {
+        min-height: 0;
+        padding: 3.2rem 1.4rem 3.5rem;
+      }
+
+      .closure-hero h1 {
+        font-size: clamp(2.7rem, 12vw, 4rem);
+      }
+
+      .closure-message {
+        font-size: .98rem;
+      }
+
+      .closure-values {
+        width: 100%;
+      }
+
+      .closure-value {
+        padding: .95rem .45rem 1rem;
+      }
+
+      .closure-value strong {
+        font-size: .72rem;
+      }
+
+      .closure-signature {
+        font-size: 2rem;
+      }
+
+      .closure-photo {
+        min-height: 300px;
+      }
     }
 
     .catalogue-section {
@@ -257,16 +382,36 @@
   <main id="contenu">
 
     <section class="closure-hero">
-      <div class="container closure-hero-inner">
-        <p class="closure-eyebrow">Information</p>
+      <div class="closure-hero-inner">
+        <div class="closure-copy">
+          <p class="closure-eyebrow">Information</p>
 
-        <h1>Fermeture exceptionnelle</h1>
+          <h1>Fermeture <span>exceptionnelle</span></h1>
 
-        <p id="fermeture-motif" class="closure-message">
-          Chargement de l'information…
-        </p>
+          <p id="fermeture-motif" class="closure-message">
+            Chargement de l'information…
+          </p>
 
-        <div class="closure-divider" aria-hidden="true"></div>
+          <div class="closure-values" aria-label="Les engagements du Carnet du Chef">
+            <div class="closure-value">
+              <span class="closure-value-icon" aria-hidden="true">♢</span>
+              <strong>Des produits<br>de qualité</strong>
+            </div>
+            <div class="closure-value">
+              <span class="closure-value-icon" aria-hidden="true">♨</span>
+              <strong>Une cuisine<br>passionnée</strong>
+            </div>
+            <div class="closure-value">
+              <span class="closure-value-icon" aria-hidden="true">♡</span>
+              <strong>Des moments<br>à partager</strong>
+            </div>
+          </div>
+
+          <p class="closure-signature">À très bientôt !</p>
+          <div class="closure-divider" aria-hidden="true"></div>
+        </div>
+
+        <div class="closure-photo" aria-label="Emplacement réservé pour la photo du chef"></div>
       </div>
     </section>
 
