@@ -25,45 +25,147 @@
 
   <style>
     .closure-hero {
+      padding: 0;
       background: var(--color-sage-dark);
-      color: var(--color-gold);
-      padding: clamp(3.5rem, 8vw, 6rem) 0;
     }
 
-    .closure-hero-inner {
-      max-width: 820px;
-      margin: 0 auto;
+    .closure-hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      min-height: 620px;
+    }
+
+    .closure-copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(3rem, 6vw, 5.5rem) clamp(1.5rem, 5vw, 5rem);
+      background: var(--color-sage-dark);
+      color: var(--color-gold);
       text-align: center;
     }
 
-    .closure-eyebrow {
-      margin: 0 0 .75rem;
+    .closure-copy-inner {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .closure-brand {
+      margin: 0;
+      color: #fff;
+      font-family: Fraunces, serif;
+      font-size: clamp(2rem, 3.4vw, 3rem);
+      line-height: 1.05;
+      font-weight: 600;
+    }
+
+    .closure-brand span {
       color: var(--color-gold);
-      font-size: .78rem;
-      font-weight: 700;
-      letter-spacing: .14em;
+    }
+
+    .closure-tagline {
+      margin: .7rem 0 0;
+      color: rgba(255,255,255,.8);
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .28em;
       text-transform: uppercase;
     }
 
-    .closure-hero h1 {
+    .closure-top-divider,
+    .closure-divider {
+      width: 54px;
+      height: 1px;
+      margin-left: auto;
+      margin-right: auto;
+      background: var(--color-gold);
+      opacity: .85;
+    }
+
+    .closure-top-divider {
+      margin-top: 2rem;
+      margin-bottom: 2.6rem;
+    }
+
+    .closure-eyebrow {
+      margin: 0 0 .6rem;
+      color: var(--color-gold);
+      font-size: .76rem;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .closure-copy h1 {
       margin: 0;
+      color: #fff;
+      font-family: Fraunces, serif;
+      font-size: clamp(3rem, 6vw, 5.5rem);
+      line-height: .98;
+      font-weight: 600;
+    }
+
+    .closure-copy h1 span {
       color: var(--color-gold);
     }
 
     .closure-message {
       max-width: 680px;
-      margin: 1rem auto 0;
+      margin: 1.7rem auto 0;
+      color: rgba(255,255,255,.92);
+      font-family: Fraunces, serif;
+      font-size: clamp(1rem, 1.45vw, 1.2rem);
+      line-height: 1.65;
+    }
+
+    .closure-values {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      max-width: 650px;
+      margin: 2.3rem auto 0;
+    }
+
+    .closure-value {
+      padding: 0 1rem;
+      border-right: 1px solid rgba(212,174,98,.45);
+    }
+
+    .closure-value:last-child {
+      border-right: 0;
+    }
+
+    .closure-value-icon {
+      display: block;
+      margin-bottom: .7rem;
       color: var(--color-gold);
-      font-size: 1.05rem;
-      line-height: 1.7;
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .closure-value p {
+      margin: 0;
+      color: #fff;
+      font-size: .9rem;
+      line-height: 1.35;
+    }
+
+    .closure-signature {
+      margin: 2.2rem 0 1rem;
+      color: var(--color-gold);
+      font-family: "Brush Script MT", "Segoe Script", cursive;
+      font-size: clamp(2.1rem, 4vw, 3.5rem);
+      line-height: 1;
     }
 
     .closure-divider {
-      width: 54px;
-      height: 1px;
-      margin: 1.75rem auto 0;
-      background: var(--color-gold);
-      opacity: .7;
+      margin-top: 1.2rem;
+    }
+
+    /* Zone volontairement vide : la photo sera ajoutée ici ultérieurement. */
+    .closure-photo-slot {
+      min-height: 100%;
+      background: #edf0ea;
     }
 
     .catalogue-section {
@@ -199,18 +301,51 @@
     }
 
     @media (max-width: 900px) {
+      .closure-hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .closure-copy {
+        min-height: 620px;
+      }
+
+      .closure-photo-slot {
+        min-height: 420px;
+      }
+
       .mirror-products {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
     @media (max-width: 620px) {
-      .closure-hero {
-        padding: 3rem 0;
+      .closure-copy {
+        min-height: auto;
+        padding: 3rem 1.25rem;
       }
 
-      .closure-message {
-        font-size: .98rem;
+      .closure-copy h1 {
+        font-size: clamp(2.7rem, 12vw, 4rem);
+      }
+
+      .closure-values {
+        gap: 0;
+      }
+
+      .closure-value {
+        padding: 0 .55rem;
+      }
+
+      .closure-value-icon {
+        font-size: 1.65rem;
+      }
+
+      .closure-value p {
+        font-size: .78rem;
+      }
+
+      .closure-photo-slot {
+        min-height: 300px;
       }
 
       .mirror-products {
@@ -257,16 +392,58 @@
   <main id="contenu">
 
     <section class="closure-hero">
-      <div class="container closure-hero-inner">
-        <p class="closure-eyebrow">Information</p>
+      <div class="closure-hero-grid">
 
-        <h1>Fermeture exceptionnelle</h1>
+        <div class="closure-copy">
+          <div class="closure-copy-inner">
+            <p class="closure-brand">
+              Le Carnet <span>du Chef</span>
+            </p>
 
-        <p id="fermeture-motif" class="closure-message">
-          Chargement de l'information…
-        </p>
+            <p class="closure-tagline">
+              Cuisine · Partage · Événements
+            </p>
 
-        <div class="closure-divider" aria-hidden="true"></div>
+            <div class="closure-top-divider" aria-hidden="true"></div>
+
+            <p class="closure-eyebrow">Information</p>
+
+            <h1>
+              Fermeture<br>
+              <span>exceptionnelle</span>
+            </h1>
+
+            <p id="fermeture-motif" class="closure-message">
+              Le Carnet du Chef est exceptionnellement fermé.<br>
+              Nous vous remercions pour votre compréhension et votre fidélité. À très bientôt !
+            </p>
+
+            <div class="closure-values">
+              <div class="closure-value">
+                <span class="closure-value-icon" aria-hidden="true">♧</span>
+                <p>Des produits<br>de qualité</p>
+              </div>
+
+              <div class="closure-value">
+                <span class="closure-value-icon" aria-hidden="true">♨</span>
+                <p>Une cuisine<br>passionnée</p>
+              </div>
+
+              <div class="closure-value">
+                <span class="closure-value-icon" aria-hidden="true">♡</span>
+                <p>Des moments<br>à partager</p>
+              </div>
+            </div>
+
+            <p class="closure-signature">À très bientôt !</p>
+
+            <div class="closure-divider" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <!-- PHOTO À AJOUTER ICI : cette moitié est volontairement laissée vide. -->
+        <div class="closure-photo-slot" aria-label="Emplacement réservé à la photo"></div>
+
       </div>
     </section>
 
