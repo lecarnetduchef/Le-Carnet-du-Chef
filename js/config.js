@@ -141,6 +141,14 @@ async function synchroniserFermetureGlobale() {
       const commandeLayout = document.querySelector(".order-layout");
       if (commandeLayout) commandeLayout.style.display = "";
     }
+
+    if (
+      pathname.endsWith("/catalogue-fermeture.html") &&
+      !CDC_CONFIG.commandes.fermetureExceptionnelle.active
+    ) {
+      window.location.replace("commande.html");
+      return;
+    }
   } catch (error) {
     console.error("Impossible de lire l'état global des commandes :", error);
     if (window.location.pathname.endsWith("/commande.html")) {

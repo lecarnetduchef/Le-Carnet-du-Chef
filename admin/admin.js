@@ -58,10 +58,10 @@ function updateDashboardGreeting() {
 
 setInterval(updateDashboardGreeting, 60000);
 
-function initNavigation() { const items = document.querySelectorAll("[data-admin-target]"); const views = document.querySelectorAll("[data-admin-view]"); items.forEach((item) => { item.addEventListener("click", () => { const target = item.dataset.adminTarget; if (target === "products-section") return; if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return; const productsSubmenu = document.querySelector("#admin-products-submenu"); if (productsSubmenu) productsSubmenu.hidden = true; const productsParent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item")).find((nav) => nav.querySelector("span")?.textContent?.trim() === "Produits / Menus"); if (productsParent) productsParent.setAttribute("aria-expanded", "false"); views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); }); items.forEach((nav) => nav.classList.toggle("active", nav === item)); const title = item.querySelector("span")?.textContent?.trim() || "Administration"; if (els.adminPageTitle) els.adminPageTitle.textContent = title; closeMobileNavigation(); if (target === "stocks-section") void renderStocks(); if (target === "dashboard-section") { updateDashboardGreeting(); void loadDashboardStats(); void loadOrdersState(); } if (target === "requests-section") startDemandes(); if (target === "quotes-section") startDevis(); }); }); if (els.mobileMenu && els.sidebar) els.mobileMenu.addEventListener("click", () => { if (!auth.currentUser || els.dashboard.hidden) return; const open = els.sidebar.classList.toggle("is-open"); els.mobileMenu.setAttribute("aria-expanded", String(open)); }); }
+function initNavigation() { const items = document.querySelectorAll("[data-admin-target]"); const views = document.querySelectorAll("[data-admin-view]"); items.forEach((item) => { item.addEventListener("click", () => { const target = item.dataset.adminTarget; if (target === "products-section") return; if (!auth.currentUser || !els.dashboard || els.dashboard.hidden) return; const productsSubmenu = document.querySelector("#admin-products-submenu"); if (productsSubmenu) productsSubmenu.hidden = true; const productsParent = Array.from(document.querySelectorAll("[data-admin-target], .admin-nav-item")).find((nav) => nav.querySelector("span")?.textContent?.trim() === "Produits / Menus"); if (productsParent) productsParent.setAttribute("aria-expanded", "false"); views.forEach((view) => { view.hidden = view.id !== target; view.classList.toggle("active", view.id === target); }); items.forEach((nav) => nav.classList.toggle("active", nav === item)); const title = item.querySelector("span")?.textContent?.trim() || "Administration"; if (els.adminPageTitle) els.adminPageTitle.textContent = title; closeMobileNavigation(); if (target === "stocks-section") void renderStocks(); if (target === "dashboard-section") { updateDashboardGreeting(); void loadDashboardStats(); void loadOrdersState(); } if (target === "requests-section") startDemandes(); if (target === "quotes-section") startDevis(); if (target === "document-section" || target === "factures-section" || target === "encaissements-section") startFactures(); }); }); if (els.mobileMenu && els.sidebar) els.mobileMenu.addEventListener("click", () => { if (!auth.currentUser || els.dashboard.hidden) return; const open = els.sidebar.classList.toggle("is-open"); els.mobileMenu.setAttribute("aria-expanded", String(open)); }); }
 function closeMobileNavigation() { if (!els.sidebar || !els.mobileMenu) return; els.sidebar.classList.remove("is-open"); els.mobileMenu.setAttribute("aria-expanded", "false"); }
 function resetAdminToLogin() { if (els.dashboard) els.dashboard.hidden = true; if (els.loginScreen) els.loginScreen.hidden = false; pendingUrls.clear(); closeMobileNavigation(); const views = document.querySelectorAll("[data-admin-view]"); views.forEach((view) => { view.hidden = true; view.classList.remove("active"); }); if (els.dashboardSection) { els.dashboardSection.hidden = false; els.dashboardSection.classList.add("active"); } const navItems = document.querySelectorAll("[data-admin-target]"); navItems.forEach((item) => item.classList.toggle("active", item.dataset.adminTarget === "dashboard-section")); if (els.adminPageTitle) els.adminPageTitle.textContent = "Tableau de bord"; if (els.userEmail) els.userEmail.textContent = ""; selectedDemandeId = null; devisSelectedId = null; devisCurrent = null; }
-function initAuth() { onAuthStateChanged(auth, async (user) => { if (user) { els.loginScreen.hidden = true; els.dashboard.hidden = false; els.userEmail.textContent = user.email || "administrateur"; await loadChefPresentation(); await loadDashboardStats(); await renderStocks(); await loadOrdersState(); startDemandes(); startFactures(); } else resetAdminToLogin(); }); els.loginForm.addEventListener("submit", async (e) => { e.preventDefault(); els.loginError.hidden = true; try { await signInWithEmailAndPassword(auth, els.loginForm.email.value.trim(), els.loginForm.password.value); } catch (err) { els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code); els.loginError.hidden = false; } }); if (els.logoutBtn) els.logoutBtn.addEventListener("click", async (event) => { event.preventDefault(); els.logoutBtn.disabled = true; try { await signOut(auth); resetAdminToLogin(); } catch (error) { console.error("Erreur de déconnexion Firebase :", error); } finally { els.logoutBtn.disabled = false; } }); if (els.saveChefPresentationButton) els.saveChefPresentationButton.addEventListener("click", (event) => { event.preventDefault(); void saveChefPresentation(); }); if (els.chefPresentation) els.chefPresentation.addEventListener("input", updateChefPresentationPreview); if (els.closeOrdersButton) els.closeOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ferme", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🔴 Commandes forcées fermées.", false); updateOrdersStateUI("ferme"); } catch (error) { showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.openOrdersButton) els.openOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ouvert", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🟢 Commandes forcées ouvertes.", false); updateOrdersStateUI("ouvert"); } catch (error) { showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.automaticOrdersButton) els.automaticOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: null, fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🕐 Mode automatique rétabli.", false); updateOrdersStateUI("aucun"); } catch (error) { showOrderStatus(`Impossible de rétablir le mode automatique : ${error?.message || "erreur inconnue"}`, true); } }); }
+function initAuth() { onAuthStateChanged(auth, async (user) => { if (user) { els.loginScreen.hidden = true; els.dashboard.hidden = false; els.userEmail.textContent = user.email || "administrateur"; startFactures(); await loadChefPresentation(); await loadDashboardStats(); await renderStocks(); await loadOrdersState(); startDemandes(); } else resetAdminToLogin(); }); els.loginForm.addEventListener("submit", async (e) => { e.preventDefault(); els.loginError.hidden = true; try { await signInWithEmailAndPassword(auth, els.loginForm.email.value.trim(), els.loginForm.password.value); } catch (err) { els.loginError.textContent = "Connexion impossible : " + traduireErreur(err.code); els.loginError.hidden = false; } }); if (els.logoutBtn) els.logoutBtn.addEventListener("click", async (event) => { event.preventDefault(); els.logoutBtn.disabled = true; try { await signOut(auth); resetAdminToLogin(); } catch (error) { console.error("Erreur de déconnexion Firebase :", error); } finally { els.logoutBtn.disabled = false; } }); if (els.saveChefPresentationButton) els.saveChefPresentationButton.addEventListener("click", (event) => { event.preventDefault(); void saveChefPresentation(); }); if (els.chefPresentation) els.chefPresentation.addEventListener("input", updateChefPresentationPreview); if (els.closeOrdersButton) els.closeOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ferme", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🔴 Commandes forcées fermées.", false); updateOrdersStateUI("ferme"); } catch (error) { showOrderStatus(`Impossible de fermer les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.openOrdersButton) els.openOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: "ouvert", updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🟢 Commandes forcées ouvertes.", false); updateOrdersStateUI("ouvert"); } catch (error) { showOrderStatus(`Impossible d’ouvrir les commandes : ${error?.message || "erreur inconnue"}`, true); } }); if (els.automaticOrdersButton) els.automaticOrdersButton.addEventListener("click", async () => { if (!auth.currentUser) return; try { await setDoc(doc(db, "siteContent", "commandes"), { modeManuel: null, fermetureManuelleGlobale: false, updatedAt: serverTimestamp() }, { merge: true }); showOrderStatus("🕐 Mode automatique rétabli.", false); updateOrdersStateUI("aucun"); } catch (error) { showOrderStatus(`Impossible de rétablir le mode automatique : ${error?.message || "erreur inconnue"}`, true); } }); }
 async function loadOrdersState() { if (!auth.currentUser || !els.ordersStateLabel || !els.ordersStateBadge) return; try { const snapshot = await getDoc(doc(db, "siteContent", "commandes")); const data = snapshot.exists() ? snapshot.data() : {}; const mode = data.modeManuel === "ouvert" || data.modeManuel === "ferme" ? data.modeManuel : "aucun"; updateOrdersStateUI(mode); } catch (error) { console.error("Impossible de lire l’état des commandes :", error); els.ordersStateLabel.textContent = "État indisponible"; els.ordersStateBadge.textContent = "Erreur de lecture"; els.ordersStateBadge.className = "admin-order-state admin-order-state-unknown"; } }
 function updateOrdersStateUI(mode) {
   if (!els.ordersStateLabel || !els.ordersStateBadge) return;
@@ -570,7 +570,7 @@ function getDemandeTypeLabel(type) { const labels = { traiteur: "Traiteur", chef
 function getDemandeEventDate(demande) { return demande.dateEvenement || demande.dateSouhaitee || ""; }
 function normalizeDemandeStatus(status) { const value = String(status || "").trim().toLowerCase(); return Object.prototype.hasOwnProperty.call(DEMANDE_STATUSES, value) ? value : "nouvelle"; }
 function getDemandeStatusLabel(status) { return DEMANDE_STATUSES[normalizeDemandeStatus(status)]; }
-function toMillis(value) { if (value === null || value === undefined || value === "") return 0; try { if (typeof value.toMillis === "function") { const millis = value.toMillis(); return Number.isFinite(millis) ? millis : 0; } if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.getTime() : 0; if (typeof value === "number") return Number.isFinite(value) ? value : 0; if (typeof value === "object" && Number.isFinite(Number(value.seconds))) return Number(value.seconds) * 1000 + Math.floor(Number(value.nanoseconds || 0) / 1000000); const parsed = Date.parse(String(value)); return Number.isFinite(parsed) ? parsed : 0; } catch (_) { return 0; } }
+function toMillis(value) { if (value === null || value === undefined || value === "") return 0; try { if (typeof value.toMillis === "function") { const millis = value.toMillis(); return Number.isFinite(millis) ? millis : 0; } if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.getTime() : 0; if (typeof value === "number") return Number.isFinite(value) ? value : 0; if (typeof value === "object" && value.timestampValue) { const parsedTimestamp = Date.parse(String(value.timestampValue)); return Number.isFinite(parsedTimestamp) ? parsedTimestamp : 0; } if (typeof value === "object" && Number.isFinite(Number(value.seconds))) return Number(value.seconds) * 1000 + Math.floor(Number(value.nanoseconds || 0) / 1000000); const parsed = Date.parse(String(value)); return Number.isFinite(parsed) ? parsed : 0; } catch (_) { return 0; } }
 function formatDate(value) { const millis = toMillis(value); if (!millis) return "Date inconnue"; try { return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(millis)); } catch (_) { return "Date inconnue"; } }
 function setDemandesState(state, message = "") { if (els.demandesLoading) els.demandesLoading.hidden = state !== "loading"; if (els.demandesError) { els.demandesError.hidden = state !== "error"; els.demandesError.textContent = message; } if (els.demandesEmpty) els.demandesEmpty.hidden = state !== "empty"; if (els.demandesList) els.demandesList.hidden = state === "loading" || state === "error"; }
 function closeDemandeDetail() { selectedDemandeId = null; if (els.demandeDetailPanel) els.demandeDetailPanel.hidden = true; }
@@ -806,30 +806,98 @@ function sendDevis() { const email = document.querySelector("#devis-client-email
 function showDevisStatus(message, isError = false) { const el = document.querySelector("#devis-status"); if (!el) return; el.textContent = message; el.className = `admin-alert ${isError ? "admin-alert-error" : "admin-alert-success"}`; el.hidden = false; }
 
 function startFactures() {
-  if (!auth.currentUser) return;
-  const section = document.querySelector("#invoices-section");
-  if (!section || startFactures.initialized) {
-    if (section) void loadFactures();
+
+  const documentSection = document.querySelector("#document-section");
+  const facturesSection = document.querySelector("#factures-section");
+  const encaissementsSection = document.querySelector("#encaissements-section");
+
+  if (!documentSection || !facturesSection || !encaissementsSection) return;
+
+  if (startFactures.initialized) {
+    void loadFactures();
     return;
   }
 
   startFactures.initialized = true;
 
-  section.innerHTML = `
+  documentSection.innerHTML = `
     <div class="admin-section-heading">
       <div>
-        <p class="admin-eyebrow">COMPTABILITÉ · FACTURATION</p>
-        <h2>Facturation</h2>
-        <p class="muted">Devis, factures et paiements : de la proposition au règlement.</p>
+        <p class="admin-eyebrow">Document</p>
+        <h2>Document</h2>
+        <p class="muted">Créer et gérer vos factures.</p>
+      </div>
+      <button id="facture-new" type="button" class="btn btn-primary">＋ Nouvelle facture</button>
+    </div>
+
+    <div id="factures-status" class="admin-alert" hidden aria-live="polite"></div>
+
+    <section class="admin-section">
+      <div class="admin-section-heading compact">
+        <div>
+          <p class="admin-eyebrow">Document</p>
+          <h3 id="facture-editor-title">Nouvelle facture</h3>
+        </div>
+        <span id="facture-number" class="muted">Brouillon</span>
+      </div>
+
+      <div class="admin-form-grid">
+        <label>Devis source<select id="facture-devis"><option value="">Sélectionner un devis…</option></select></label>
+        <label>Statut<select id="facture-statut">
+          <option value="impayee">Impayée</option>
+          <option value="payee">Payée</option>
+          <option value="annulee">Annulée</option>
+          <option value="avoir">Avoir</option>
+        </select></label>
+        <label>Client<input id="facture-client" type="text"></label>
+        <label>Email<input id="facture-email" type="email"></label>
+        <label>Téléphone<input id="facture-telephone" type="tel"></label>
+        <label>Date d’échéance<input id="facture-echeance" type="date"></label>
+      </div>
+
+      <div class="admin-section-heading compact" style="margin-top:1rem;">
+        <h4>Prestations</h4>
+        <button id="facture-add-line" type="button" class="btn btn-secondary">＋ Ajouter</button>
+      </div>
+
+      <div id="facture-lines"></div>
+
+      <div class="admin-form-grid">
+        <label>Remise (€)<input id="facture-remise" type="number" min="0" step="0.01" value="0"></label>
+      </div>
+
+      <label class="lcc-facture-full-label">Conditions<textarea id="facture-conditions" rows="5" placeholder="Conditions de règlement…"></textarea></label>
+
+      <div class="lcc-facture-total">
+        <span>Total</span>
+        <strong id="facture-total">0,00 €</strong>
+      </div>
+
+      <div class="admin-form-actions">
+        <button id="facture-save" type="button" class="btn btn-primary">Enregistrer</button>
+        <button id="facture-pdf" type="button" class="btn btn-secondary">Télécharger / Imprimer</button>
+        <button id="facture-send" type="button" class="btn btn-secondary">✉ Envoyer la facture</button>
+        <button id="facture-payment-link" type="button" class="btn btn-primary">💳 Créer le lien Stripe</button>
+        <button id="facture-payment-email" type="button" class="btn btn-secondary">✉ Envoyer le lien Stripe</button>
+        <button id="facture-delete" type="button" class="btn btn-secondary">🗑 Supprimer</button>
+      </div>
+    </section>
+  `;
+
+  facturesSection.innerHTML = `
+    <div class="admin-section-heading">
+      <div>
+        <p class="admin-eyebrow">Factures</p>
+        <h2>Factures</h2>
+        <p class="muted">Toutes les factures enregistrées.</p>
       </div>
       <div class="admin-orders-header-actions">
         <span class="admin-orders-total"><strong id="factures-total">0</strong> facture(s)</span>
         <button id="factures-refresh" type="button" class="btn btn-secondary">↻ Actualiser</button>
-        <button id="facture-new" type="button" class="btn btn-primary">＋ Nouvelle facture</button>
       </div>
     </div>
 
-    <div class="admin-order-filters" role="toolbar" aria-label="Filtres financiers">
+    <div class="admin-order-filters" role="toolbar" aria-label="Filtres des factures">
       <button type="button" class="admin-filter-btn active" data-facture-filter="all">Factures</button>
       <button type="button" class="admin-filter-btn" data-facture-filter="payee">Payées</button>
       <button type="button" class="admin-filter-btn" data-facture-filter="impayee">Impayées</button>
@@ -837,105 +905,28 @@ function startFactures() {
       <button type="button" class="admin-filter-btn" data-facture-filter="history">Historique</button>
     </div>
 
-    <div id="factures-status" class="admin-alert" hidden aria-live="polite"></div>
+    <div id="factures-list" class="lcc-factures-list"></div>
+  `;
 
-    <div class="lcc-factures-grid">
-      <section class="admin-section">
-        <div class="admin-section-heading compact">
-          <div>
-            <p class="admin-eyebrow">DOCUMENT</p>
-            <h3 id="facture-editor-title">Nouvelle facture</h3>
-          </div>
-          <span id="facture-number" class="muted">Brouillon</span>
-        </div>
-
-        <div class="admin-form-grid">
-          <label>Devis source<select id="facture-devis"><option value="">Sélectionner un devis…</option></select></label>
-          <label>Statut<select id="facture-statut">
-            <option value="impayee">Impayée</option>
-            <option value="payee">Payée</option>
-            <option value="annulee">Annulée</option>
-            <option value="avoir">Avoir</option>
-          </select></label>
-          <label>Client<input id="facture-client" type="text"></label>
-          <label>Email<input id="facture-email" type="email"></label>
-          <label>Téléphone<input id="facture-telephone" type="tel"></label>
-          <label>Date d’échéance<input id="facture-echeance" type="date"></label>
-        </div>
-
-        <div class="admin-section-heading compact" style="margin-top:1rem;">
-          <h4>Prestations</h4>
-          <button id="facture-add-line" type="button" class="btn btn-secondary">＋ Ajouter</button>
-        </div>
-
-        <div id="facture-lines"></div>
-
-        <div class="admin-form-grid">
-          <label>Remise (€)<input id="facture-remise" type="number" min="0" step="0.01" value="0"></label>
-        </div>
-        <label class="lcc-facture-full-label">Conditions<textarea id="facture-conditions" rows="5" placeholder="Conditions de règlement…"></textarea></label>
-
-        <div class="lcc-facture-total">
-          <span>Total</span>
-          <strong id="facture-total">0,00 €</strong>
-        </div>
-
-        <div class="admin-form-actions">
-          <button id="facture-save" type="button" class="btn btn-primary">Enregistrer</button>
-          <button id="facture-pdf" type="button" class="btn btn-secondary">Télécharger / Imprimer</button>
-          <button id="facture-send" type="button" class="btn btn-secondary">✉ Envoyer la facture</button>
-          <button id="facture-payment-link" type="button" class="btn btn-primary">💳 Créer le lien Stripe</button>
-          <button id="facture-payment-email" type="button" class="btn btn-secondary">✉ Envoyer le lien Stripe</button>
-          <button id="facture-delete" type="button" class="btn btn-secondary">🗑 Supprimer</button>
-        </div>
-      </section>
-
-      <aside class="admin-section">
-        <div class="admin-section-heading compact">
-          <h3>Factures</h3>
-        </div>
-        <div id="factures-list" class="lcc-factures-list"></div>
-      </aside>
+  encaissementsSection.innerHTML = `
+    <div class="admin-section-heading">
+      <div>
+        <p class="admin-eyebrow">Encaissements</p>
+        <h2>Encaissements</h2>
+        <p class="muted">Chaque événement Stripe reste relié à sa facture.</p>
+      </div>
+      <div class="admin-orders-header-actions">
+        <span class="admin-orders-total"><strong id="paiements-total">0</strong> paiement(s)</span>
+        <button id="paiements-refresh" type="button" class="btn btn-secondary">↻ Actualiser</button>
+      </div>
     </div>
 
-    <section class="admin-section" style="margin-top:1rem;">
-      <div class="admin-section-heading compact">
-        <div>
-          <p class="admin-eyebrow">ENCAISSEMENTS</p>
-          <h3>Paiements</h3>
-          <p class="muted">Chaque événement Stripe reste relié à sa facture.</p>
-        </div>
-        <span class="admin-orders-total"><strong id="paiements-total">0</strong> paiement(s)</span>
-      </div>
-
-      <div id="paiements-list" class="lcc-factures-list"></div>
-      <div id="paiement-detail" class="admin-section" hidden style="margin-top:1rem;"></div>
-    </section>
-
-    <style>
-      .lcc-factures-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,.75fr);gap:1rem}
-      .lcc-factures-list{display:grid;gap:.6rem}
-      .lcc-facture-item{display:grid;gap:.25rem;width:100%;text-align:left;padding:.85rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}
-      .lcc-facture-item:hover{border-color:var(--color-sage-dark)}
-      .lcc-facture-badge{display:inline-flex;width:max-content;border-radius:999px;padding:.25rem .55rem;background:var(--color-cream);font-size:.68rem;font-weight:800}
-      .lcc-facture-badge-payee{background:#dfead9}
-      .lcc-facture-badge-avoir{background:#eee5f5}
-      .lcc-facture-badge-annulee{background:#f3d9d5;color:#7e302a}
-      .lcc-facture-line{display:grid;grid-template-columns:minmax(0,1fr) 90px 120px 120px auto;gap:.5rem;align-items:center;margin-bottom:.55rem}
-      .lcc-facture-line input{width:100%;box-sizing:border-box}
-      .lcc-facture-full-label{display:block;margin-top:1rem}.lcc-facture-full-label textarea{width:100%;box-sizing:border-box}..lcc-facture-total{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:1rem;background:var(--color-cream);border-radius:var(--radius-sm)}
-      .lcc-facture-total strong{font-family:var(--font-display);font-size:1.8rem;color:var(--color-sage-dark)}
-      .lcc-payment-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem;align-items:center;width:100%;text-align:left;padding:.9rem;border:1px solid var(--color-border);border-radius:12px;background:var(--color-white);cursor:pointer}
-      .lcc-payment-row:hover{border-color:var(--color-sage-dark)}
-      .lcc-payment-main{display:grid;gap:.2rem}
-      .lcc-payment-badge{display:inline-flex;width:max-content;border-radius:999px;padding:.25rem .55rem;background:var(--color-cream);font-size:.68rem;font-weight:800}
-      .lcc-payment-badge-paid{background:#dfead9}
-      @media(max-width:900px){.lcc-factures-grid{grid-template-columns:1fr}.lcc-facture-line{grid-template-columns:1fr 90px 110px auto}}
-      @media(max-width:600px){.lcc-facture-line{grid-template-columns:1fr 1fr}.lcc-facture-line:first-child{grid-column:1/-1}.lcc-payment-row{grid-template-columns:1fr}}
-    </style>
+    <div id="paiements-list" class="lcc-factures-list"></div>
+    <div id="paiement-detail" class="admin-section" hidden style="margin-top:1rem;"></div>
   `;
 
   document.querySelector("#factures-refresh")?.addEventListener("click", () => void loadFactures());
+  document.querySelector("#paiements-refresh")?.addEventListener("click", () => void loadFactures());
   document.querySelector("#facture-new")?.addEventListener("click", resetFactureForm);
   document.querySelector("#facture-add-line")?.addEventListener("click", () => addFactureLine());
   document.querySelector("#facture-remise")?.addEventListener("input", updateFactureTotal);
@@ -947,10 +938,10 @@ function startFactures() {
   document.querySelector("#facture-delete")?.addEventListener("click", () => void deleteFacture());
   document.querySelector("#facture-devis")?.addEventListener("change", applyFactureDevis);
 
-  section.querySelectorAll("[data-facture-filter]").forEach((button) => {
+  facturesSection.querySelectorAll("[data-facture-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       startFactures.filter = button.dataset.factureFilter || "all";
-      section.querySelectorAll("[data-facture-filter]").forEach((item) => item.classList.toggle("active", item === button));
+      facturesSection.querySelectorAll("[data-facture-filter]").forEach((item) => item.classList.toggle("active", item === button));
       void loadFactures();
     });
   });
@@ -1163,7 +1154,7 @@ function renderFactures(docs) {
       <strong>${escapeHtml(facture.id)}</strong>
       <span>${escapeHtml(facture.client?.nom || "Client sans nom")}</span>
       <span class="lcc-facture-badge ${badge}">${escapeHtml(labels[facture.statut] || "Impayée")}</span>
-      <small>${escapeHtml(formatDate(facture.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(facture.total)))}</small>
+      <small>${escapeHtml(formatDate(facture.createdAt))} · ${escapeHtml(new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(factureMoney(Number(facture.total) > 0 ? facture.total : (Number(facture.totalCentimes || 0) / 100))))}</small>
     `;
 
     item.addEventListener("click", () => openFacture(facture));
@@ -1183,7 +1174,7 @@ function renderFacturePayments(payments, invoices) {
   }
 
   payments.forEach((payment) => {
-    const facture = invoices.find((item) => item.id === payment.factureId);
+    const facture = invoices.find((item) => item.id === payment.factureId || (payment.commandeId && item.commandeId === payment.commandeId) || (payment.stripeInvoiceId && item.stripeInvoiceId === payment.stripeInvoiceId));
     const row = document.createElement("button");
     row.type = "button";
     row.className = "lcc-payment-row";
@@ -1195,7 +1186,7 @@ function renderFacturePayments(payments, invoices) {
     row.innerHTML = `
       <div class="lcc-payment-main">
         <strong>${escapeHtml(payment.reference || payment.id || "Paiement")}</strong>
-        <small>${escapeHtml(payment.client?.nom || payment.clientNom || "Client non renseigné")} · ${escapeHtml(payment.mode || "Stripe")} · ${escapeHtml(payment.date || formatDate(payment.createdAt))}</small>
+        <small>${escapeHtml(payment.client?.nom || payment.clientNom || "Client non renseigné")} · ${escapeHtml(payment.mode || "Stripe")} · ${escapeHtml(payment.date || formatDate(payment.createdAt || payment.paidAt))}</small>
         <span class="lcc-payment-badge ${statusClass}">${escapeHtml(payment.statut || "en_attente")}</span>
         <small>${facture ? `Facture liée : ${escapeHtml(facture.id)}` : payment.factureId ? `Facture liée : ${escapeHtml(payment.factureId)}` : "Aucune facture liée"}</small>
       </div>
@@ -1217,7 +1208,7 @@ function openPaiementDetail(payment, facture) {
   detail.innerHTML = `
     <div class="admin-section-heading compact">
       <div>
-        <p class="admin-eyebrow">DÉTAIL DU PAIEMENT</p>
+        <p class="admin-eyebrow">Détail du paiement</p>
         <h3>${escapeHtml(payment.reference || payment.id || "Paiement")}</h3>
       </div>
       <button type="button" class="btn btn-secondary" id="paiement-detail-close">Fermer</button>

@@ -84,23 +84,6 @@ function getCompositionFromForm() {
     .filter((item) => item.quantite > 0);
 }
 
-function setComposition(composition = []) {
-  const byCategory = new Map(
-    composition.map((item) => [String(item.categorie || ""), Number(item.quantite || 0)])
-  );
-
-  compositionRows.forEach((row) => {
-    const category = row.dataset.compositionCategory;
-    const checkbox = row.querySelector(".formule-composition-enabled");
-    const quantity = row.querySelector(".formule-composition-quantity");
-    const value = byCategory.get(category) || 0;
-
-    checkbox.checked = value > 0;
-    quantity.value = String(value);
-    quantity.disabled = value <= 0;
-  });
-}
-
 function resetForm() {
   form.reset();
   idInput.value = "";

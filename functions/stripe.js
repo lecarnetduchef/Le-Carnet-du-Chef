@@ -1,7 +1,7 @@
 const Stripe = require("stripe");
 const { getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { validateRequestId } = require("./idempotency");
-const { finalizePaidOrder, OrderCreationError } = require("./order");
+const { finalizePaidOrder, OrderCreationError, attachInvoiceToOrder } = require("./order");
 
 const db = getFirestore();
 const SITE_URL = process.env.SITE_URL || "https://lecarnetduchef.fr";
@@ -67,6 +67,17 @@ async function createCheckoutSession({ requestId, paymentAttempt }) {
     client_reference_id: validRequestId,
     success_url: `${SITE_URL}/pages/confirmation.html?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${SITE_URL}/pages/commande.html?paiement=annule`,
+    invoice_creation: {
+      enabled: true,
+      invoice_data: {
+        description: `Commande ${String(paymentAttempt.numeroCommande || paymentAttempt.commandeId)}`,
+        metadata: {
+          requestId: validRequestId,
+          commandeId: String(paymentAttempt.commandeId),
+          type: "commande"
+        }
+      }
+    },
     metadata: {
       requestId: validRequestId,
       commandeId: String(paymentAttempt.commandeId),
@@ -229,6 +240,163 @@ async function upsertInvoiceFromStripe({ session = null, invoice: providedInvoic
   return { id, invoiceId, commandeId: null, devisId: metadata.devisId, paiementId: metadata.paiementId || base.paiementId || null, clientEmail, totalCentimes, devise, pdfUrl, hostedUrl, status: invoice?.status === "paid" ? "payee" : status };
 }
 
+async function upsertCommandeInvoiceFromStripe({ session = null, invoice: providedInvoice = null, commandeId, paiementId = null }) {
+  const idCommande = requiredText(String(commandeId || ""), "Commande");
+  const invoiceId = providedInvoice?.id || (session?.invoice ? String(session.invoice) : null);
+  if (!invoiceId) return null;
+
+  const invoice = providedInvoice || await retrieveInvoice(invoiceId);
+  if (!invoice) return null;
+
+  const metadata = invoice.metadata || session?.metadata || {};
+  if (metadata.type !== "commande") return null;
+
+  const id = `STRIPE-${invoiceId}`;
+  const ref = db.collection("factures").doc(id);
+  const existing = await ref.get();
+  const base = existing.exists ? existing.data() || {} : {};
+
+  const commandeSnap = await db.collection("commandes").doc(idCommande).get();
+  const commande = commandeSnap.exists ? commandeSnap.data() || {} : {};
+  const client = commande.client || {};
+
+  const clientEmail =
+    invoice.customer_email ||
+    session?.customer_details?.email ||
+    session?.customer_email ||
+    client.email ||
+    base.clientEmail ||
+    null;
+
+  const totalCentimes =
+    invoice.total ??
+    session?.amount_total ??
+    base.totalCentimes ??
+    commande.montants?.totalCentimes ??
+    0;
+
+  const devise = String(
+    invoice.currency ||
+    session?.currency ||
+    base.devise ||
+    "eur"
+  ).toUpperCase();
+
+  const pdfUrl = invoice.invoice_pdf || base.pdfUrl || null;
+  const hostedUrl = invoice.hosted_invoice_url || base.hostedUrl || null;
+  const status = invoice.status === "paid" ? "payee" : "en_attente";
+
+  await ref.set({
+    numero: invoice.number || base.numero || id,
+    provider: "stripe",
+    stripeInvoiceId: invoiceId,
+    statut: status,
+    type: "commande",
+    commandeId: idCommande,
+    devisId: null,
+    paiementId: paiementId || metadata.paiementId || base.paiementId || null,
+    requestId: metadata.requestId || session?.metadata?.requestId || base.requestId || null,
+    client,
+    clientEmail,
+    totalCentimes,
+    devise,
+    pdfUrl,
+    hostedUrl,
+    paidAt: invoice.status_transitions?.paid_at
+      ? Timestamp.fromMillis(Number(invoice.status_transitions.paid_at) * 1000)
+      : base.paidAt || null,
+    createdAt: base.createdAt || Timestamp.now(),
+    updatedAt: Timestamp.now()
+  }, { merge: true });
+
+  return {
+    id,
+    invoiceId,
+    commandeId: idCommande,
+    paiementId: paiementId || metadata.paiementId || base.paiementId || null,
+    clientEmail,
+    totalCentimes,
+    devise,
+    pdfUrl,
+    hostedUrl,
+    status
+  };
+}
+
+async function sendCommandeInvoiceEmail({ commandeId, invoice }) {
+  if (!commandeId || !invoice?.invoiceId || !invoice.pdfUrl) {
+    return { sent: false, skipped: true, reason: "INVOICE_NOT_READY" };
+  }
+
+  const email = String(invoice.clientEmail || "").trim();
+  if (!email) {
+    return { sent: false, skipped: true, reason: "CLIENT_EMAIL_MISSING" };
+  }
+
+  const ref = db.collection("factures").doc(invoice.id);
+  const old = await ref.get();
+
+  if (old.exists && old.data()?.email?.status === "sent") {
+    return {
+      sent: true,
+      alreadySent: true,
+      emailId: old.data()?.email?.messageId || null
+    };
+  }
+
+  const { apiKey, from } = emailConfig();
+
+  const total = new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: invoice.devise || "EUR"
+  }).format(Number(invoice.totalCentimes || 0) / 100);
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `commande-invoice-email-${invoice.invoiceId}`
+    },
+    body: JSON.stringify({
+      from,
+      to: [email],
+      subject: "Paiement confirmé — Le Carnet du Chef",
+      html: `<p>Bonjour${invoice.client?.nom ? ` ${String(invoice.client.nom)}` : ""},</p>
+<p>Votre paiement de la commande <strong>${String(commandeId)}</strong> a bien été confirmé.</p>
+<p>Montant payé : <strong>${total}</strong>.</p>
+<p>Votre facture est jointe à cet e-mail.</p>
+${invoice.hostedUrl ? `<p><a href="${invoice.hostedUrl}">Consulter la facture en ligne</a></p>` : ""}
+<p>Merci pour votre confiance,<br>Le Carnet du Chef</p>`,
+      attachments: [{
+        path: invoice.pdfUrl,
+        filename: `facture-${commandeId}.pdf`
+      }]
+    })
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(`Resend email error ${response.status}: ${JSON.stringify(body)}`);
+  }
+
+  await ref.set({
+    email: {
+      status: "sent",
+      messageId: body?.id || null,
+      sentAt: Timestamp.now(),
+      recipient: email
+    },
+    updatedAt: Timestamp.now()
+  }, { merge: true });
+
+  return {
+    sent: true,
+    emailId: body?.id || null
+  };
+}
+
 async function sendInvoiceEmail({ devisId, invoice }) {
   if (!devisId || !invoice?.invoiceId || !invoice.pdfUrl) return { sent: false, skipped: true, reason: "INVOICE_NOT_READY" };
   const snap = await db.collection("devis").doc(String(devisId)).get();
@@ -289,7 +457,41 @@ async function handleCheckoutCompleted(session) {
     throw error;
   }
   const paiementId = await upsertStripePayment({ session, transactionId, status: "paye" });
-  return { handled: true, type: "commande", paiementId, ...result };
+
+  let facture = null;
+
+  if (session.invoice) {
+    facture = await upsertCommandeInvoiceFromStripe({
+      session,
+      commandeId: result.commandeId,
+      paiementId
+    });
+
+    if (facture) {
+      await attachInvoiceToOrder({
+        commandeId: result.commandeId,
+        invoiceStripeId: facture.invoiceId,
+        invoicePdfUrl: facture.pdfUrl,
+        invoiceHostedUrl: facture.hostedUrl,
+        invoiceStatus: facture.status
+      });
+
+      if (facture.pdfUrl) {
+        await sendCommandeInvoiceEmail({
+          commandeId: result.commandeId,
+          invoice: facture
+        });
+      }
+    }
+  }
+
+  return {
+    handled: true,
+    type: "commande",
+    paiementId,
+    factureId: facture?.id || null,
+    ...result
+  };
 }
 
 async function refundPaidCheckout({ session, requestId, reason, paiementId = null }) {
@@ -320,13 +522,93 @@ async function handleCheckoutExpired(session) {
 
 async function handleInvoicePaid(invoice) {
   const metadata = invoice.metadata || {};
-  if (metadata.type !== "devis" || !metadata.devisId) return { handled: false, ignored: true, reason: "NOT_QUOTE_INVOICE" };
-  const facture = await upsertInvoiceFromStripe({ invoice, status: "payee" });
+
+  if (metadata.type === "commande" && metadata.commandeId) {
+    const commandeId = String(metadata.commandeId);
+    const commandeSnap = await db.collection("commandes").doc(commandeId).get();
+
+    if (!commandeSnap.exists) {
+      return {
+        handled: false,
+        ignored: true,
+        reason: "ORDER_NOT_READY",
+        commandeId
+      };
+    }
+
+    const facture = await upsertCommandeInvoiceFromStripe({
+      invoice,
+      commandeId
+    });
+
+    if (facture) {
+      await attachInvoiceToOrder({
+        commandeId,
+        invoiceStripeId: facture.invoiceId,
+        invoicePdfUrl: facture.pdfUrl,
+        invoiceHostedUrl: facture.hostedUrl,
+        invoiceStatus: facture.status
+      });
+
+      if (facture.pdfUrl) {
+        await sendCommandeInvoiceEmail({
+          commandeId,
+          invoice: facture
+        });
+      }
+    }
+
+    return {
+      handled: true,
+      type: "commande",
+      factureId: facture?.id || null
+    };
+  }
+
+  if (metadata.type !== "devis" || !metadata.devisId) {
+    return {
+      handled: false,
+      ignored: true,
+      reason: "NOT_QUOTE_INVOICE"
+    };
+  }
+
+  const facture = await upsertInvoiceFromStripe({
+    invoice,
+    status: "payee"
+  });
+
   const paiementId = metadata.paiementId || null;
-  if (paiementId) await db.collection("paiements").doc(paiementId).set({ statut: "paye", stripeInvoiceId: invoice.id, invoiceStripeId: invoice.id, paidAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true });
-  await db.collection("devis").doc(String(metadata.devisId)).set({ statut: "paye", paiementId, stripeInvoiceId: invoice.id, updatedAt: Timestamp.now() }, { merge: true });
-  if (facture?.pdfUrl) await sendInvoiceEmail({ devisId: metadata.devisId, invoice: facture });
-  return { handled: true, type: "devis", factureId: facture?.id || null };
+
+  if (paiementId) {
+    await db.collection("paiements").doc(paiementId).set({
+      statut: "paye",
+      stripeInvoiceId: invoice.id,
+      invoiceStripeId: invoice.id,
+      paidAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
+    }, { merge: true });
+  }
+
+  await db.collection("devis").doc(String(metadata.devisId)).set({
+    statut: "paye",
+    paiementId,
+    stripeInvoiceId: invoice.id,
+    updatedAt: Timestamp.now()
+  }, { merge: true });
+
+  if (facture?.pdfUrl) {
+    await sendInvoiceEmail({
+      devisId: metadata.devisId,
+      invoice: facture
+    });
+  }
+
+  return {
+    handled: true,
+    type: "devis",
+    factureId: facture?.id || null
+  };
 }
 
 async function getCheckoutStatus(sessionId) {

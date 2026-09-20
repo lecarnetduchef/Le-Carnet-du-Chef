@@ -32,7 +32,12 @@ function normalizeComposition(composition) {
   if (!Array.isArray(composition)) return [];
   return composition
     .filter((item) => CATEGORY_LABELS[item?.categorie] && Number(item?.quantite) > 0)
-    .map((item) => ({ categorie: item.categorie, quantite: Number(item.quantite) }));
+    .map((item) => ({
+      categorie: item.categorie,
+      quantite: Number(item.quantite),
+      produitId: item.produitId || "",
+      produitNom: item.produitNom || ""
+    }));
 }
 
 function setupImageModal() {
@@ -140,6 +145,7 @@ function renderProductOptions(select, category, previewContainer, forcedProductI
   const products = productsByCategory.get(category) || [];
   select.innerHTML = "";
   previewContainer.innerHTML = "";
+
   if (!products.length) {
     const option = document.createElement("option");
     option.value = "";
@@ -149,7 +155,60 @@ function renderProductOptions(select, category, previewContainer, forcedProductI
     return;
   }
 
+  if (forcedProductId) {
+    const forcedProduct = products.find((product) => product.id === forcedProductId);
+
+    if (!forcedProduct) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Produit imposé indisponible";
+      select.appendChild(option);
+      select.disabled = true;
+      return;
+    }
+
+    const option = document.createElement("option");
+    option.value = forcedProduct.id;
+    option.textContent = forcedProduct.nom;
+    select.appendChild(option);
+
+    select.value = forcedProduct.id;
+    select.disabled = true;
+
+    const image = createImageElement(
+      forcedProduct.photo,
+      "product-photo",
+      forcedProduct.nom
+    );
+
+    if (image) {
+      previewContainer.appendChild(image);
+    } else {
+      const placeholderImage = document.createElement("span");
+      placeholderImage.className = "product-photo-placeholder";
+      placeholderImage.textContent = "Aucune image";
+      previewContainer.appendChild(placeholderImage);
+    }
+
+    if (forcedProduct.description?.trim()) {
+      const details = document.createElement("details");
+      details.className = "product-description-details";
+
+      const summary = document.createElement("summary");
+      summary.textContent = "En quelques mots";
+
+      const description = document.createElement("p");
+      description.textContent = forcedProduct.description.trim();
+
+      details.append(summary, description);
+      previewContainer.parentElement?.appendChild(details);
+    }
+
+    return;
+  }
+
   select.disabled = false;
+
   const placeholder = document.createElement("option");
   placeholder.value = "";
   placeholder.textContent = `Choisir un ${category.toLowerCase()}`;
@@ -166,22 +225,17 @@ function renderProductOptions(select, category, previewContainer, forcedProductI
     select.appendChild(option);
   });
 
-  if (forcedProductId) {
-    const forcedOption = products.find((product) => product.id === forcedProductId);
-    if (!forcedOption) {
-      select.disabled = true;
-      return;
-    }
-    select.value = forcedProductId;
-  }
-
   select.addEventListener("change", () => {
     previewContainer.innerHTML = "";
-    previewContainer.parentElement?.querySelectorAll(".product-description-details").forEach((el) => el.remove());
+    previewContainer.parentElement
+      ?.querySelectorAll(".product-description-details")
+      .forEach((el) => el.remove());
+
     const product = products.find((item) => item.id === select.value);
     if (!product) return;
 
     const image = createImageElement(product.photo, "product-photo", product.nom);
+
     if (image) {
       previewContainer.appendChild(image);
     } else {
@@ -202,7 +256,7 @@ function renderProductOptions(select, category, previewContainer, forcedProductI
       description.textContent = product.description.trim();
 
       details.append(summary, description);
-      previewContainer.parentElement.appendChild(details);
+      previewContainer.parentElement?.appendChild(details);
     }
   });
 }
@@ -360,15 +414,35 @@ function createFormulaCard(formule) {
     select.dataset.category = categorie;
     select.dataset.requiredQuantity = String(quantite);
     preview.className = "product-photo-preview";
-    const imposedProductId = formule.bloquee === true
-      ? composition.find((item) => item.categorie === categorie)?.produitId || ""
-      : "";
+    const rawCompositionItem = Array.isArray(formule.composition)
+      ? formule.composition.find((item) => item?.categorie === categorie)
+      : null;
+
+    const imposedProductId = String(rawCompositionItem?.produitId || "");
 
     renderProductOptions(select, categorie, preview, imposedProductId);
 
-    if (imposedProductId && select.value === imposedProductId) {
+    if (imposedProductId) {
+      const imposedProduct = (productsByCategory.get(categorie) || []).find(
+        (product) => product.id === imposedProductId
+      );
+
+      if (imposedProduct) {
+        select.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = imposedProduct.id;
+        option.textContent = imposedProduct.nom;
+        option.selected = true;
+        select.appendChild(option);
+        select.value = imposedProduct.id;
+      }
+
       select.disabled = true;
-      select.dispatchEvent(new Event("change"));
+      select.setAttribute("aria-disabled", "true");
+
+      if (imposedProductId) {
+        select.dispatchEvent(new Event("change"));
+      }
     }
 
     row.append(label, select, preview);
