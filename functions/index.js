@@ -354,7 +354,7 @@ const stripeWebhook = onRequest({ region: "europe-west9", cors: false, secrets: 
   catch (error) { console.error("Erreur webhook Stripe :", error); return res.status(400).json({ ok: false, code: "STRIPE_WEBHOOK_ERROR", message: "Webhook Stripe invalide ou impossible à traiter." }); }
 });
 
-function projectCatalogueItem(item, { product = false } = {}) { const projected = { id: item?.id, nom: item?.nom, prix: item?.prix, ordre: item?.ordre, actif: item?.actif, stockDisponible: item?.stockDisponible, description: item?.description, photo: item?.photo, composition: item?.composition }; if (product) projected.categorie = item?.categorie; return projected; }
+function projectCatalogueItem(item, { product = false } = {}) { const projected = { id: item?.id, nom: item?.nom, prix: item?.prix, ordre: item?.ordre, actif: item?.actif, stockDisponible: item?.stockDisponible, description: item?.description, photo: item?.photo, composition: item?.composition, bloquee: item?.bloquee === true }; if (product) projected.categorie = item?.categorie; return projected; }
 const getCatalogue = onRequest({ region: "europe-west9", cors: true }, async (req, res) => {
   if (req.method !== "GET") { res.set("Allow", "GET"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
   try { const [formules, produits] = await Promise.all([getFormules(), getProduits()]); return res.status(200).json({ formules: formules.map((f) => projectCatalogueItem(f)), produits: produits.map((p) => projectCatalogueItem(p, { product: true })) }); }

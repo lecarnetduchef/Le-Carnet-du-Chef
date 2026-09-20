@@ -22,12 +22,14 @@ const descriptionInput = document.querySelector("#formule-description");
 const photoInput = document.querySelector("#formule-photo");
 const orderInput = document.querySelector("#formule-order");
 const activeInput = document.querySelector("#formule-active");
+const blockedInput = document.querySelector("#formule-bloquee");
 const saveButton = document.querySelector("#formule-save-btn");
 const cancelButton = document.querySelector("#formule-cancel-btn");
-const compositionRows = Array.from(document.querySelectorAll("[data-composition-category]"));
+let compositionRows = [];
 
 const CATEGORIES = ["Plat", "Boisson", "Dessert"];
 let currentFormules = [];
+let currentProducts = [];
 let currentUser = null;
 
 function setStatus(message = "", isError = false) {
@@ -54,15 +56,31 @@ function toNonNegativeInteger(value, label) {
 }
 
 function getCompositionFromForm() {
+  const blocked = blockedInput?.checked === true;
+
   return compositionRows
     .filter((row) => row.querySelector(".formule-composition-enabled")?.checked)
-    .map((row) => ({
-      categorie: row.dataset.compositionCategory,
-      quantite: toNonNegativeInteger(
-        row.querySelector(".formule-composition-quantity")?.value,
-        `La quantité ${row.dataset.compositionCategory}`
-      )
-    }))
+    .map((row) => {
+      const item = {
+        categorie: row.dataset.compositionCategory,
+        quantite: toNonNegativeInteger(
+          row.querySelector(".formule-composition-quantity")?.value,
+          `La quantité ${row.dataset.compositionCategory}`
+        )
+      };
+
+      if (blocked) {
+        const select = row.querySelector(".formule-blocked-product");
+        const product = currentProducts.find((entry) => entry.id === select?.value);
+        if (!product) {
+          throw new Error(`Le produit imposé pour ${item.categorie} est obligatoire.`);
+        }
+        item.produitId = product.id;
+        item.produitNom = product.nom || "";
+      }
+
+      return item;
+    })
     .filter((item) => item.quantite > 0);
 }
 
@@ -88,6 +106,7 @@ function resetForm() {
   idInput.value = "";
   orderInput.value = "0";
   activeInput.checked = true;
+  if (blockedInput) blockedInput.checked = false;
   setComposition([]);
   cancelButton.hidden = true;
   saveButton.textContent = "Créer la formule";
@@ -101,6 +120,7 @@ function fillForm(formule) {
   photoInput.value = formule.photo || "";
   orderInput.value = Number.isFinite(formule.ordre) ? formule.ordre : 0;
   activeInput.checked = formule.actif !== false;
+  if (blockedInput) blockedInput.checked = formule.bloquee === true;
   setComposition(Array.isArray(formule.composition) ? formule.composition : []);
   cancelButton.hidden = false;
   saveButton.textContent = "Enregistrer les modifications";
@@ -175,6 +195,22 @@ function renderFormules() {
   currentFormules.forEach((formule) => list.appendChild(formuleRow(formule)));
 }
 
+async function loadProducts() {
+  if (!currentUser || !FIREBASE_READY) return;
+
+  const snapshot = await getDocs(collection(db, "produits"));
+  currentProducts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+
+  compositionRows.forEach((row) => {
+    populateBlockedProductSelect(
+      row.querySelector(".formule-blocked-product"),
+      row.dataset.compositionCategory
+    );
+  });
+
+  refreshBlockedProductFields();
+}
+
 async function loadFormules() {
   if (!currentUser || !FIREBASE_READY) return;
 
@@ -223,6 +259,7 @@ async function saveFormule(event) {
       photo: photoInput.value.trim(),
       ordre,
       actif: activeInput.checked,
+      bloquee: blockedInput?.checked === true,
       composition,
       updatedAt: serverTimestamp()
     };
@@ -282,10 +319,76 @@ async function deleteFormule(formule) {
   }
 }
 
+function populateBlockedProductSelect(select, category, selectedId = "") {
+  if (!select) return;
+
+  const products = currentProducts
+    .filter((product) => product?.categorie === category)
+    .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+
+  select.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = `Choisir un ${category.toLowerCase()}`;
+  select.appendChild(placeholder);
+
+  products.forEach((product) => {
+    const option = document.createElement("option");
+    option.value = product.id || "";
+    option.textContent = product.nom || "Produit sans nom";
+    select.appendChild(option);
+  });
+
+  if (selectedId) select.value = selectedId;
+}
+
+function refreshBlockedProductFields() {
+  const blocked = blockedInput?.checked === true;
+
+  compositionRows.forEach((row) => {
+    const field = row.querySelector(".formule-blocked-product-field");
+    const select = row.querySelector(".formule-blocked-product");
+    const enabled = row.querySelector(".formule-composition-enabled")?.checked === true;
+
+    if (!field || !select) return;
+
+    field.hidden = !blocked || !enabled;
+    select.disabled = !blocked || !enabled;
+  });
+}
+
+function setComposition(composition = []) {
+  const byCategory = new Map(
+    composition.map((item) => [String(item.categorie || ""), item])
+  );
+
+  compositionRows.forEach((row) => {
+    const category = row.dataset.compositionCategory;
+    const checkbox = row.querySelector(".formule-composition-enabled");
+    const quantity = row.querySelector(".formule-composition-quantity");
+    const select = row.querySelector(".formule-blocked-product");
+    const item = byCategory.get(category);
+    const value = Number(item?.quantite || 0);
+
+    checkbox.checked = value > 0;
+    quantity.value = String(value);
+    quantity.disabled = value <= 0;
+
+    populateBlockedProductSelect(select, category, item?.produitId || "");
+  });
+
+  refreshBlockedProductFields();
+}
+
 function initCompositionControls() {
   compositionRows.forEach((row) => {
     const checkbox = row.querySelector(".formule-composition-enabled");
     const quantity = row.querySelector(".formule-composition-quantity");
+    const select = row.querySelector(".formule-blocked-product");
+
+    populateBlockedProductSelect(select, row.dataset.compositionCategory);
+
     checkbox.addEventListener("change", () => {
       if (checkbox.checked) {
         if (Number(quantity.value) < 1) quantity.value = "1";
@@ -293,28 +396,44 @@ function initCompositionControls() {
       } else {
         quantity.value = "0";
         quantity.disabled = true;
+        if (select) select.value = "";
       }
+      refreshBlockedProductFields();
     });
   });
+
+  blockedInput?.addEventListener("change", refreshBlockedProductFields);
 }
 
 function init() {
-  if (!section || !form || !FIREBASE_READY) return;
+  compositionRows = Array.from(document.querySelectorAll("[data-composition-category]"));
+
+  if (!section || !form || !list || !FIREBASE_READY) return;
 
   resetForm();
   initCompositionControls();
   form.addEventListener("submit", saveFormule);
-  cancelButton.addEventListener("click", resetForm);
+  cancelButton?.addEventListener("click", resetForm);
 
   auth.onAuthStateChanged((user) => {
     currentUser = user;
     section.hidden = !user;
-    if (user) {
-      void loadFormules();
-    } else {
+
+    if (!user) {
       currentFormules = [];
       list.innerHTML = "";
+      return;
     }
+
+    void loadProducts()
+      .then(() => loadFormules())
+      .catch((error) => {
+        console.error("Erreur de lecture des produits :", error);
+        setStatus(
+          `Impossible de charger les produits : ${error?.message || "erreur inconnue"}`,
+          true
+        );
+      });
   });
 }
 

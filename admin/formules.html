@@ -89,6 +89,7 @@
 
             <div class="admin-checkboxes">
               <label class="admin-checkbox"><input id="formule-active" type="checkbox" checked> Formule active</label>
+              <label class="admin-checkbox"><input id="formule-bloquee" type="checkbox"> Formule bloquée — choix imposés</label>
             </div>
 
             <div class="admin-section-heading compact" style="margin-top:2rem;">
@@ -100,14 +101,29 @@
               <div class="formule-composition-row" data-composition-category="Plat">
                 <label class="admin-checkbox"><input class="formule-composition-enabled" type="checkbox"> Plat</label>
                 <label>Quantité <input class="formule-composition-quantity" type="number" min="0" step="1" value="0" disabled></label>
+                <label class="formule-blocked-product-field" hidden>Produit imposé
+                  <select class="formule-blocked-product">
+                    <option value="">Choisir un plat</option>
+                  </select>
+                </label>
               </div>
               <div class="formule-composition-row" data-composition-category="Boisson">
                 <label class="admin-checkbox"><input class="formule-composition-enabled" type="checkbox"> Boisson</label>
                 <label>Quantité <input class="formule-composition-quantity" type="number" min="0" step="1" value="0" disabled></label>
+                <label class="formule-blocked-product-field" hidden>Produit imposé
+                  <select class="formule-blocked-product">
+                    <option value="">Choisir une boisson</option>
+                  </select>
+                </label>
               </div>
               <div class="formule-composition-row" data-composition-category="Dessert">
                 <label class="admin-checkbox"><input class="formule-composition-enabled" type="checkbox"> Dessert</label>
                 <label>Quantité <input class="formule-composition-quantity" type="number" min="0" step="1" value="0" disabled></label>
+                <label class="formule-blocked-product-field" hidden>Produit imposé
+                  <select class="formule-blocked-product">
+                    <option value="">Choisir un dessert</option>
+                  </select>
+                </label>
               </div>
             </div>
 

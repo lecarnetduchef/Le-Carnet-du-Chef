@@ -71,6 +71,25 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
     const required = composition(formule);
     const components = Array.isArray(line?.composants) ? line.composants : [];
     if (components.length !== required.size) fail(`Ligne ${i + 1}: composants incomplets.`, "INVALID_COMPONENTS");
+
+    const blockedComposition = new Map();
+    if (formule.bloquee === true) {
+      for (const item of Array.isArray(formule.composition) ? formule.composition : []) {
+        const category = text(item?.categorie);
+        const produitId = text(item?.produitId);
+        if (!CATEGORIES.has(category) || !produitId || blockedComposition.has(category)) {
+          fail(`Ligne ${i + 1}: composition bloquée invalide.`, "INVALID_BLOCKED_FORMULA");
+        }
+        blockedComposition.set(category, produitId);
+      }
+
+      for (const category of required.keys()) {
+        if (!blockedComposition.has(category)) {
+          fail(`Ligne ${i + 1}: composition bloquée incomplète.`, "INVALID_BLOCKED_FORMULA");
+        }
+      }
+    }
+
     const seen = new Set(), cleanComponents = [];
 
     for (const raw of components) {
@@ -83,6 +102,9 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
       const available = Number(product.stockDisponible);
       if (!Number.isInteger(available) || available <= 0) fail(`Ligne ${i + 1}: produit indisponible.`, "PRODUCT_UNAVAILABLE");
       if (String(product.categorie || "") !== category) fail(`Ligne ${i + 1}: catégorie produit incorrecte.`, "PRODUCT_CATEGORY_MISMATCH");
+      if (formule.bloquee === true && blockedComposition.get(category) !== produitId) {
+        fail(`Ligne ${i + 1}: produit non autorisé pour la formule bloquée.`, "BLOCKED_FORMULA_PRODUCT_MISMATCH");
+      }
       const perFormula = required.get(category);
       demanded.set(produitId, (demanded.get(produitId) || 0) + quantity * perFormula);
       seen.add(category);

@@ -136,7 +136,7 @@ function createImageElement(url, className, alt) {
   return img;
 }
 
-function renderProductOptions(select, category, previewContainer) {
+function renderProductOptions(select, category, previewContainer, forcedProductId = "") {
   const products = productsByCategory.get(category) || [];
   select.innerHTML = "";
   previewContainer.innerHTML = "";
@@ -165,6 +165,15 @@ function renderProductOptions(select, category, previewContainer) {
     if (!product.id) option.textContent += " — identifiant indisponible";
     select.appendChild(option);
   });
+
+  if (forcedProductId) {
+    const forcedOption = products.find((product) => product.id === forcedProductId);
+    if (!forcedOption) {
+      select.disabled = true;
+      return;
+    }
+    select.value = forcedProductId;
+  }
 
   select.addEventListener("change", () => {
     previewContainer.innerHTML = "";
@@ -351,7 +360,17 @@ function createFormulaCard(formule) {
     select.dataset.category = categorie;
     select.dataset.requiredQuantity = String(quantite);
     preview.className = "product-photo-preview";
-    renderProductOptions(select, categorie, preview);
+    const imposedProductId = formule.bloquee === true
+      ? composition.find((item) => item.categorie === categorie)?.produitId || ""
+      : "";
+
+    renderProductOptions(select, categorie, preview, imposedProductId);
+
+    if (imposedProductId && select.value === imposedProductId) {
+      select.disabled = true;
+      select.dispatchEvent(new Event("change"));
+    }
+
     row.append(label, select, preview);
     compositionEl.appendChild(row);
   });
