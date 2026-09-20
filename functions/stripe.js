@@ -424,6 +424,111 @@ async function sendInvoiceEmail({ devisId, invoice }) {
   return { sent: true, emailId: body?.id || null };
 }
 
+async function sendNewOrderNotificationEmail({ commandeId, numeroCommande }) {
+  try {
+    const orderSnap = await db.collection("commandes").doc(commandeId).get();
+    if (!orderSnap.exists) {
+      console.error("Notification nouvelle commande : commande introuvable", commandeId);
+      return;
+    }
+
+    const order = orderSnap.data() || {};
+    const client = order.client || {};
+    const montants = order.montants || {};
+    const lignes = Array.isArray(order.lignes) ? order.lignes : [];
+
+    const linesHtml = lignes.map((line) => {
+      const nom = String(line.formuleNom || line.nom || "Article");
+      const quantite = Number(line.quantite || 0);
+      return `<li>${nom} × ${quantite}</li>`;
+    }).join("");
+
+    const { apiKey, from } = emailConfig();
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: ["lecarnetduchef@gmail.com"],
+        subject: `🔔 Nouvelle commande ${String(numeroCommande || commandeId)}`,
+        html: `
+          <h2>Nouvelle commande reçue</h2>
+          <p><strong>Commande :</strong> ${String(numeroCommande || commandeId)}</p>
+          <p><strong>Client :</strong> ${String(client.prenom || "")} ${String(client.nom || "")}</p>
+          <p><strong>Email :</strong> ${String(client.email || "")}</p>
+          <p><strong>Téléphone :</strong> ${String(client.telephone || "")}</p>
+          <p><strong>Mode de réception :</strong> ${String(order.modeReception || "")}</p>
+          <p><strong>Date :</strong> ${String(order.dateCommande || "")}</p>
+          <p><strong>Créneau :</strong> ${String(order.creneau || "")}</p>
+          <p><strong>Total :</strong> ${(Number(montants.totalCentimes || 0) / 100).toFixed(2).replace(".", ",")} €</p>
+          <h3>Articles</h3>
+          <ul>${linesHtml || "<li>Aucun article</li>"}</ul>
+          <p><a href="${SITE_URL}/admin/">Ouvrir l'administration</a></p>
+        `
+      })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Resend ${response.status}: ${body}`);
+    }
+
+    console.log("Notification nouvelle commande envoyée", commandeId);
+  } catch (error) {
+    console.error("Échec notification nouvelle commande :", error);
+  }
+}
+
+async function sendPaymentReceivedNotificationEmail({ factureId, facture }) {
+  try {
+    const { apiKey, from } = emailConfig();
+    const data = facture || {};
+    const numero = String(data.numero || data.numeroFacture || factureId);
+    const client = data.client || {};
+    const montantCentimes = Number(
+      data.totalCentimes ??
+      data.montantCentimes ??
+      data.montantTotalCentimes ??
+      (Number(data.total || 0) * 100)
+    );
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from,
+        to: ["lecarnetduchef@gmail.com"],
+        subject: `🔔 Paiement reçu — Facture ${numero}`,
+        html: `
+          <h2>Paiement reçu</h2>
+          <p><strong>Facture :</strong> ${numero}</p>
+          <p><strong>Montant :</strong> ${(montantCentimes / 100).toFixed(2).replace(".", ",")} €</p>
+          <p><strong>Client :</strong> ${String(client.prenom || "")} ${String(client.nom || "")}</p>
+          <p><strong>Email :</strong> ${String(client.email || data.email || "")}</p>
+          <p><strong>Facture ID :</strong> ${factureId}</p>
+          <p><a href="${SITE_URL}/admin/">Ouvrir l'administration</a></p>
+        `
+      })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Resend ${response.status}: ${body}`);
+    }
+
+    console.log("Notification paiement reçu envoyée", factureId);
+  } catch (error) {
+    console.error("Échec notification paiement reçu :", error);
+  }
+}
+
 async function handleCheckoutCompleted(session) {
   if (session.payment_status !== "paid") return { handled: false, paymentStatus: session.payment_status || null };
   const metadata = session.metadata || {};
@@ -433,8 +538,20 @@ async function handleCheckoutCompleted(session) {
     const factureRef = db.collection("factures").doc(factureId);
     const factureSnap = await factureRef.get();
     if (!factureSnap.exists) throw new Error("Facture introuvable pour ce paiement.");
+
+    const factureData = factureSnap.data() || {};
+    const alreadyPaid = factureData.statut === "payee";
+
     const paiementId = await upsertStripePayment({ session, transactionId, status: "paye", invoiceId: factureId });
     await factureRef.set({ statut: "payee", paiementId, stripeCheckoutSessionId: session.id, stripePaymentIntentId: transactionId, paidAt: Timestamp.now(), updatedAt: Timestamp.now() }, { merge: true });
+
+    if (!alreadyPaid) {
+      await sendPaymentReceivedNotificationEmail({
+        factureId,
+        facture: factureData
+      });
+    }
+
     return { handled: true, type: "facture", paiementId, factureId };
   }
   if (metadata.type === "devis") {
@@ -458,6 +575,12 @@ async function handleCheckoutCompleted(session) {
   }
   const paiementId = await upsertStripePayment({ session, transactionId, status: "paye" });
 
+  if (!result.idempotent) {
+    await sendNewOrderNotificationEmail({
+      commandeId: result.commandeId,
+      numeroCommande: result.numeroCommande
+    });
+  }
   let facture = null;
 
   if (session.invoice) {
