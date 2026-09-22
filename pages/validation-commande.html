@@ -1,126 +1,46 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Finalisez votre commande — Le Carnet du Chef</title>
-<link rel="icon" href="../favicon/favicon.ico" sizes="any"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../css/variables.css"><link rel="stylesheet" href="../css/style.css">
-<style>
-.validation-hero{background:var(--color-sage-dark);color:var(--color-gold);padding:3.4rem 0}.validation-hero h1{color:var(--color-gold);font-family:Fraunces,serif;font-size:clamp(2.3rem,5vw,3.7rem);margin:.3rem 0}.validation-hero p{color:#f4e5cc}.validation-wrap{padding:2rem 0 4rem}.validation-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:1.5rem;align-items:start}.checkout-card{background:#fff;border:1px solid rgba(49,76,64,.14);border-radius:16px;padding:1.5rem;box-shadow:0 10px 30px rgba(39,55,47,.08)}.summary-card{position:sticky;top:1rem}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.checkout-field{display:grid;gap:.4rem}.checkout-field-full{grid-column:1/-1}.checkout-field input,.checkout-field select,.checkout-field textarea{width:100%;box-sizing:border-box;padding:.75rem .8rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff;font:inherit}.checkout-field textarea{min-height:100px}.checkout-choice{display:flex;gap:1rem}.checkout-choice label{display:flex;gap:.4rem;align-items:center}.delivery-fields{display:grid;grid-template-columns:1.5fr .7fr 1fr;gap:1rem}.delivery-fields[hidden]{display:none}.checkout-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.2rem}.summary-line{display:flex;justify-content:space-between;gap:.7rem;padding:.75rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.summary-meta{display:grid;gap:.6rem;margin-top:1rem}.summary-meta div{padding:.7rem;border-radius:9px;background:#f7f8f3}.summary-total{margin-top:1rem;border-top:1px solid rgba(49,76,64,.18);padding-top:.8rem}.summary-total div{display:flex;justify-content:space-between;margin:.35rem 0}.grand-total{font-weight:700;font-size:1.1rem}.notice.error{color:#8b2e2e}.notice.success{color:#315f43}@media(max-width:850px){.validation-grid{grid-template-columns:1fr}.summary-card{position:static}}@media(max-width:620px){.checkout-grid{grid-template-columns:1fr}.delivery-fields{grid-template-columns:1fr}.checkout-actions{flex-direction:column}.checkout-actions .btn{width:100%}}
-</style></head>
-<body><header class="site-header"><div class="container"><a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a><nav class="nav-links" id="nav-links"><a href="../index.html">Accueil</a><a href="prestations.html">Prestations</a><a href="commande.html">Commander</a><a href="apropos.html">À propos</a><a href="contact.html">Contact</a></nav><a class="header-cart" href="panier.html" aria-label="Ouvrir le panier">🛒<span class="header-cart-count" data-cart-count hidden>0</span></a><button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links"><span></span></button></div></header>
-<main><section class="validation-hero"><div class="container"><p class="eyebrow">Validation</p><h1>Finalisez votre commande</h1><p>Complétez vos informations pour préparer le récapitulatif final puis poursuivre vers le paiement sécurisé.</p></div></section>
-<div class="container validation-wrap"><p><a class="btn btn-secondary" href="commande.html">← Retour au catalogue</a></p><div class="validation-grid"><div><section class="section checkout-section">
-      <div class="container">
-        <div id="checkout-card" class="checkout-card">
-          <p class="eyebrow">Validation</p>
-          <h2>Informations de commande</h2>
-          <p class="muted">Complétez vos informations pour préparer le récapitulatif final. Aucun paiement n'est lancé à cette étape.</p>
-
-          <form id="checkout-form" novalidate>
-            <div class="checkout-grid">
-              <div class="checkout-field">
-                <label for="client-prenom">Prénom *</label>
-                <input id="client-prenom" name="prenom" type="text" autocomplete="given-name" required>
-              </div>
-              <div class="checkout-field">
-                <label for="client-nom">Nom *</label>
-                <input id="client-nom" name="nom" type="text" autocomplete="family-name" required>
-              </div>
-              <div class="checkout-field">
-                <label for="client-telephone">Téléphone *</label>
-                <input id="client-telephone" name="telephone" type="tel" autocomplete="tel" required>
-              </div>
-              <div class="checkout-field">
-                <label for="client-email">Email *</label>
-                <input id="client-email" name="email" type="email" autocomplete="email" required>
-              </div>
-
-              <fieldset class="checkout-field checkout-field-full" style="border:0;padding:0;margin:0;">
-                <legend class="checkout-legend">Mode de réception *</legend>
-                <div class="checkout-choice">
-                  <label><input type="radio" name="modeReception" value="retrait" required> Retrait</label>
-                  <label><input type="radio" name="modeReception" value="livraison" required> Livraison</label>
-                </div>
-              </fieldset>
-
-              <div class="checkout-field">
-                <label for="date-souhaitee">Date souhaitée *</label>
-                <select id="date-souhaitee" name="dateSouhaitee" required></select>
-              </div>
-              <div class="checkout-field">
-                <label for="creneau">Créneau *</label>
-                <select id="creneau" name="creneau" required disabled>
-                  <option value="">Choisissez d'abord le mode de réception et la date</option>
-                </select>
-              </div>
-
-              <div id="delivery-fields" class="checkout-field checkout-field-full delivery-fields" hidden>
-                <div class="checkout-field">
-                  <label for="adresse">Adresse *</label>
-                  <input id="adresse" name="adresse" type="text" autocomplete="street-address">
-                </div>
-                <div class="checkout-field">
-                  <label for="code-postal">Code postal *</label>
-                  <input id="code-postal" name="codePostal" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5">
-                </div>
-                <div class="checkout-field">
-                  <label for="ville">Ville *</label>
-                  <select id="ville" name="ville">
-                    <option value="">Choisir une commune</option>
-                    <option>Roanne</option>
-                    <option>Le Coteau</option>
-                    <option>Riorges</option>
-                    <option>Mably</option>
-                    <option>Perreux</option>
-                    <option>Villerest</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="checkout-field checkout-field-full">
-                <label for="precisions">Précisions / instructions</label>
-                <textarea id="precisions" name="precisions"></textarea>
-              </div>
-              <div class="checkout-field checkout-field-full">
-                <label for="allergies">Allergies / intolérances</label>
-                <textarea id="allergies" name="allergies"></textarea>
-              </div>
-            </div>
-
-            <p id="delivery-fee-notice" class="delivery-notice" hidden></p>
-            <p id="checkout-form-error" class="notice error" role="alert" hidden></p>
-            <div class="checkout-actions">
-              <button type="button" id="checkout-review-button" class="btn btn-primary">Voir le récapitulatif</button>
-            </div>
-          </form>
-
-          
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></span></div>
-    </div>
-  </footer>
-
-  </div><aside class="checkout-card summary-card">
-<p class="eyebrow">Votre panier</p>
-<div id="final-summary" hidden>
-<h2>Récapitulatif</h2>
-<div id="summary-lines"></div>
-<div id="summary-meta" class="summary-meta"></div>
-<div id="summary-total" class="summary-total"></div>
-<p class="provisional-total">Le montant affiché avant validation est indicatif. Le prix, les frais de livraison et le total définitifs sont recalculés côté serveur.</p>
-<p id="checkout-summary-error" class="notice error" role="alert" hidden></p>
-<div class="checkout-actions">
-<button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
-<button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finalisez votre commande — Le Carnet du Chef</title>
+<link rel="icon" href="../favicon/favicon.ico" sizes="any"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/variables.css"><link rel="stylesheet" href="../css/style.css"><style>
+.validation-hero{background:var(--color-sage-dark);color:var(--color-gold);padding:3.4rem 0}.validation-hero h1{color:var(--color-gold);font-family:Fraunces,serif;font-size:clamp(2.3rem,5vw,3.7rem);margin:.3rem 0}.validation-hero p{color:#f4e5cc}.validation-wrap{padding:2rem 0 4rem}.validation-grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:1.5rem;align-items:start}.checkout-card{background:#fff;border:1px solid rgba(49,76,64,.14);border-radius:16px;padding:1.5rem;box-shadow:0 10px 30px rgba(39,55,47,.08)}.summary-card{position:sticky;top:1rem}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.checkout-field{display:grid;gap:.4rem}.checkout-field-full{grid-column:1/-1}.checkout-field input,.checkout-field select,.checkout-field textarea{width:100%;box-sizing:border-box;padding:.75rem .8rem;border:1px solid rgba(49,76,64,.22);border-radius:10px;background:#fff;font:inherit}.checkout-field textarea{min-height:100px}.checkout-choice{display:flex;gap:1rem}.checkout-choice label{display:flex;gap:.4rem;align-items:center}.delivery-fields{display:grid;grid-template-columns:1.5fr .7fr 1fr;gap:1rem}.delivery-fields[hidden]{display:none}.checkout-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.2rem}.summary-line{display:flex;justify-content:space-between;gap:.7rem;padding:.75rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.summary-meta{display:grid;gap:.6rem;margin-top:1rem}.summary-meta div{padding:.7rem;border-radius:9px;background:#f7f8f3}.summary-total{margin-top:1rem;border-top:1px solid rgba(49,76,64,.18);padding-top:.8rem}.summary-total div{display:flex;justify-content:space-between;margin:.35rem 0}.grand-total{font-weight:700;font-size:1.1rem}.order-cart-preview{display:grid;gap:.2rem}.order-cart-item{display:grid;grid-template-columns:1fr auto;gap:.5rem;padding:.7rem 0;border-bottom:1px solid rgba(49,76,64,.1)}.order-cart-item strong{font-size:.9rem}.order-cart-item small{display:block;color:#69736d;margin-top:.2rem}.order-cart-total{display:flex;justify-content:space-between;margin-top:1rem;padding-top:.9rem;border-top:1px solid rgba(49,76,64,.18);font-weight:700}.summary-card h2{font-family:Fraunces,serif;margin:.15rem 0 .8rem}.notice.error{color:#8b2e2e}.notice.success{color:#315f43}@media(max-width:850px){.validation-grid{grid-template-columns:1fr}.summary-card{position:static}}@media(max-width:620px){.checkout-grid{grid-template-columns:1fr}.delivery-fields{grid-template-columns:1fr}.checkout-actions{flex-direction:column}.checkout-actions .btn{width:100%}}
+</style>
+</head>
+<body>
+<header class="site-header"><div class="container"><a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a><nav class="nav-links" id="nav-links"><a href="../index.html">Accueil</a><a href="prestations.html">Prestations</a><a href="commande.html">Commander</a><a href="apropos.html">À propos</a><a href="contact.html">Contact</a></nav><a class="header-cart" href="panier.html" aria-label="Ouvrir le panier">🛒<span class="header-cart-count" data-cart-count hidden>0</span></a><button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links"><span></span></button></div></header>
+<main>
+<section class="validation-hero"><div class="container"><p class="eyebrow">Validation</p><h1>Finalisez votre commande</h1><p>Complétez vos informations pour préparer le récapitulatif final puis poursuivre vers le paiement sécurisé.</p></div></section>
+<div class="container validation-wrap"><p><a class="btn btn-secondary" href="commande.html">← Retour au catalogue</a></p>
+<div class="validation-grid">
+<section class="checkout-card checkout-section">
+<p class="eyebrow">Validation</p><h2>Informations de commande</h2><p class="muted">Complétez vos informations pour préparer le récapitulatif final. Aucun paiement n'est lancé à cette étape.</p>
+<form id="checkout-form" novalidate>
+<div class="checkout-grid">
+<div class="checkout-field"><label for="client-prenom">Prénom *</label><input id="client-prenom" name="prenom" type="text" autocomplete="given-name" required></div>
+<div class="checkout-field"><label for="client-nom">Nom *</label><input id="client-nom" name="nom" type="text" autocomplete="family-name" required></div>
+<div class="checkout-field"><label for="client-telephone">Téléphone *</label><input id="client-telephone" name="telephone" type="tel" autocomplete="tel" required></div>
+<div class="checkout-field"><label for="client-email">Email *</label><input id="client-email" name="email" type="email" autocomplete="email" required></div>
+<fieldset class="checkout-field checkout-field-full" style="border:0;padding:0;margin:0"><legend class="checkout-legend">Mode de réception *</legend><div class="checkout-choice"><label><input type="radio" name="modeReception" value="retrait" required> Retrait</label><label><input type="radio" name="modeReception" value="livraison" required> Livraison</label></div></fieldset>
+<div class="checkout-field"><label for="date-souhaitee">Date souhaitée *</label><select id="date-souhaitee" name="dateSouhaitee" required></select></div>
+<div class="checkout-field"><label for="creneau">Créneau *</label><select id="creneau" name="creneau" required disabled><option value="">Choisissez d'abord le mode de réception et la date</option></select></div>
+<div id="delivery-fields" class="checkout-field checkout-field-full delivery-fields" hidden><div class="checkout-field"><label for="adresse">Adresse *</label><input id="adresse" name="adresse" type="text" autocomplete="street-address"></div><div class="checkout-field"><label for="code-postal">Code postal *</label><input id="code-postal" name="codePostal" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5"></div><div class="checkout-field"><label for="ville">Ville *</label><select id="ville" name="ville"><option value="">Choisir une commune</option><option>Roanne</option><option>Le Coteau</option><option>Riorges</option><option>Mably</option><option>Perreux</option><option>Villerest</option></select></div></div>
+<div class="checkout-field checkout-field-full"><label for="precisions">Précisions / instructions</label><textarea id="precisions" name="precisions"></textarea></div>
+<div class="checkout-field checkout-field-full"><label for="allergies">Allergies / intolérances</label><textarea id="allergies" name="allergies"></textarea></div>
 </div>
-<p class="checkout-help">La validation prépare votre paiement sécurisé Stripe. Votre commande ne sera confirmée qu’après paiement.</p>
-</div>
-<div id="summary-empty" class="cart-note">Votre panier sera récapitulé ici après validation des informations.</div>
-</aside></div></div></main>
-<footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></span></div></div></footer>
+<p id="delivery-fee-notice" class="delivery-notice" hidden></p><p id="checkout-form-error" class="notice error" role="alert" hidden></p>
+<div class="checkout-actions"><button type="button" id="checkout-review-button" class="btn btn-primary">Voir le récapitulatif</button></div>
+</form>
+</section>
+<aside class="checkout-card summary-card">
+<p class="eyebrow">Votre commande</p>
+<div id="order-cart-preview"><h2>Récapitulatif</h2><div id="order-cart-lines" class="order-cart-preview"></div><div id="order-cart-total" class="order-cart-total"><span>Total</span><span>0,00 €</span></div></div>
+<div id="final-summary" hidden><h2>Récapitulatif</h2><div id="summary-lines"></div><div id="summary-meta" class="summary-meta"></div><div id="summary-total" class="summary-total"></div><p class="provisional-total">Le montant affiché avant validation est indicatif. Le prix, les frais de livraison et le total définitifs sont recalculés côté serveur.</p><p id="checkout-summary-error" class="notice error" role="alert" hidden></p><div class="checkout-actions"><button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button><button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button></div><p class="checkout-help">La validation prépare votre paiement sécurisé Stripe. Votre commande ne sera confirmée qu’après paiement.</p></div>
+</aside>
+</div></div></main>
+<footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></div></div></footer>
 <script src="../js/config.js"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js"></script><script>
     (() => {
       const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
@@ -139,6 +59,9 @@
       const backButton = document.querySelector("#back-to-checkout-button");
       const finalValidationButton = document.querySelector("#final-validation-button");
       const finalSummary = document.querySelector("#final-summary");
+      const orderCartPreview = document.querySelector("#order-cart-preview");
+      const orderCartLines = document.querySelector("#order-cart-lines");
+      const orderCartTotal = document.querySelector("#order-cart-total");
       const summaryLines = document.querySelector("#summary-lines");
       const summaryMeta = document.querySelector("#summary-meta");
       const summaryTotal = document.querySelector("#summary-total");
@@ -184,6 +107,7 @@
             }
           }
 
+          renderOrderCartPreview();
           if (typeof renderSummary === "function" && !finalSummary.hidden) {
             renderSummary();
           }
@@ -355,6 +279,35 @@
         } catch {
           return { lines: [] };
         }
+      }
+
+      function renderOrderCartPreview() {
+        const cart = getCartSnapshot();
+        orderCartLines.innerHTML = "";
+        if (!cart.lines.length) {
+          orderCartLines.innerHTML = '<p class="cart-note">Votre panier est vide.</p>';
+          orderCartTotal.querySelector("span:last-child").textContent = euro.format(0);
+          reviewButton.disabled = true;
+          return;
+        }
+        let total = 0;
+        cart.lines.forEach((line) => {
+          const lineTotal = (Number(line.prixUnitaire) || 0) * Number(line.quantite || 0);
+          total += lineTotal;
+          const item = document.createElement("div");
+          item.className = "order-cart-item";
+          const left = document.createElement("div");
+          const strong = document.createElement("strong");
+          strong.textContent = line.formuleNom + " × " + line.quantite;
+          const small = document.createElement("small");
+          small.textContent = (line.composants || []).map(x => x.produitNom).join(" · ");
+          left.append(strong, small);
+          const price = document.createElement("span");
+          price.textContent = euro.format(lineTotal);
+          item.append(left, price);
+          orderCartLines.appendChild(item);
+        });
+        orderCartTotal.querySelector("span:last-child").textContent = euro.format(total);
       }
 
       function validateCart(cart) {
@@ -639,6 +592,7 @@ window.location.assign(data.checkoutUrl);
         finalValidationButton.disabled = false;
         finalValidationButton.textContent = "Valider ma commande";
         renderSummary();
+        orderCartPreview.hidden = true;
         form.hidden = true;
         finalSummary.hidden = false;
         finalSummary.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -650,6 +604,7 @@ window.location.assign(data.checkoutUrl);
         activeRequestId = null;
         summaryError.hidden = true;
         finalSummary.hidden = true;
+        orderCartPreview.hidden = false;
         form.hidden = false;
         checkoutSection.scrollIntoView({ behavior: "smooth", block: "start" });
       });
