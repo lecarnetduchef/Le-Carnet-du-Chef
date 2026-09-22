@@ -244,6 +244,7 @@ async function saveFormule(event) {
       description: descriptionInput.value.trim(),
       photo: photoInput.value.trim(),
       ordre,
+      categorieFormule: categoryInput.value || "chef",
       actif: activeInput.checked,
       bloquee: blockedInput?.checked === true,
       composition,
