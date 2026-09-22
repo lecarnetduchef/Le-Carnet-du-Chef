@@ -34,7 +34,7 @@ function renderHome(){
  const special=data.formules.filter(f=>specialCats.includes(categoryOf(f)));
  if(special.length){
    const sec=document.createElement("section");sec.className="catalogue-section";
-   sec.innerHTML='<div class="section-heading"><div><h2>Formules spéciales</h2><p>Des créations uniques pour les occasions particulières.</p></div><span class="section-link">Voir toutes les formules →</span></div><div class="formula-grid">'+special.slice(0,4).map(f=>tile(f)).join("")+'</div>';
+   sec.innerHTML='<div class="section-heading"><div><h2>Formules spéciales</h2><p>Des créations uniques pour les occasions particulières.</p></div><a class="section-link" href="commande.html?categorie=speciales">Voir toutes les formules →</a></div><div class="formula-grid">'+special.slice(0,4).map(f=>tile(f)).join("")+'</div>';
    host.appendChild(sec);
  }
  const plats=data.produits.filter(p=>p?.categorie==="Plat"&&p?.actif!==false).slice(0,4);
