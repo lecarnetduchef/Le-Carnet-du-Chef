@@ -93,9 +93,6 @@ function renderCategory(){
  if(!cat)return;
  document.querySelector("#catalogue-home").hidden=true;document.querySelector("#category-view").hidden=false;
  const info=labels[cat]||{title:"Catalogue",description:""};
- document.querySelector("#category-title").textContent=info.title;
- document.querySelector("#category-description").textContent=info.description;
- document.querySelector("#category-breadcrumb").textContent=info.title;
  const items=data.formules.filter(f=>categoryOf(f)===cat);
  const grid=document.querySelector("#category-grid");
  grid.innerHTML=items.length?items.map(f=>tile(f,true)).join(""):'<p class="catalogue-empty">Aucune formule disponible dans cette catégorie.</p>';
