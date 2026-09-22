@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon panier — Le Carnet du Chef</title>
+  <link rel="icon" href="../favicon/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../favicon/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    :root{--catalogue-cream:#f8f6ee;--catalogue-sage:#314c40;--catalogue-gold:#d9a35e}
+    body{background:var(--catalogue-cream)}
+    .catalogue-hero{background:var(--catalogue-sage);color:#fff;padding:4.2rem 0 4rem;text-align:center}
+    .catalogue-hero h1{font-family:Fraunces,serif;color:var(--catalogue-gold);font-size:clamp(2.5rem,5vw,4.4rem);line-height:.98;margin:.5rem auto 1rem;max-width:800px}
+    .catalogue-hero p{max-width:720px;margin:auto;color:#f4e5cc}
+    .catalogue-home{padding:2.4rem 0 4rem}
+    .catalogue-section{margin-bottom:2.8rem}
+    .section-heading{display:flex;justify-content:space-between;align-items:end;gap:1rem;margin-bottom:1rem}
+    .section-heading h2{margin:.15rem 0;font-size:clamp(1.5rem,3vw,2rem)}
+    .section-heading p{margin:0;color:#69736d}
+    .section-link{color:var(--catalogue-sage);font-weight:700;text-decoration:none;white-space:nowrap}
+    .section-link:hover{text-decoration:underline}
+    .formula-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+    .formula-tile{background:#fff;border:1px solid rgba(49,76,64,.12);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(39,55,47,.06);display:flex;flex-direction:column}
+    .formula-tile img,.formula-tile .tile-placeholder{width:100%;height:155px;object-fit:cover;background:#e9eee8;display:block}
+    .formula-tile-body{padding:.85rem;display:flex;flex-direction:column;flex:1}
+    .formula-tile h3{font-family:Fraunces,serif;font-size:1.15rem;margin:0 0 .2rem}
+    .formula-tile .desc{font-size:.85rem;color:#66706a;margin:0 0 .6rem;min-height:2.4em}
+    .formula-tile .price{font-weight:700;margin-top:auto}
+    .tile-actions{display:flex;gap:.5rem;margin-top:.75rem}
+    .tile-actions .btn{flex:1;padding:.55rem .65rem;font-size:.82rem}
+    .catalogue-empty{padding:1.2rem;border-radius:12px;background:#f0ead8;color:#59635d}
+    .category-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:2rem;align-items:start;padding:2.2rem 0 4rem}
+    .breadcrumb{font-size:.8rem;color:#737b76;margin-bottom:1rem}.breadcrumb a{color:inherit}
+    .category-head h1{font-family:Fraunces,serif;font-size:clamp(2.2rem,4vw,3.1rem);margin:.2rem 0 .5rem}.category-head p{color:#66706a}
+    .category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1.5rem}
+    .category-card{background:#fff;border:1px solid rgba(49,76,64,.12);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(39,55,47,.06)}
+    .category-card img,.category-card .tile-placeholder{width:100%;height:170px;object-fit:cover;background:#e9eee8;display:block}
+    .category-card-body{padding:1rem}.category-card h2{font-family:Fraunces,serif;margin:0 0 .2rem;font-size:1.45rem}.category-card p{color:#66706a;font-size:.9rem;margin:.2rem 0 .75rem}.category-card .price{font-weight:700}
+    .detail-link{display:inline-block;margin-top:.65rem;font-size:.82rem;color:#314c40;text-decoration:none;font-weight:600}
+    .cart-panel{background:#fff;border:1px solid rgba(49,76,64,.12);border-radius:14px;padding:1.2rem;box-shadow:0 8px 24px rgba(39,55,47,.06);position:sticky;top:1rem}
+    .cart-panel h2{font-family:Fraunces,serif;font-size:1.8rem;margin:.2rem 0 .8rem}.cart-panel .eyebrow{margin:0}
+    .cart-lines{display:grid;gap:.75rem}.cart-line{padding:.7rem 0;border-top:1px solid rgba(49,76,64,.12)}.cart-line:first-child{border-top:0}.cart-line-title{display:flex;justify-content:space-between;gap:.5rem;font-weight:700;font-size:.9rem}.cart-components{font-size:.78rem;color:#69736d;margin:.35rem 0}.cart-actions{display:flex;align-items:center;gap:.4rem}.cart-actions button{border:0;background:transparent;cursor:pointer}.cart-total{display:flex;justify-content:space-between;border-top:1px solid rgba(49,76,64,.18);padding-top:.9rem;margin-top:.8rem;font-weight:700}.cart-note{font-size:.78rem;color:#737b76;margin-top:.8rem}.cart-panel .btn{width:100%;margin-top:.8rem}.cart-panel .btn:disabled{opacity:.45;cursor:not-allowed}
+    .cart-page{padding:2.5rem 0 4rem}.cart-page-inner{max-width:920px;margin:auto}.cart-page h1{font-family:Fraunces,serif;font-size:clamp(2.3rem,4vw,3.3rem)}.cart-page-card{background:#fff;border:1px solid rgba(49,76,64,.12);border-radius:16px;padding:1.2rem;box-shadow:0 8px 24px rgba(39,55,47,.06)}
+    .header-cart{position:relative;display:inline-flex;align-items:center;justify-content:center;margin-left:1rem;text-decoration:none;color:inherit;font-size:1.25rem}.header-cart-count{position:absolute;top:-7px;right:-9px;min-width:17px;height:17px;border-radius:50%;background:#a66b32;color:#fff;font:700 10px/17px Work Sans;text-align:center;padding:0 3px;box-sizing:border-box}
+    @media(max-width:1050px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.category-layout{grid-template-columns:1fr}.cart-panel{position:static}}
+    @media(max-width:650px){.formula-grid,.category-grid{grid-template-columns:1fr 1fr;gap:.7rem}.formula-tile img,.formula-tile .tile-placeholder{height:125px}.category-card img,.category-card .tile-placeholder{height:140px}.section-heading{align-items:start}.section-heading h2{font-size:1.4rem}.section-link{font-size:.78rem}.category-grid{grid-template-columns:1fr}.catalogue-hero{padding:3rem 1rem}}
+  </style>
+</head>
+<body>
+<header class="site-header">
+  <div class="container">
+    <a href="../index.html" class="logo">Le Carnet <span>du Chef</span></a>
+    <nav class="nav-links" id="nav-links">
+      <a href="../index.html">Accueil</a><a href="prestations.html">Prestations</a><a href="commande.html">Commander</a><a href="apropos.html">À propos</a><a href="contact.html">Contact</a>
+    </nav>
+    <a class="header-cart" href="panier.html" aria-label="Ouvrir le panier">🛒<span class="header-cart-count" data-cart-count hidden>0</span></a>
+    <button class="nav-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links"><span></span></button>
+  </div>
+</header>
+
+<main id="contenu">
+  <section class="catalogue-home cart-page"><div class="container cart-page-inner"><p class="eyebrow">Votre panier</p><h1>Mon panier</h1><p class="muted">Vérifiez vos articles avant de passer au paiement.</p><div class="cart-page-card"><div id="full-cart-lines" class="cart-lines"></div><p id="full-cart-empty" class="cart-note">Votre panier est vide.</p><div class="cart-total"><span>Total</span><span id="full-cart-total">0,00 €</span></div><div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem"><a href="commande.html" class="btn btn-secondary">Continuer mes achats</a><button id="full-cart-pay" class="btn btn-primary" type="button" disabled>Payer ma commande</button></div><p class="cart-note">Les informations de commande seront demandées à l'étape suivante.</p></div></div></section>
+</main>
+<footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></span></div></div></footer>
+
+<script src="../js/config.js"></script>
+<script src="../js/script.js"></script>
+<script type="module" src="../js/panier.js"></script>
+<script type="module" src="../js/catalogue.js?v=20260922"></script>
+</body>
+</html>
