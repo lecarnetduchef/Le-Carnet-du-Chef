@@ -50,7 +50,7 @@
     @media(max-width:1050px){.formula-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.category-layout{grid-template-columns:1fr}.cart-panel{position:static}}
     @media(max-width:650px){.formula-grid,.category-grid{grid-template-columns:1fr 1fr;gap:.7rem}.formula-tile img,.formula-tile .tile-placeholder{height:125px}.category-card img,.category-card .tile-placeholder{height:140px}.section-heading{align-items:start}.section-heading h2{font-size:1.4rem}.section-link{font-size:.78rem}.category-grid{grid-template-columns:1fr}.catalogue-hero{padding:3rem 1rem}}
 .dish-tile{cursor:pointer}.dish-tile:focus-visible{outline:2px solid var(--catalogue-gold);outline-offset:3px}.dish-gallery-modal[hidden]{display:none}.dish-gallery-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:1rem}.dish-gallery-backdrop{position:absolute;inset:0;background:rgba(31,43,36,.72);backdrop-filter:blur(3px)}.dish-gallery-dialog{position:relative;width:min(980px,94vw);max-height:92vh;overflow:auto;background:var(--catalogue-cream);border:1px solid rgba(217,163,94,.28);border-radius:18px;padding:1.25rem;box-shadow:0 30px 80px rgba(0,0,0,.25)}.dish-gallery-close{position:absolute;right:1rem;top:.8rem;width:38px;height:38px;border:1px solid rgba(49,76,64,.2);border-radius:50%;background:#fff;font-size:1.5rem;cursor:pointer}.dish-gallery-head{display:flex;justify-content:space-between;align-items:end;gap:1rem;padding-right:3rem}.dish-gallery-head h2{font-family:Fraunces,serif;margin:.1rem 0;font-size:clamp(1.6rem,3vw,2.3rem)}.dish-gallery-main{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:.75rem;margin-top:1rem}.dish-gallery-arrow{width:44px;height:44px;border:1px solid rgba(49,76,64,.2);border-radius:50%;background:#fff;color:var(--catalogue-sage);font-size:2rem;line-height:1;cursor:pointer}.dish-gallery-photo{background:#fff;border-radius:14px;overflow:hidden;border:1px solid rgba(49,76,64,.12)}.dish-gallery-photo img{display:block;width:100%;height:min(58vh,520px);object-fit:cover}.dish-gallery-caption{display:flex;justify-content:space-between;gap:1rem;padding:.8rem 1rem;font-family:Fraunces,serif;font-size:1.1rem}.dish-gallery-caption span{font-family:Work Sans,sans-serif;font-weight:700}.dish-gallery-thumbs{display:flex;gap:.55rem;overflow-x:auto;padding:.8rem 0 .15rem}.dish-thumb{flex:0 0 76px;border:2px solid transparent;border-radius:9px;padding:0;background:#fff;overflow:hidden;cursor:pointer}.dish-thumb.is-active{border-color:var(--catalogue-gold)}.dish-thumb img,.dish-thumb .tile-placeholder{display:block;width:76px;height:58px;object-fit:cover}.gallery-open{overflow:hidden}@media(max-width:650px){.dish-gallery-dialog{padding:.85rem}.dish-gallery-main{grid-template-columns:38px minmax(0,1fr) 38px;gap:.35rem}.dish-gallery-arrow{width:36px;height:36px;font-size:1.6rem}.dish-gallery-photo img{height:48vh}.dish-gallery-caption{font-size:1rem}}
-.catalogue-social{margin:3.5rem 0 1rem;padding:2.4rem 1.5rem;background:var(--catalogue-sage);border-radius:18px;text-align:center;color:#fff}.catalogue-social .eyebrow{color:var(--catalogue-gold)}.catalogue-social h2{color:#fff;font-family:Fraunces,serif;font-size:clamp(1.8rem,3vw,2.6rem);margin:.15rem 0 .5rem}.catalogue-social>p{color:#f4e5cc;max-width:620px;margin:0 auto 1.4rem}.catalogue-social-links{display:flex;justify-content:center;flex-wrap:wrap;gap:.75rem}.catalogue-social-links a{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1rem;border:1px solid rgba(244,229,204,.45);border-radius:999px;color:#fff;font-weight:600;background:rgba(255,255,255,.06)}.catalogue-social-links a:hover{background:#fff;color:var(--catalogue-sage)}@media(max-width:650px){.catalogue-social{margin-top:2.5rem;padding:2rem 1rem}.catalogue-social-links{display:grid;grid-template-columns:1fr}.catalogue-social-links a{justify-content:center}}
+.catalogue-social-banner{margin:1rem 0 0;background:var(--catalogue-sage);color:#fff;overflow:hidden;border-top:1px solid rgba(217,163,94,.28);border-bottom:1px solid rgba(217,163,94,.28)}.catalogue-social-inner{max-width:var(--container-max);margin:auto;padding:1.15rem var(--space-3);display:flex;align-items:center;justify-content:space-between;gap:1.5rem}.catalogue-social-copy{display:flex;align-items:baseline;gap:.8rem;min-width:0}.catalogue-social-copy strong{font-family:Fraunces,serif;font-size:1.35rem;font-weight:600;white-space:nowrap;color:#fff}.catalogue-social-copy span{color:#f4e5cc;font-size:.86rem}.catalogue-social-links{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}.catalogue-social-links a{display:inline-flex;align-items:center;padding:.45rem .8rem;border:1px solid rgba(244,229,204,.35);border-radius:999px;color:#fff;font-size:.78rem;font-weight:600;transition:background .2s ease,color .2s ease,transform .2s ease}.catalogue-social-links a:hover{background:#fff;color:var(--catalogue-sage);transform:translateY(-1px)}.catalogue-social-marquee{height:2px;background:linear-gradient(90deg,transparent,var(--catalogue-gold),transparent);background-size:200% 100%;animation:catalogueSocialFlow 4s linear infinite}@keyframes catalogueSocialFlow{from{background-position:100% 0}to{background-position:-100% 0}}@media(max-width:650px){.catalogue-social-inner{padding:1rem;display:block;text-align:center}.catalogue-social-copy{display:block}.catalogue-social-copy strong{display:block;font-size:1.2rem}.catalogue-social-copy span{display:block;margin-top:.15rem}.catalogue-social-links{justify-content:center;margin-top:.8rem}.catalogue-social-links a{padding:.4rem .7rem}}
   </style>
 </head>
 <body>
@@ -84,17 +84,21 @@
   <section id="category-view" class="category-layout container" hidden>
     <div>
       <div id="category-grid" class="category-grid"></div>
-      <section class="catalogue-social" aria-label="Réseaux sociaux du Carnet du Chef">
-        <p class="eyebrow">L'univers du Carnet</p>
-        <h2>Suivez-nous sur les réseaux</h2>
-        <p>Découvrez les nouveaux plats, les coulisses et les actualités du Carnet du Chef.</p>
-        <div class="catalogue-social-links">
-          <a data-cdc-link="liens.instagram" href="#" target="_blank" rel="noopener">📷 Instagram</a>
-          <a data-cdc-link="liens.tiktok" href="#" target="_blank" rel="noopener">🎵 TikTok</a>
-          <a data-cdc-link="liens.snapchat" href="#" target="_blank" rel="noopener">👻 Snapchat</a>
-        </div>
-      </section>
     </div>
+  </section>
+  <section class="catalogue-social-banner" aria-label="Réseaux sociaux du Carnet du Chef">
+    <div class="catalogue-social-inner">
+      <div class="catalogue-social-copy">
+        <strong>Suivez le Carnet du Chef</strong>
+        <span>Les nouveautés, les plats et les coulisses.</span>
+      </div>
+      <div class="catalogue-social-links">
+        <a data-cdc-link="liens.instagram" href="#" target="_blank" rel="noopener">📷 Instagram</a>
+        <a data-cdc-link="liens.tiktok" href="#" target="_blank" rel="noopener">🎵 TikTok</a>
+        <a data-cdc-link="liens.snapchat" href="#" target="_blank" rel="noopener">👻 Snapchat</a>
+      </div>
+    </div>
+    <div class="catalogue-social-marquee" aria-hidden="true"></div>
   </section>
 </main>
 <footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></span></div></div></footer>
