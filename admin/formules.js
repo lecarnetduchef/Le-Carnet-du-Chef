@@ -21,6 +21,7 @@ const priceInput = document.querySelector("#formule-price");
 const descriptionInput = document.querySelector("#formule-description");
 const photoInput = document.querySelector("#formule-photo");
 const orderInput = document.querySelector("#formule-order");
+const categoryInput = document.querySelector("#formule-categorie");
 const activeInput = document.querySelector("#formule-active");
 const blockedInput = document.querySelector("#formule-bloquee");
 const saveButton = document.querySelector("#formule-save-btn");
@@ -88,6 +89,7 @@ function resetForm() {
   form.reset();
   idInput.value = "";
   orderInput.value = "0";
+  if (categoryInput) categoryInput.value = "chef";
   activeInput.checked = true;
   if (blockedInput) blockedInput.checked = false;
   setComposition([]);
@@ -102,6 +104,7 @@ function fillForm(formule) {
   descriptionInput.value = formule.description || "";
   photoInput.value = formule.photo || "";
   orderInput.value = Number.isFinite(formule.ordre) ? formule.ordre : 0;
+  if (categoryInput) categoryInput.value = formule.categorieCatalogue || "chef";
   activeInput.checked = formule.actif !== false;
   if (blockedInput) blockedInput.checked = formule.bloquee === true;
   setComposition(Array.isArray(formule.composition) ? formule.composition : []);
@@ -241,6 +244,7 @@ async function saveFormule(event) {
       description: descriptionInput.value.trim(),
       photo: photoInput.value.trim(),
       ordre,
+      categorieCatalogue: categoryInput?.value || "chef",
       actif: activeInput.checked,
       bloquee: blockedInput?.checked === true,
       composition,
