@@ -62,22 +62,41 @@ function getCompositionFromForm() {
   return compositionRows
     .filter((row) => row.querySelector(".formule-composition-enabled")?.checked)
     .map((row) => {
+      const category = row.dataset.compositionCategory;
       const item = {
-        categorie: row.dataset.compositionCategory,
+        categorie: category,
         quantite: toNonNegativeInteger(
           row.querySelector(".formule-composition-quantity")?.value,
-          `La quantité ${row.dataset.compositionCategory}`
+          `La quantité ${category}`
         )
       };
 
       if (blocked) {
         const select = row.querySelector(".formule-blocked-product");
         const product = currentProducts.find((entry) => entry.id === select?.value);
+
         if (!product) {
-          throw new Error(`Le produit imposé pour ${item.categorie} est obligatoire.`);
+          throw new Error(`Le produit imposé pour ${category} est obligatoire.`);
         }
+
         item.produitId = product.id;
         item.produitNom = product.nom || "";
+      } else {
+        const selectedIds = Array.from(
+          row.querySelectorAll(".formule-allowed-product:checked")
+        ).map((input) => input.value).filter(Boolean);
+
+        if (!selectedIds.length) {
+          throw new Error(`Sélectionnez au moins un produit autorisé pour ${category}.`);
+        }
+
+        item.produitsAutorises = selectedIds.map((produitId) => {
+          const product = currentProducts.find((entry) => entry.id === produitId);
+          return {
+            produitId,
+            produitNom: product?.nom || ""
+          };
+        });
       }
 
       return item;
@@ -188,13 +207,20 @@ async function loadProducts() {
   currentProducts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
 
   compositionRows.forEach((row) => {
+    const category = row.dataset.compositionCategory;
+
     populateBlockedProductSelect(
       row.querySelector(".formule-blocked-product"),
-      row.dataset.compositionCategory
+      category
+    );
+
+    renderAllowedProductCheckboxes(
+      row.querySelector(".formule-allowed-products"),
+      category
     );
   });
 
-  refreshBlockedProductFields();
+  refreshCompositionFields();
 }
 
 async function loadFormules() {
@@ -330,21 +356,76 @@ function populateBlockedProductSelect(select, category, selectedId = "") {
   if (selectedId) select.value = selectedId;
 }
 
-function refreshBlockedProductFields() {
-  const blocked = blockedInput?.checked === true;
+function renderAllowedProductCheckboxes(container, category, selectedIds = []) {
+  if (!container) return;
 
-  compositionRows.forEach((row) => {
-    const field = row.querySelector(".formule-blocked-product-field");
-    const select = row.querySelector(".formule-blocked-product");
-    const enabled = row.querySelector(".formule-composition-enabled")?.checked === true;
+  const selected = new Set(selectedIds);
+  const products = currentProducts
+    .filter((product) => product?.categorie === category && product?.actif !== false)
+    .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
 
-    if (!field || !select) return;
+  container.innerHTML = "";
 
-    field.hidden = !blocked || !enabled;
-    select.disabled = !blocked || !enabled;
+  if (!products.length) {
+    const empty = document.createElement("span");
+    empty.className = "muted";
+    empty.textContent = "Aucun produit disponible.";
+    container.appendChild(empty);
+    return;
+  }
+
+  products.forEach((product) => {
+    const label = document.createElement("label");
+    label.className = "admin-checkbox";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "formule-allowed-product";
+    input.value = product.id || "";
+    input.checked = selected.has(product.id);
+
+    const text = document.createElement("span");
+    text.textContent = product.nom || "Produit sans nom";
+
+    label.append(input, text);
+    container.appendChild(label);
   });
 }
 
+function refreshCompositionFields() {
+  const blocked = blockedInput?.checked === true;
+
+  compositionRows.forEach((row) => {
+    const enabled = row.querySelector(".formule-composition-enabled")?.checked === true;
+    const quantity = row.querySelector(".formule-composition-quantity");
+    const allowedField = row.querySelector(".formule-allowed-products-field");
+    const allowedProducts = row.querySelectorAll(".formule-allowed-product");
+    const blockedField = row.querySelector(".formule-blocked-product-field");
+    const blockedSelect = row.querySelector(".formule-blocked-product");
+
+    if (quantity) quantity.disabled = !enabled;
+
+    if (allowedField) {
+      allowedField.hidden = blocked || !enabled;
+    }
+
+    allowedProducts.forEach((input) => {
+      input.disabled = blocked || !enabled;
+    });
+
+    if (blockedField) {
+      blockedField.hidden = !blocked || !enabled;
+    }
+
+    if (blockedSelect) {
+      blockedSelect.disabled = !blocked || !enabled;
+    }
+  });
+}
+
+function refreshBlockedProductFields() {
+  refreshCompositionFields();
+}
 function setComposition(composition = []) {
   const byCategory = new Map(
     composition.map((item) => [String(item.categorie || ""), item])
@@ -355,6 +436,7 @@ function setComposition(composition = []) {
     const checkbox = row.querySelector(".formule-composition-enabled");
     const quantity = row.querySelector(".formule-composition-quantity");
     const select = row.querySelector(".formule-blocked-product");
+    const allowedContainer = row.querySelector(".formule-allowed-products");
     const item = byCategory.get(category);
     const value = Number(item?.quantite || 0);
 
@@ -362,19 +444,39 @@ function setComposition(composition = []) {
     quantity.value = String(value);
     quantity.disabled = value <= 0;
 
-    populateBlockedProductSelect(select, category, item?.produitId || "");
+    populateBlockedProductSelect(
+      select,
+      category,
+      item?.produitId || ""
+    );
+
+    const selectedIds = Array.isArray(item?.produitsAutorises)
+      ? item.produitsAutorises
+          .map((entry) => String(entry?.produitId || ""))
+          .filter(Boolean)
+      : [];
+
+    renderAllowedProductCheckboxes(
+      allowedContainer,
+      category,
+      selectedIds
+    );
   });
 
-  refreshBlockedProductFields();
+  refreshCompositionFields();
 }
-
 function initCompositionControls() {
   compositionRows.forEach((row) => {
     const checkbox = row.querySelector(".formule-composition-enabled");
     const quantity = row.querySelector(".formule-composition-quantity");
     const select = row.querySelector(".formule-blocked-product");
+    const allowedContainer = row.querySelector(".formule-allowed-products");
 
     populateBlockedProductSelect(select, row.dataset.compositionCategory);
+    renderAllowedProductCheckboxes(
+      allowedContainer,
+      row.dataset.compositionCategory
+    );
 
     checkbox.addEventListener("change", () => {
       if (checkbox.checked) {
@@ -384,14 +486,18 @@ function initCompositionControls() {
         quantity.value = "0";
         quantity.disabled = true;
         if (select) select.value = "";
+
+        row.querySelectorAll(".formule-allowed-product").forEach((input) => {
+          input.checked = false;
+        });
       }
-      refreshBlockedProductFields();
+
+      refreshCompositionFields();
     });
   });
 
-  blockedInput?.addEventListener("change", refreshBlockedProductFields);
+  blockedInput?.addEventListener("change", refreshCompositionFields);
 }
-
 function init() {
   compositionRows = Array.from(document.querySelectorAll("[data-composition-category]"));
 

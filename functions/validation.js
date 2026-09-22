@@ -151,6 +151,33 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
       if (formule.bloquee === true && blockedComposition.get(category) !== produitId) {
         fail(`Ligne ${i + 1}: produit non autorisé pour la formule bloquée.`, "BLOCKED_FORMULA_PRODUCT_MISMATCH");
       }
+      if (formule.bloquee !== true) {
+        const compositionItem = (Array.isArray(formule.composition) ? formule.composition : [])
+          .find((item) => text(item?.categorie) === category);
+
+        const allowedIds = new Set(
+          Array.isArray(compositionItem?.produitsAutorises)
+            ? compositionItem.produitsAutorises
+                .map((item) => text(item?.produitId))
+                .filter(Boolean)
+            : []
+        );
+
+        if (!allowedIds.size) {
+          fail(
+            `Ligne ${i + 1}: aucun produit autorisé configuré pour ${category}.`,
+            "FORMULA_ALLOWED_PRODUCTS_MISSING"
+          );
+        }
+
+        if (!allowedIds.has(produitId)) {
+          fail(
+            `Ligne ${i + 1}: produit non autorisé pour la formule.`,
+            "FORMULA_PRODUCT_NOT_ALLOWED"
+          );
+        }
+      }
+
       const perFormula = required.get(category);
       demanded.set(produitId, (demanded.get(produitId) || 0) + quantity * perFormula);
       seen.add(category);

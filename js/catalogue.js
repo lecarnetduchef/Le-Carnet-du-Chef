@@ -293,8 +293,16 @@ function renderCategory(){
  const selected=params.get("formule");
  if(selected) renderFormulaDetail(items.find(f=>f.id===selected));
  }
-function renderProductOptions(select, category, previewContainer, forcedProductId = "") {
-  const products = productsByCategory.get(category) || [];
+function renderProductOptions(select, category, previewContainer, forcedProductId = "", allowedProductIds = []) {
+  const categoryProducts = productsByCategory.get(category) || [];
+  const allowedIds = new Set(
+    Array.isArray(allowedProductIds)
+      ? allowedProductIds.map((id) => String(id))
+      : []
+  );
+  const products = allowedIds.size
+    ? categoryProducts.filter((product) => allowedIds.has(String(product.id)))
+    : [];
   select.innerHTML = "";
   previewContainer.innerHTML = "";
 
@@ -432,7 +440,19 @@ function renderFormulaDetail(formule){
 
   const imposedProductId=String(rawCompositionItem?.produitId || item.produitId || "");
 
-  renderProductOptions(select,item.categorie,preview,imposedProductId);
+  const allowedProductIds = Array.isArray(rawCompositionItem?.produitsAutorises)
+    ? rawCompositionItem.produitsAutorises
+        .map((entry) => String(entry?.produitId || ""))
+        .filter(Boolean)
+    : [];
+
+  renderProductOptions(
+    select,
+    item.categorie,
+    preview,
+    imposedProductId,
+    allowedProductIds
+  );
 
   if(imposedProductId){
     const imposedProduct=(productsByCategory.get(item.categorie)||[]).find(
