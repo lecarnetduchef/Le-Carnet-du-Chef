@@ -26,6 +26,39 @@ function lineKey(formuleId, composants) {
   return `${formuleId}::${ids}`;
 }
 
+function productLineKey(productId) {
+  return `produit::${productId}`;
+}
+
+export function addProductToCart({ product, quantite }) {
+  const quantity = Math.max(1, Number.parseInt(quantite, 10) || 1);
+  const productId = String(product?.id || "");
+  if (!productId) return;
+
+  const key = productLineKey(productId);
+  const existing = cart.lines.find((line) => line.lineId === key);
+
+  if (existing) {
+    existing.quantite += quantity;
+  } else {
+    cart.lines.push({
+      lineId: key,
+      type: "produit",
+      formuleId: "",
+      formuleNom: String(product.nom || ""),
+      produitId: productId,
+      produitNom: String(product.nom || ""),
+      categorie: String(product.categorie || ""),
+      prixUnitaire: Number(product.prix) || 0,
+      quantite: quantity,
+      composants: []
+    });
+  }
+
+  saveCart();
+  window.dispatchEvent(new CustomEvent("cdc-cart-updated", { detail: getCart() }));
+}
+
 export function addToCart({ formule, quantite, composants }) {
   const quantity = Math.max(1, Number.parseInt(quantite, 10) || 1);
   const key = lineKey(formule.id, composants);
@@ -88,6 +121,8 @@ function renderHeaderCartCount() {
 }
 
 function renderCart() {
+  renderHeaderCartCount();
+
   const container = document.querySelector("#cart-lines");
   const empty = document.querySelector("#cart-empty");
   const total = document.querySelector("#cart-total");
@@ -100,27 +135,54 @@ function renderCart() {
     const article = document.createElement("article");
     article.className = "cart-line";
 
+    const displayName = line.type === "produit"
+      ? String(line.produitNom || line.formuleNom || "Produit")
+      : String(line.formuleNom || "Formule");
+
     const title = document.createElement("div");
     title.className = "cart-line-title";
     title.innerHTML = `<span></span><span></span>`;
-    title.children[0].textContent = `${line.formuleNom} × ${line.quantite}`;
-    title.children[1].textContent = euro.format((Number(line.prixUnitaire) || 0) * line.quantite);
+    title.children[0].textContent = `${displayName} × ${line.quantite}`;
+    title.children[1].textContent = euro.format(
+      (Number(line.prixUnitaire) || 0) * line.quantite
+    );
 
     const components = document.createElement("div");
     components.className = "cart-components";
-    components.textContent = line.composants.map((item) => `${item.categorie} : ${item.produitNom} × ${item.quantiteParFormule}`).join(" · ");
+
+    if (line.type === "produit") {
+      components.textContent = `À la carte · ${line.categorie || "Produit"}`;
+    } else {
+      components.textContent = (Array.isArray(line.composants) ? line.composants : [])
+        .map((item) =>
+          `${item.categorie} : ${item.produitNom} × ${item.quantiteParFormule}`
+        )
+        .join(" · ");
+    }
 
     const actions = document.createElement("div");
     actions.className = "cart-actions";
     actions.innerHTML = `
-      <button type="button" data-cart-minus aria-label="Diminuer ${line.formuleNom}">−</button>
+      <button type="button" data-cart-minus aria-label="Diminuer ${displayName}">−</button>
       <strong>${line.quantite}</strong>
-      <button type="button" data-cart-plus aria-label="Augmenter ${line.formuleNom}">+</button>
+      <button type="button" data-cart-plus aria-label="Augmenter ${displayName}">+</button>
       <button type="button" data-cart-remove>Supprimer</button>
     `;
-    actions.querySelector("[data-cart-minus]").addEventListener("click", () => updateLineQuantity(line.lineId, line.quantite - 1));
-    actions.querySelector("[data-cart-plus]").addEventListener("click", () => updateLineQuantity(line.lineId, line.quantite + 1));
-    actions.querySelector("[data-cart-remove]").addEventListener("click", () => removeLine(line.lineId));
+
+    actions.querySelector("[data-cart-minus]")
+      .addEventListener("click", () =>
+        updateLineQuantity(line.lineId, line.quantite - 1)
+      );
+
+    actions.querySelector("[data-cart-plus]")
+      .addEventListener("click", () =>
+        updateLineQuantity(line.lineId, line.quantite + 1)
+      );
+
+    actions.querySelector("[data-cart-remove]")
+      .addEventListener("click", () =>
+        removeLine(line.lineId)
+      );
 
     article.append(title, components, actions);
     container.appendChild(article);

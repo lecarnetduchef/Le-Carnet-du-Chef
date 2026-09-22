@@ -311,16 +311,43 @@
       }
 
       function validateCart(cart) {
-        if (!cart.lines.length) return "Votre panier est vide. Ajoutez au moins une formule avant de continuer.";
+        if (!cart.lines.length) return "Votre panier est vide. Ajoutez au moins une formule ou un produit avant de continuer.";
+
         for (const line of cart.lines) {
-          if (!line.lineId || !line.formuleId || !line.formuleNom) return "Une ligne du panier est incomplète. Revenez au catalogue et vérifiez votre commande.";
-          if (!Number.isInteger(Number(line.quantite)) || Number(line.quantite) <= 0) return "Une quantité de formule est invalide.";
-          if (!Array.isArray(line.composants)) return "La composition d’une formule est invalide.";
+          if (!line.lineId) return "Une ligne du panier est incomplète. Revenez au catalogue et vérifiez votre commande.";
+
+          const lineType = String(line.type || "formule").toLowerCase();
+
+          if (lineType === "produit") {
+            if (!line.produitId || !line.produitNom || !["Plat", "Boisson", "Dessert"].includes(String(line.categorie || ""))) {
+              return "Un produit individuel du panier est incomplet.";
+            }
+            if (!Number.isInteger(Number(line.quantite)) || Number(line.quantite) <= 0) {
+              return "Une quantité de produit est invalide.";
+            }
+            continue;
+          }
+
+          if (!line.formuleId || !line.formuleNom) {
+            return "Une ligne de formule est incomplète. Revenez au catalogue et vérifiez votre commande.";
+          }
+          if (!Number.isInteger(Number(line.quantite)) || Number(line.quantite) <= 0) {
+            return "Une quantité de formule est invalide.";
+          }
+          if (!Array.isArray(line.composants)) {
+            return "La composition d’une formule est invalide.";
+          }
+
           for (const component of line.composants) {
-            if (!component.produitId || !component.produitNom || !["Plat", "Boisson", "Dessert"].includes(component.categorie)) return "Un composant de formule est incomplet.";
-            if (!Number.isInteger(Number(component.quantiteParFormule)) || Number(component.quantiteParFormule) <= 0) return "La quantité d’un composant est invalide.";
+            if (!component.produitId || !component.produitNom || !["Plat", "Boisson", "Dessert"].includes(component.categorie)) {
+              return "Un composant de formule est incomplet.";
+            }
+            if (!Number.isInteger(Number(component.quantiteParFormule)) || Number(component.quantiteParFormule) <= 0) {
+              return "La quantité d’un composant est invalide.";
+            }
           }
         }
+
         return "";
       }
 
@@ -462,7 +489,10 @@
         return {
           requestId: activeRequestId,
           lignes: cart.lines.map((line) => ({
+            type: String(line.type || "formule"),
             formuleId: String(line.formuleId || ""),
+            produitId: String(line.produitId || ""),
+            categorie: String(line.categorie || ""),
             quantite: Number(line.quantite),
             composants: (line.composants || []).map((component) => ({
               produitId: String(component.produitId || ""),

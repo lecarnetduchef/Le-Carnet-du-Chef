@@ -1,4 +1,4 @@
-import { addToCart, getCart, removeLine, updateLineQuantity, getCartTotal } from "./panier.js";
+import { addToCart, addProductToCart, getCart, removeLine, updateLineQuantity, getCartTotal } from "./panier.js";
 
 const GET_CATALOGUE_URL="https://europe-west9-carnet-du-chef.cloudfunctions.net/getCatalogue";
 const euro=new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"});
@@ -26,7 +26,109 @@ function categoryOf(f){
  if(name.includes("spéciale")||name.includes("speciale")||name.includes("offre spéciale")||name.includes("offre speciale")) return "speciales";
  return "chef";
 }
+function setupImageModal() {
+  if (document.getElementById("catalogue-image-modal")) return;
+
+  const style = document.createElement("style");
+  style.id = "catalogue-image-modal-style";
+  style.textContent = `
+    .catalogue-image-clickable{cursor:zoom-in}
+    .catalogue-image-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(20,28,24,.82);box-sizing:border-box}
+    .catalogue-image-modal[hidden]{display:none}
+    .catalogue-image-modal-content{position:relative;display:flex;align-items:center;justify-content:center;width:min(96vw,1200px);height:min(94vh,900px);box-sizing:border-box}
+    .catalogue-image-modal img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .catalogue-image-modal-close{position:absolute;top:-.75rem;right:-.75rem;width:2.5rem;height:2.5rem;border:0;border-radius:50%;background:#fff;color:#314c40;font-size:1.8rem;line-height:1;cursor:pointer;display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+    .catalogue-image-modal-close:focus-visible{outline:3px solid #fff;outline-offset:3px}
+    @media(max-width:620px){.catalogue-image-modal{padding:.65rem}.catalogue-image-modal-content{width:100%;height:92vh}.catalogue-image-modal-close{top:.25rem;right:.25rem}}
+  `;
+  document.head.appendChild(style);
+
+  const modal = document.createElement("div");
+  modal.id = "catalogue-image-modal";
+  modal.className = "catalogue-image-modal";
+  modal.hidden = true;
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-label", "Image agrandie");
+
+  const content = document.createElement("div");
+  content.className = "catalogue-image-modal-content";
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "catalogue-image-modal-close";
+  closeButton.setAttribute("aria-label", "Fermer l'image agrandie");
+  closeButton.textContent = "×";
+
+  const modalImage = document.createElement("img");
+  modalImage.alt = "";
+
+  content.append(closeButton, modalImage);
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  const closeModal = () => {
+    modal.hidden = true;
+    modalImage.removeAttribute("src");
+    document.body.style.removeProperty("overflow");
+  };
+
+  closeButton.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) closeModal();
+  });
+
+  window.__catalogueOpenImageModal = (url, alt) => {
+    if (!url) return;
+    modalImage.src = url;
+    modalImage.alt = alt || "";
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    closeButton.focus();
+  };
+}
+
+function makeImageClickable(img, alt) {
+  if (!img) return;
+  setupImageModal();
+  img.classList.add("catalogue-image-clickable");
+  img.setAttribute("role", "button");
+  img.setAttribute("tabindex", "0");
+  img.setAttribute("aria-label", `Agrandir l'image${alt ? ` : ${alt}` : ""}`);
+
+  const open = () => window.__catalogueOpenImageModal?.(img.currentSrc || img.src, alt);
+  img.addEventListener("click", open);
+  img.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
+  });
+}
+
+function createImageElement(url, className, alt) {
+  if (!url || typeof url !== "string" || !url.trim()) return null;
+
+  const img = document.createElement("img");
+  img.className = className;
+  img.src = url;
+  img.alt = alt || "";
+  img.loading = "lazy";
+  makeImageClickable(img, alt);
+  img.addEventListener("error", () => {
+    const placeholder = document.createElement("span");
+    placeholder.className = `${className}-placeholder`;
+    placeholder.textContent = "Aucune image";
+    img.replaceWith(placeholder);
+  }, { once: true });
+  return img;
+}
+
 function image(url,name){if(!url)return '<div class="tile-placeholder"></div>';return '<img loading="lazy" src="'+String(url).replace(/"/g,"&quot;")+'" alt="'+String(name||"").replace(/"/g,"&quot;")+'">';}
+
 function tile(f,detail=false){
  const cat=categoryOf(f);
  const href="commande.html?categorie="+encodeURIComponent(cat)+"&formule="+encodeURIComponent(f.id||"");
@@ -36,9 +138,32 @@ function tile(f,detail=false){
  return '<article class="'+(detail?"category-card":"formula-tile")+'">'+image(f.photo,f.nom)+'<div class="'+(detail?"category-card-body":"formula-tile-body")+'"><h'+(detail?"2":"3")+'>'+escapeHtml(f.nom||"Formule")+'</h'+(detail?"2":"3")+'><p class="desc">'+escapeHtml(f.description||"")+'</p><div class="price">'+euro.format(Number(f.prix)||0)+'</div><div class="tile-actions">'+action+'</div></div></article>';
 }
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
-function dishTile(p,index){
- return '<article class="formula-tile dish-tile" data-dish-index="'+index+'" tabindex="0" role="button" aria-label="Voir '+escapeHtml(p.nom||"ce plat")+'">'+image(p.photo,p.nom)+'<div class="formula-tile-body"><h3>'+escapeHtml(p.nom)+'</h3><div class="price">'+euro.format(Number(p.prix)||0)+'</div></div></article>';
+function productTile(p,index,category){
+ const description=String(p.description||"").trim();
+ const safeCategory=String(category||p.categorie||"Produit");
+ const safeName=escapeHtml(p.nom||"Produit");
+ const safeId=escapeHtml(p.id||"");
+ const photo=image(p.photo,p.nom);
+ return '<article class="formula-tile dish-tile catalogue-product-tile" data-product-id="'+safeId+'" data-product-category="'+escapeHtml(safeCategory)+'">'+
+   photo+
+   '<div class="formula-tile-body">'+
+   '<h3>'+safeName+'</h3>'+
+   '<div class="price">'+euro.format(Number(p.prix)||0)+'</div>'+
+   (description
+     ? '<details class="catalogue-product-description"><summary>En quelques mots</summary><p>'+escapeHtml(description)+'</p></details>'
+     : '')+
+   '<div class="catalogue-product-cart">'+
+   '<div class="catalogue-product-quantity" aria-label="Quantité">'+
+   '<button type="button" data-product-minus aria-label="Diminuer '+safeName+'">−</button>'+
+   '<output>1</output>'+
+   '<button type="button" data-product-plus aria-label="Augmenter '+safeName+'">+</button>'+
+   '</div>'+
+   '<button type="button" class="btn btn-primary" data-product-add>Ajouter au panier</button>'+
+   '</div>'+
+   '</div>'+
+   '</article>';
 }
+
 let dishGalleryItems=[];let dishGalleryIndex=0;
 function ensureDishGallery(){
  if(document.querySelector("#dish-gallery-modal")) return;
@@ -64,30 +189,92 @@ function renderDishGallery(){
 }
 function normalize(){data.formules=data.formules.filter(f=>f?.actif!==false).sort((a,b)=>Number(a.ordre||0)-Number(b.ordre||0));}
 function renderHome(){
- const host=document.querySelector("#catalogue-sections"); if(!host)return;
+ const host=document.querySelector("#catalogue-sections");
+ if(!host)return;
  host.innerHTML="";
+
+ const productSections=[
+   {
+     category:"Plat",
+     title:"Nos plats à la carte",
+     description:"Découvrez notre sélection de plats."
+   },
+   {
+     category:"Dessert",
+     title:"Nos desserts à la carte",
+     description:"Terminez votre repas sur une note gourmande."
+   },
+   {
+     category:"Boisson",
+     title:"Nos boissons à la carte",
+     description:"Accompagnez votre repas avec la boisson de votre choix."
+   }
+ ];
+
+ productSections.forEach(({category,title,description})=>{
+   const products=data.produits.filter(
+     p=>p?.categorie===category&&p?.actif!==false
+   );
+   if(!products.length)return;
+
+   const sec=document.createElement("section");
+   sec.className="catalogue-section";
+   sec.innerHTML='<div class="section-heading"><div><h2>'+title+'</h2><p>'+description+'</p></div></div><div class="formula-grid">'+products.map((p,i)=>productTile(p,i,category)).join("")+'</div>';
+   host.appendChild(sec);
+
+   sec.querySelectorAll(".catalogue-product-tile").forEach(card=>{
+     const productId=card.dataset.productId;
+     const product=products.find(p=>String(p.id)===productId);
+     if(!product)return;
+
+     const photo=card.querySelector("img");
+     if(photo){
+       makeImageClickable(photo,product.nom);
+     }
+
+     const output=card.querySelector("output");
+     let quantity=1;
+
+     const setQuantity=(value)=>{
+       quantity=Math.max(1,Math.min(50,parseInt(value,10)||1));
+       output.textContent=String(quantity);
+     };
+
+     card.querySelector("[data-product-minus]")?.addEventListener("click",(event)=>{
+       event.stopPropagation();
+       setQuantity(quantity-1);
+     });
+
+     card.querySelector("[data-product-plus]")?.addEventListener("click",(event)=>{
+       event.stopPropagation();
+       setQuantity(quantity+1);
+     });
+
+     card.querySelector("[data-product-add]")?.addEventListener("click",(event)=>{
+       event.stopPropagation();
+       addProductToCart({product,quantite:quantity});
+     });
+   });
+ });
+
  const chef=data.formules.filter(f=>categoryOf(f)==="chef");
  if(chef.length){
-   const sec=document.createElement("section");sec.className="catalogue-section";
+   const sec=document.createElement("section");
+   sec.className="catalogue-section";
    sec.innerHTML='<div class="section-heading"><div><h2>Formules du Chef</h2><p>Des formules complètes pour tous les moments.</p></div><a class="section-link" href="commande.html?categorie=chef">Voir toutes les formules →</a></div><div class="formula-grid">'+chef.slice(0,4).map(f=>tile(f)).join("")+'</div>';
    host.appendChild(sec);
  }
+
  const specialCats=["speciales","petit-dejeuner","brunch","fromages"];
  const special=data.formules.filter(f=>specialCats.includes(categoryOf(f)));
  if(special.length){
-   const sec=document.createElement("section");sec.className="catalogue-section";
+   const sec=document.createElement("section");
+   sec.className="catalogue-section";
    sec.innerHTML='<div class="section-heading"><div><h2>Formules spéciales</h2><p>Des créations uniques pour les occasions particulières.</p></div><a class="section-link" href="commande.html?categorie=speciales">Voir toutes les formules →</a></div><div class="formula-grid">'+special.slice(0,4).map(f=>tile(f)).join("")+'</div>';
    host.appendChild(sec);
  }
- const plats=data.produits.filter(p=>p?.categorie==="Plat"&&p?.actif!==false);
- if(plats.length){
-   const sec=document.createElement("section");sec.className="catalogue-section";
-   sec.innerHTML='<div class="section-heading"><div><h2>Nos plats à la carte</h2><p>Découvrez notre sélection de plats.</p></div><button type="button" class="section-link gallery-trigger">Voir tous les plats →</button></div><div class="formula-grid">'+plats.slice(0,4).map((p,i)=>dishTile(p,i)).join("")+'</div>';
-   host.appendChild(sec);
-   sec.querySelector(".gallery-trigger")?.addEventListener("click",()=>openDishGallery(plats,0));
-   sec.querySelectorAll("[data-dish-index]").forEach(card=>card.addEventListener("click",()=>openDishGallery(plats,Number(card.dataset.dishIndex))));
- }
 }
+
 function renderCategory(){
  const params=new URLSearchParams(location.search);const cat=params.get("categorie");
  if(!cat)return;
@@ -106,6 +293,113 @@ function renderCategory(){
  const selected=params.get("formule");
  if(selected) renderFormulaDetail(items.find(f=>f.id===selected));
  }
+function renderProductOptions(select, category, previewContainer, forcedProductId = "") {
+  const products = productsByCategory.get(category) || [];
+  select.innerHTML = "";
+  previewContainer.innerHTML = "";
+
+  if (!products.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Aucun produit disponible";
+    select.appendChild(option);
+    select.disabled = true;
+    return;
+  }
+
+  if (forcedProductId) {
+    const forcedProduct = products.find((product) => product.id === forcedProductId);
+
+    if (!forcedProduct) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Produit imposé indisponible";
+      select.appendChild(option);
+      select.disabled = true;
+      return;
+    }
+
+    const option = document.createElement("option");
+    option.value = forcedProduct.id;
+    option.textContent = forcedProduct.nom;
+    select.appendChild(option);
+    select.value = forcedProduct.id;
+    select.disabled = true;
+
+    const image = createImageElement(
+      forcedProduct.photo,
+      "product-photo",
+      forcedProduct.nom
+    );
+
+    if (image) {
+      previewContainer.appendChild(image);
+    } else {
+      const placeholderImage = document.createElement("span");
+      placeholderImage.className = "product-photo-placeholder";
+      placeholderImage.textContent = "Aucune image";
+      previewContainer.appendChild(placeholderImage);
+    }
+
+    return;
+  }
+
+  select.disabled = false;
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = `Choisir un ${category.toLowerCase()}`;
+  placeholder.selected = true;
+  placeholder.disabled = true;
+  select.appendChild(placeholder);
+
+  products.forEach((product) => {
+    const option = document.createElement("option");
+    option.value = product.id || "";
+    option.textContent = product.nom;
+    option.disabled = !product.id;
+    if (!product.id) option.textContent += " — identifiant indisponible";
+    select.appendChild(option);
+  });
+
+  select.addEventListener("change", () => {
+    previewContainer.innerHTML = "";
+
+    previewContainer.parentElement
+      ?.querySelectorAll(".product-description-details")
+      .forEach((el) => el.remove());
+
+    const product = products.find((item) => item.id === select.value);
+    if (!product) return;
+
+    const image = createImageElement(
+      product.photo,
+      "product-photo",
+      product.nom
+    );
+
+    if (image) {
+      previewContainer.appendChild(image);
+    } else {
+      const placeholderImage = document.createElement("span");
+      placeholderImage.className = "product-photo-placeholder";
+      placeholderImage.textContent = "Aucune image";
+      previewContainer.appendChild(placeholderImage);
+    }
+
+    if (product.description?.trim()) {
+      const details = document.createElement("details");
+      details.className = "product-description-details";
+      const summary = document.createElement("summary");
+      summary.textContent = "En quelques mots";
+      const description = document.createElement("p");
+      description.textContent = product.description.trim();
+      details.append(summary, description);
+      previewContainer.parentElement?.appendChild(details);
+    }
+  });
+}
+
 function renderFormulaDetail(formule){
  const old=document.querySelector("#formula-detail");old?.remove();
  if(!formule)return;
@@ -115,18 +409,75 @@ function renderFormulaDetail(formule){
  document.querySelector("#category-grid")?.before(section);
  const comp=section.querySelector(".detail-composition");
  composition.forEach(item=>{
-   const row=document.createElement("label");row.className="detail-component";
-   const name=document.createElement("span");name.textContent=(item.categorie==="Plat"?"Plat":item.categorie==="Boisson"?"Boisson":"Dessert")+" × "+item.quantite;
-   const select=document.createElement("select");select.dataset.category=item.categorie;select.dataset.requiredQuantity=item.quantite;
-   const products=productsByCategory.get(item.categorie)||[];
-   const forced=item.produitId||"";
-   if(forced){
-     const p=products.find(x=>x.id===forced);select.innerHTML='<option value="'+forced+'">'+escapeHtml(p?.nom||item.produitNom||"Produit imposé")+'</option>';select.disabled=true;
-   }else{
-     select.innerHTML='<option value="">Choisir un '+item.categorie.toLowerCase()+'</option>'+products.map(p=>'<option value="'+p.id+'">'+escapeHtml(p.nom)+'</option>').join("");
-   }
-   row.append(name,select);comp.appendChild(row);
- });
+
+  const row=document.createElement("div");
+  row.className="component-row";
+
+  const label=document.createElement("label");
+  const select=document.createElement("select");
+  const preview=document.createElement("div");
+
+  const selectId=`component-${formule.id || formule.nom}-${item.categorie}`;
+  label.htmlFor=selectId;
+  label.textContent=(item.categorie==="Plat"?"Plat":item.categorie==="Boisson"?"Boisson":"Dessert")+" × "+item.quantite;
+
+  select.id=selectId;
+  select.dataset.category=item.categorie;
+  select.dataset.requiredQuantity=String(item.quantite);
+  preview.className="product-photo-preview";
+
+  const rawCompositionItem=Array.isArray(formule.composition)
+    ? formule.composition.find(x=>x?.categorie===item.categorie)
+    : null;
+
+  const imposedProductId=String(rawCompositionItem?.produitId || item.produitId || "");
+
+  renderProductOptions(select,item.categorie,preview,imposedProductId);
+
+  if(imposedProductId){
+    const imposedProduct=(productsByCategory.get(item.categorie)||[]).find(
+      product=>product.id===imposedProductId
+    );
+
+    if(imposedProduct){
+      select.innerHTML="";
+      const option=document.createElement("option");
+      option.value=imposedProduct.id;
+      option.textContent=imposedProduct.nom;
+      option.selected=true;
+      select.appendChild(option);
+      select.value=imposedProduct.id;
+    }
+
+    select.disabled=true;
+    select.setAttribute("aria-disabled","true");
+    select.dispatchEvent(new Event("change"));
+  }
+
+  row.append(label,select,preview);
+
+  if(imposedProductId){
+    const imposedProduct=(productsByCategory.get(item.categorie)||[]).find(
+      product=>product.id===imposedProductId
+    );
+
+    if(imposedProduct?.description?.trim()){
+      const details=document.createElement("details");
+      details.className="product-description-details";
+
+      const summary=document.createElement("summary");
+      summary.textContent="En quelques mots";
+
+      const description=document.createElement("p");
+      description.textContent=imposedProduct.description.trim();
+
+      details.append(summary,description);
+      row.appendChild(details);
+    }
+  }
+  comp.appendChild(row);
+
+});
  let qty=1;const out=section.querySelector("output");const setQ=v=>{qty=Math.max(1,parseInt(v,10)||1);out.textContent=qty};
  section.querySelector("[data-detail-minus]").onclick=()=>setQ(qty-1);section.querySelector("[data-detail-plus]").onclick=()=>setQ(qty+1);
  section.querySelector("[data-detail-add]").onclick=()=>{
@@ -142,7 +493,14 @@ function renderFormulaDetail(formule){
 }
 function renderSideCart(){
  const cart=getCart(),lines=document.querySelector("#category-cart-lines");if(!lines)return;
- lines.innerHTML=cart.lines.map(line=>'<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(line.formuleNom)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml((line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · "))+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>').join("");
+ const lineMarkup=line=>{
+   const name=line.type==="produit"?String(line.produitNom||line.formuleNom||"Produit"):String(line.formuleNom||"Formule");
+   const components=line.type==="produit"
+     ?"À la carte · "+String(line.categorie||"Produit")
+     :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
+   return '<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(name)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml(components)+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>';
+ };
+ lines.innerHTML=cart.lines.map(lineMarkup).join("");
  document.querySelector("#category-cart-empty").hidden=cart.lines.length>0;document.querySelector("#category-cart-total").textContent=euro.format(getCartTotal());document.querySelector("#category-pay").disabled=!cart.lines.length;
  lines.querySelectorAll("[data-minus]").forEach(b=>b.onclick=()=>updateLineQuantity(b.dataset.minus,cart.lines.find(x=>x.lineId===b.dataset.minus).quantite-1));
  lines.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>updateLineQuantity(b.dataset.plus,cart.lines.find(x=>x.lineId===b.dataset.plus).quantite+1));
@@ -150,7 +508,14 @@ function renderSideCart(){
 }
 function renderFullCart(){
  const cart=getCart(),lines=document.querySelector("#full-cart-lines");if(!lines)return;
- lines.innerHTML=cart.lines.map(line=>'<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(line.formuleNom)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml((line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · "))+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>').join("");
+ const lineMarkup=line=>{
+   const name=line.type==="produit"?String(line.produitNom||line.formuleNom||"Produit"):String(line.formuleNom||"Formule");
+   const components=line.type==="produit"
+     ?"À la carte · "+String(line.categorie||"Produit")
+     :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
+   return '<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(name)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml(components)+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>';
+ };
+ lines.innerHTML=cart.lines.map(lineMarkup).join("");
  document.querySelector("#full-cart-empty").hidden=cart.lines.length>0;document.querySelector("#full-cart-total").textContent=euro.format(getCartTotal());document.querySelector("#full-cart-pay").disabled=!cart.lines.length;
  lines.querySelectorAll("[data-minus]").forEach(b=>b.onclick=()=>updateLineQuantity(b.dataset.minus,getCart().lines.find(x=>x.lineId===b.dataset.minus).quantite-1));
  lines.querySelectorAll("[data-plus]").forEach(b=>b.onclick=()=>updateLineQuantity(b.dataset.plus,getCart().lines.find(x=>x.lineId===b.dataset.plus).quantite+1));
@@ -162,6 +527,13 @@ async function load(){
   const r=await fetch(GET_CATALOGUE_URL,{cache:"no-store"});if(!r.ok)throw new Error();
   data=await r.json();normalize();
   if(!Array.isArray(data.formules)||!Array.isArray(data.produits))throw new Error();
+  productsByCategory=new Map();
+  data.produits.filter(p=>p?.actif!==false).forEach(p=>{
+    const category=String(p.categorie||"").trim();
+    if(!category)return;
+    if(!productsByCategory.has(category))productsByCategory.set(category,[]);
+    productsByCategory.get(category).push(p);
+  });
   renderHome();renderCategory();renderFullCart();
   document.querySelector("#catalogue-status")?.remove();
  }catch(e){const s=document.querySelector("#catalogue-status");if(s)s.textContent="Le catalogue ne peut pas être chargé pour le moment.";}

@@ -47,7 +47,10 @@ function buildPaymentIntentPayload(input) {
 
   return {
     lignes: lines.map((line) => ({
+      type: normalizeText(line?.type).toLowerCase(),
       formuleId: normalizeText(line?.formuleId),
+      produitId: normalizeText(line?.produitId),
+      categorie: normalizeText(line?.categorie),
       quantite: line?.quantite,
       composants: Array.isArray(line?.composants)
         ? line.composants.map((component) => ({

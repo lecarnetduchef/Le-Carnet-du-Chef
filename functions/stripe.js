@@ -42,7 +42,7 @@ async function createCheckoutSession({ requestId, paymentAttempt }) {
   const lineItems = lines.map((line) => ({
     price_data: {
       currency: "eur",
-      product_data: { name: String(line.formuleNom || "Formule") },
+      product_data: { name: String(line.type === "produit" ? line.produitNom || "Produit" : line.formuleNom || "Formule") },
       unit_amount: Number(line.prixUnitaireCentimes)
     },
     quantity: Number(line.quantite)

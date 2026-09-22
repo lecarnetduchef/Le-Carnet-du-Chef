@@ -62,6 +62,52 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
   const validated = [];
 
   lines.forEach((line, i) => {
+    const lineType = text(line?.type).toLowerCase();
+
+    if (lineType === "produit") {
+      const produitId = text(line?.produitId);
+      const product = products.get(produitId);
+
+      if (!product) fail(`Ligne ${i + 1}: produit introuvable.`, "INVALID_PRODUCT");
+      if (product.actif !== true) fail(`Ligne ${i + 1}: produit inactif.`, "PRODUCT_INACTIVE");
+
+      const category = text(line?.categorie);
+      if (!CATEGORIES.has(category)) fail(`Ligne ${i + 1}: catégorie produit invalide.`, "INVALID_PRODUCT_CATEGORY");
+      if (String(product.categorie || "") !== category) fail(`Ligne ${i + 1}: catégorie produit incorrecte.`, "PRODUCT_CATEGORY_MISMATCH");
+
+      const quantity = Number(line?.quantite);
+      if (!Number.isInteger(quantity) || quantity <= 0 || quantity > MAX_QUANTITY) {
+        fail(`Ligne ${i + 1}: quantité invalide.`, "INVALID_QUANTITY");
+      }
+
+      const available = Number(product.stockDisponible);
+      if (!Number.isInteger(available) || available <= 0) {
+        fail(`Ligne ${i + 1}: produit indisponible.`, "PRODUCT_UNAVAILABLE");
+      }
+
+      const price = Number(product.prix);
+      if (!Number.isFinite(price) || price < 0) {
+        fail(`Ligne ${i + 1}: prix serveur invalide.`, "INVALID_SERVER_PRICE");
+      }
+
+      demanded.set(produitId, (demanded.get(produitId) || 0) + quantity);
+
+      validated.push({
+        lineIndex: i,
+        type: "produit",
+        formuleId: "",
+        formuleNom: String(product.nom || ""),
+        produitId: product.id,
+        produitNom: String(product.nom || ""),
+        categorie: category,
+        prixUnitaire: price,
+        quantite: quantity,
+        composants: []
+      });
+
+      return;
+    }
+
     const formuleId = text(line?.formuleId), formule = formulas.get(formuleId);
     if (!formule) fail(`Ligne ${i + 1}: formule inconnue.`, "INVALID_FORMULA");
     if (formule.actif !== true) fail(`Ligne ${i + 1}: formule inactive.`, "FORMULA_INACTIVE");

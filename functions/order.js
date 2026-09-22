@@ -25,8 +25,12 @@ function validateValidatedPricing(pricing) {
 
 function buildLines(pricing) {
   return pricing.lignes.map((line) => ({
-    formuleId: String(line.formuleId),
+    type: String(line.type || "formule"),
+    formuleId: String(line.formuleId || ""),
     formuleNom: String(line.formuleNom || ""),
+    produitId: String(line.produitId || ""),
+    produitNom: String(line.produitNom || ""),
+    categorie: String(line.categorie || ""),
     prixUnitaireCentimes: line.prixUnitaireCentimes,
     quantite: line.quantite,
     sousTotalCentimes: line.sousTotalCentimes,
@@ -141,11 +145,25 @@ async function createPendingPaymentAttempt(args) {
 function requiredStockByProduct(orderData) {
   const requirements = new Map();
   for (const line of Array.isArray(orderData?.lignes) ? orderData.lignes : []) {
+    const quantity = Number(line.quantite);
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      fail("Quantité de stock invalide.", "INVALID_STOCK_DATA");
+    }
+
+    if (String(line.type || "").toLowerCase() === "produit") {
+      const produitId = String(line.produitId || "").trim();
+      if (!produitId) {
+        fail("Produit individuel invalide.", "INVALID_STOCK_DATA");
+      }
+      requirements.set(produitId, (requirements.get(produitId) || 0) + quantity);
+      continue;
+    }
+
     for (const component of Array.isArray(line.composants) ? line.composants : []) {
       const produitId = String(component.produitId || "").trim();
       const perFormula = Number(component.quantiteParFormule);
-      const quantity = Number(line.quantite);
-      if (!produitId || !Number.isInteger(perFormula) || perFormula <= 0 || !Number.isInteger(quantity) || quantity <= 0) {
+      if (!produitId || !Number.isInteger(perFormula) || perFormula <= 0) {
         fail("Composition de stock invalide.", "INVALID_STOCK_DATA");
       }
       requirements.set(produitId, (requirements.get(produitId) || 0) + perFormula * quantity);
