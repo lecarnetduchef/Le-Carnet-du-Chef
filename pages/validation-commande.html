@@ -91,20 +91,7 @@
             </div>
           </form>
 
-          <div id="final-summary" hidden>
-            <p class="eyebrow">Récapitulatif final</p>
-            <h2>Vérifiez votre commande</h2>
-            <div id="summary-lines" class="checkout-summary"></div>
-            <div id="summary-meta" class="summary-meta"></div>
-            <div id="summary-total" class="summary-total"></div>
-            <p class="provisional-total">Le montant affiché avant validation est indicatif. Le prix, les frais de livraison et le total définitifs sont recalculés côté serveur.</p>
-            <p id="checkout-summary-error" class="notice error" role="alert" hidden></p>
-            <div class="checkout-actions">
-              <button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
-              <button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
-            </div>
-            <p class="checkout-help">La validation prépare votre paiement sécurisé Stripe. Votre commande ne sera confirmée qu’après paiement.</p>
-          </div>
+          
         </div>
       </div>
     </section>
@@ -116,7 +103,23 @@
     </div>
   </footer>
 
-  </div><aside class="checkout-card summary-card"><p class="eyebrow">Votre panier</p><h2>Récapitulatif</h2><div id="summary-lines"></div><div id="summary-total" class="summary-total"></div><div id="summary-meta" class="summary-meta"></div></aside></div></div></main>
+  </div><aside class="checkout-card summary-card">
+<p class="eyebrow">Votre panier</p>
+<div id="final-summary" hidden>
+<h2>Récapitulatif</h2>
+<div id="summary-lines"></div>
+<div id="summary-meta" class="summary-meta"></div>
+<div id="summary-total" class="summary-total"></div>
+<p class="provisional-total">Le montant affiché avant validation est indicatif. Le prix, les frais de livraison et le total définitifs sont recalculés côté serveur.</p>
+<p id="checkout-summary-error" class="notice error" role="alert" hidden></p>
+<div class="checkout-actions">
+<button type="button" id="back-to-checkout-button" class="btn btn-secondary">Modifier mes informations</button>
+<button type="button" id="final-validation-button" class="btn btn-primary">Valider ma commande</button>
+</div>
+<p class="checkout-help">La validation prépare votre paiement sécurisé Stripe. Votre commande ne sera confirmée qu’après paiement.</p>
+</div>
+<div id="summary-empty" class="cart-note">Votre panier sera récapitulé ici après validation des informations.</div>
+</aside></div></div></main>
 <footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></span></div></div></footer>
 <script src="../js/config.js"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js"></script><script>
     (() => {
