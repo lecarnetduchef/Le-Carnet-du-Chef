@@ -539,7 +539,9 @@ async function loadCatalogue() {
     if (!response.ok) throw new Error(`Impossible de charger le catalogue public (${response.status}).`);
 
     const data = await response.json();
-    if (!Array.isArray(data.formules) || !Array.isArray(data.produits)) throw new Error("Structure du catalogue public invalide.");
+    if (!Array.isArray(data.formules) || !Array.isArray(data.produits)) {
+      throw new Error("Structure du catalogue public invalide.");
+    }
 
     const products = data.produits
       .filter((product) => product?.actif === true && Number(product?.stockDisponible) > 0 && CATEGORY_LABELS[product?.categorie])
@@ -556,13 +558,111 @@ async function loadCatalogue() {
       .filter((formule) => normalizeComposition(formule.composition).length > 0);
 
     catalogueEl.innerHTML = "";
+
     if (!formules.length) {
       setStatus("Aucune formule disponible actuellement.");
       return;
     }
 
-    formules.forEach((formule) => catalogueEl.appendChild(createFormulaCard(formule)));
-    setStatus(`${formules.length} formule${formules.length > 1 ? "s" : ""} disponible${formules.length > 1 ? "s" : ""}.`, "success");
+    const groups = [
+      {
+        id: "chef",
+        title: "Formules du Chef",
+        description: "Les formules proposées par Le Carnet du Chef.",
+        match: (formule) => !formule.categorieCatalogue || formule.categorieCatalogue === "chef"
+      },
+      {
+        id: "petit_dejeuner",
+        title: "Petit déjeuner",
+        description: "Une sélection dédiée aux petits-déjeuners.",
+        match: (formule) => formule.categorieCatalogue === "petit_dejeuner"
+      },
+      {
+        id: "brunch",
+        title: "Brunch",
+        description: "Des formules pensées pour les moments brunch.",
+        match: (formule) => formule.categorieCatalogue === "brunch"
+      },
+      {
+        id: "plateaux_fromages",
+        title: "Plateaux de fromages",
+        description: "Des plateaux regroupés dans leur propre espace.",
+        match: (formule) => formule.categorieCatalogue === "plateaux_fromages"
+      }
+    ];
+
+    let renderedGroups = 0;
+
+    groups.forEach((group) => {
+      const groupFormules = formules.filter(group.match);
+      if (!groupFormules.length) return;
+
+      const section = document.createElement("section");
+      section.className = "catalogue-group";
+      section.dataset.catalogueCategory = group.id;
+
+      const heading = document.createElement("div");
+      heading.className = "catalogue-group-head";
+
+      const copy = document.createElement("div");
+      const title = document.createElement("h3");
+      title.textContent = group.title;
+      const description = document.createElement("p");
+      description.textContent = group.description;
+      copy.append(title, description);
+
+      const rule = document.createElement("div");
+      rule.className = "catalogue-group-rule";
+      rule.setAttribute("aria-hidden", "true");
+
+      heading.append(copy, rule);
+
+      const grid = document.createElement("div");
+      grid.className = "catalog-grid";
+
+      groupFormules.forEach((formule) => grid.appendChild(createFormulaCard(formule)));
+
+      section.append(heading, grid);
+      catalogueEl.appendChild(section);
+      renderedGroups += 1;
+    });
+
+    const uncategorized = formules.filter(
+      (formule) => !groups.some((group) => group.match(formule))
+    );
+
+    if (uncategorized.length) {
+      const section = document.createElement("section");
+      section.className = "catalogue-group";
+      section.dataset.catalogueCategory = "autres";
+
+      const heading = document.createElement("div");
+      heading.className = "catalogue-group-head";
+
+      const copy = document.createElement("div");
+      const title = document.createElement("h3");
+      title.textContent = "Autres formules";
+      const description = document.createElement("p");
+      description.textContent = "Autres offres actuellement disponibles.";
+      copy.append(title, description);
+
+      const rule = document.createElement("div");
+      rule.className = "catalogue-group-rule";
+      heading.append(copy, rule);
+
+      const grid = document.createElement("div");
+      grid.className = "catalog-grid";
+      uncategorized.forEach((formule) => grid.appendChild(createFormulaCard(formule)));
+
+      section.append(heading, grid);
+      catalogueEl.appendChild(section);
+      renderedGroups += 1;
+    }
+
+    setStatus(
+      `${formules.length} formule${formules.length > 1 ? "s" : ""} disponible${formules.length > 1 ? "s" : ""}.`,
+      "success"
+    );
   } catch (error) {
     console.error("Erreur de chargement du catalogue :", error);
     catalogueEl.innerHTML = "";
