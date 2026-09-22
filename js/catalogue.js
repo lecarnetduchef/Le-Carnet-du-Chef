@@ -92,6 +92,7 @@ function renderCategory(){
  const params=new URLSearchParams(location.search);const cat=params.get("categorie");
  if(!cat)return;
  document.querySelector("#catalogue-home").hidden=true;document.querySelector("#category-view").hidden=false;
+ const socialBanner=document.querySelector(".catalogue-social-banner");if(socialBanner)socialBanner.hidden=true;
  const info=labels[cat]||{title:"Catalogue",description:""};
  const items=data.formules.filter(f=>categoryOf(f)===cat);
  const grid=document.querySelector("#category-grid");
