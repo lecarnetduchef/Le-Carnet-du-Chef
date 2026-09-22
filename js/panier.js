@@ -80,6 +80,13 @@ export function getCartTotal() {
   return cart.lines.reduce((total, line) => total + (Number(line.prixUnitaire) || 0) * line.quantite, 0);
 }
 
+function renderHeaderCartCount() {
+  document.querySelectorAll("[data-cart-count]").forEach((el) => {
+    el.textContent = String(cart.lines.reduce((total, line) => total + Number(line.quantite || 0), 0));
+    el.hidden = cart.lines.length === 0;
+  });
+}
+
 function renderCart() {
   const container = document.querySelector("#cart-lines");
   const empty = document.querySelector("#cart-empty");
@@ -120,9 +127,13 @@ function renderCart() {
   });
 
   total.textContent = euro.format(getCartTotal());
+  renderHeaderCartCount();
 }
 
-document.addEventListener("DOMContentLoaded", renderCart);
+document.addEventListener("DOMContentLoaded", () => {
+  renderCart();
+  renderHeaderCartCount();
+});
 
 
 window.addEventListener("storage", (event) => {
