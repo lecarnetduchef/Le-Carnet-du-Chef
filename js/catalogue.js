@@ -94,6 +94,10 @@ function renderCategory(){
  document.querySelector("#catalogue-home").hidden=true;document.querySelector("#category-view").hidden=false;
  const socialBanner=document.querySelector(".catalogue-social-banner");if(socialBanner)socialBanner.hidden=true;
  const info=labels[cat]||{title:"Catalogue",description:""};
+ const title=document.querySelector("#category-title");
+ const description=document.querySelector("#category-description");
+ if(title) title.textContent=info.title;
+ if(description) description.textContent=info.description;
  const items=data.formules.filter(f=>categoryOf(f)===cat);
  const grid=document.querySelector("#category-grid");
  grid.innerHTML=items.length?items.map(f=>tile(f,true)).join(""):'<p class="catalogue-empty">Aucune formule disponible dans cette catégorie.</p>';
