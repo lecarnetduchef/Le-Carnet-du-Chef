@@ -822,7 +822,7 @@ window.location.assign(data.checkoutUrl);
             lines.appendChild(row);
           });
           if (!cart.lines?.length) lines.innerHTML='<p class="empty">Votre panier est vide.</p>';
-          total.innerHTML="<div class="grand-total"><span>Total</span><span>"+euro.format(sum)+"</span></div>";
+          total.innerHTML='<div class="grand-total"><span>Total</span><span>'+euro.format(sum)+'</span></div>';
         } catch {}
       };
       render();
