@@ -17,7 +17,10 @@ function image(url,name){if(!url)return '<div class="tile-placeholder"></div>';r
 function tile(f,detail=false){
  const cat=categoryOf(f);
  const href="commande.html?categorie="+encodeURIComponent(cat)+"&formule="+encodeURIComponent(f.id||"");
- return '<article class="'+(detail?"category-card":"formula-tile")+'">'+image(f.photo,f.nom)+'<div class="'+(detail?"category-card-body":"formula-tile-body")+'"><h'+(detail?"2":"3")+'>'+escapeHtml(f.nom||"Formule")+'</h'+(detail?"2":"3")+'><p class="desc">'+escapeHtml(f.description||"")+'</p><div class="price">'+euro.format(Number(f.prix)||0)+'</div><div class="tile-actions"><a class="btn btn-secondary" href="'+href+'">Voir les détails</a></div></div></article>';
+ const action=detail
+   ? '<button type="button" class="btn btn-primary quick-add" data-open-formula="'+escapeHtml(f.id||"")+'">Ajouter au panier</button><a class="btn btn-secondary" href="'+href+'">Voir les détails</a>'
+   : '<a class="btn btn-secondary" href="'+href+'">Voir les détails</a>';
+ return '<article class="'+(detail?"category-card":"formula-tile")+'">'+image(f.photo,f.nom)+'<div class="'+(detail?"category-card-body":"formula-tile-body")+'"><h'+(detail?"2":"3")+'>'+escapeHtml(f.nom||"Formule")+'</h'+(detail?"2":"3")+'><p class="desc">'+escapeHtml(f.description||"")+'</p><div class="price">'+euro.format(Number(f.prix)||0)+'</div><div class="tile-actions">'+action+'</div></div></article>';
 }
 function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 function normalize(){data.formules=data.formules.filter(f=>f?.actif!==false).sort((a,b)=>Number(a.ordre||0)-Number(b.ordre||0));}
@@ -55,6 +58,8 @@ function renderCategory(){
  const items=data.formules.filter(f=>categoryOf(f)===cat);
  const grid=document.querySelector("#category-grid");
  grid.innerHTML=items.length?items.map(f=>tile(f,true)).join(""):'<p class="catalogue-empty">Aucune formule disponible dans cette catégorie.</p>';
+ const quick=grid.querySelectorAll("[data-open-formula]");
+ quick.forEach(button=>button.addEventListener("click",()=>{ const f=items.find(x=>x.id===button.dataset.openFormula); renderFormulaDetail(f); document.querySelector("#formula-detail")?.scrollIntoView({behavior:"smooth",block:"center"}); }));
  const selected=params.get("formule");
  if(selected) renderFormulaDetail(items.find(f=>f.id===selected));
  renderSideCart();
