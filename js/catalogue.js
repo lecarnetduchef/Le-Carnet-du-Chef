@@ -24,16 +24,19 @@ function normalize(){data.formules=data.formules.filter(f=>f?.actif!==false).sor
 function renderHome(){
  const host=document.querySelector("#catalogue-sections"); if(!host)return;
  host.innerHTML="";
- const order=["chef","speciales","petit-dejeuner","brunch","fromages"];
- order.forEach(cat=>{
-   const items=data.formules.filter(f=>categoryOf(f)===cat);
-   if(!items.length)return;
-   const info=labels[cat]||{title:cat,description:""};
-   const sec=document.createElement("section"); sec.className="catalogue-section";
-   const heading='<div class="section-heading"><div><h2>'+info.title+'</h2><p>'+info.description+'</p></div><a class="section-link" href="commande.html?categorie='+encodeURIComponent(cat)+'">Voir toutes les formules →</a></div>';
-   sec.innerHTML=heading+'<div class="formula-grid">'+items.slice(0,4).map(f=>tile(f)).join("")+'</div>';
+ const chef=data.formules.filter(f=>categoryOf(f)==="chef");
+ if(chef.length){
+   const sec=document.createElement("section");sec.className="catalogue-section";
+   sec.innerHTML='<div class="section-heading"><div><h2>Formules du Chef</h2><p>Des formules complètes pour tous les moments.</p></div><a class="section-link" href="commande.html?categorie=chef">Voir toutes les formules →</a></div><div class="formula-grid">'+chef.slice(0,4).map(f=>tile(f)).join("")+'</div>';
    host.appendChild(sec);
- });
+ }
+ const specialCats=["speciales","petit-dejeuner","brunch","fromages"];
+ const special=data.formules.filter(f=>specialCats.includes(categoryOf(f)));
+ if(special.length){
+   const sec=document.createElement("section");sec.className="catalogue-section";
+   sec.innerHTML='<div class="section-heading"><div><h2>Formules spéciales</h2><p>Des créations uniques pour les occasions particulières.</p></div><span class="section-link">Voir toutes les formules →</span></div><div class="formula-grid">'+special.slice(0,4).map(f=>tile(f)).join("")+'</div>';
+   host.appendChild(sec);
+ }
  const plats=data.produits.filter(p=>p?.categorie==="Plat"&&p?.actif!==false).slice(0,4);
  if(plats.length){
    const sec=document.createElement("section");sec.className="catalogue-section";
@@ -52,8 +55,43 @@ function renderCategory(){
  const items=data.formules.filter(f=>categoryOf(f)===cat);
  const grid=document.querySelector("#category-grid");
  grid.innerHTML=items.length?items.map(f=>tile(f,true)).join(""):'<p class="catalogue-empty">Aucune formule disponible dans cette catégorie.</p>';
- const selected=params.get("formule"); if(selected){requestAnimationFrame(()=>document.querySelector('[href*="'+CSS.escape(selected)+'"]')?.closest("article")?.scrollIntoView({behavior:"smooth",block:"center"}));}
+ const selected=params.get("formule");
+ if(selected) renderFormulaDetail(items.find(f=>f.id===selected));
  renderSideCart();
+}
+function renderFormulaDetail(formule){
+ const old=document.querySelector("#formula-detail");old?.remove();
+ if(!formule)return;
+ const section=document.createElement("section");section.id="formula-detail";section.className="formula-detail";
+ const composition=Array.isArray(formule.composition)?formule.composition.filter(x=>Number(x.quantite)>0):[];
+ section.innerHTML='<div class="formula-detail-image">'+image(formule.photo,formule.nom)+'</div><div><p class="eyebrow">Votre sélection</p><h2>'+escapeHtml(formule.nom)+'</h2><p class="detail-description">'+escapeHtml(formule.description||"")+'</p><div class="detail-composition"></div><div class="detail-quantity"><strong>Quantité</strong><button type="button" data-detail-minus>−</button><output>1</output><button type="button" data-detail-plus>+</button></div><button type="button" class="btn btn-primary" data-detail-add>Ajouter au panier</button></div>';
+ document.querySelector("#category-grid")?.before(section);
+ const comp=section.querySelector(".detail-composition");
+ composition.forEach(item=>{
+   const row=document.createElement("label");row.className="detail-component";
+   const name=document.createElement("span");name.textContent=(item.categorie==="Plat"?"Plat":item.categorie==="Boisson"?"Boisson":"Dessert")+" × "+item.quantite;
+   const select=document.createElement("select");select.dataset.category=item.categorie;select.dataset.requiredQuantity=item.quantite;
+   const products=productsByCategory.get(item.categorie)||[];
+   const forced=item.produitId||"";
+   if(forced){
+     const p=products.find(x=>x.id===forced);select.innerHTML='<option value="'+forced+'">'+escapeHtml(p?.nom||item.produitNom||"Produit imposé")+'</option>';select.disabled=true;
+   }else{
+     select.innerHTML='<option value="">Choisir un '+item.categorie.toLowerCase()+'</option>'+products.map(p=>'<option value="'+p.id+'">'+escapeHtml(p.nom)+'</option>').join("");
+   }
+   row.append(name,select);comp.appendChild(row);
+ });
+ let qty=1;const out=section.querySelector("output");const setQ=v=>{qty=Math.max(1,parseInt(v,10)||1);out.textContent=qty};
+ section.querySelector("[data-detail-minus]").onclick=()=>setQ(qty-1);section.querySelector("[data-detail-plus]").onclick=()=>setQ(qty+1);
+ section.querySelector("[data-detail-add]").onclick=()=>{
+   const composants=[];
+   for(const select of comp.querySelectorAll("select")){
+     if(!select.value){select.focus();return;}
+     const p=(productsByCategory.get(select.dataset.category)||[]).find(x=>x.id===select.value);
+     if(!p)return;
+     composants.push({categorie:select.dataset.category,produitId:p.id,produitNom:p.nom,quantiteParFormule:Number(select.dataset.requiredQuantity)||1});
+   }
+   addToCart({formule,quantite:qty,composants});
+ };
 }
 function renderSideCart(){
  const cart=getCart(),lines=document.querySelector("#category-cart-lines");if(!lines)return;
