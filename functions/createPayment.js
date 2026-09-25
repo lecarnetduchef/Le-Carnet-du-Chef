@@ -4,7 +4,7 @@ const {
   getOrCreatePaymentAttempt,
   IdempotencyError,
 } = require("./idempotency");
-const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
+const { getFormules, getProduits, getPetitDejeunerElements, getCommandesConfig } = require("./catalog");
 const { validateCartIntent, validateScheduleIntent, ValidationError } = require("./validation");
 const { calculateValidatedOrder, PricingError } = require("./pricing");
 const { getDeliveryDistance } = require("./delivery");
@@ -46,7 +46,7 @@ async function createPayment(request) {
     const requestFingerprint = buildRequestFingerprint(input);
     const attempt = await getOrCreatePaymentAttempt(requestId, requestFingerprint);
     stage = "cart";
-    const validatedCart = await validateCartIntent({ lignes: input.lignes }, { getFormules, getProduits });
+    const validatedCart = await validateCartIntent({ lignes: input.lignes }, { getFormules, getProduits, getPetitDejeunerElements });
     stage = "schedule";
     const config = await getCommandesConfig();
     const schedule = validateScheduleIntent({ modeReception: input.modeReception, creneau: input.creneau, date: input.date }, config);

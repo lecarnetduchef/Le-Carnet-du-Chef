@@ -1,4 +1,4 @@
-import { addToCart, addProductToCart, getCart, removeLine, updateLineQuantity, getCartTotal } from "./panier.js";
+import { addToCart, addPetitDejeunerToCart, addProductToCart, getCart, removeLine, updateLineQuantity, getCartTotal } from "./panier.js?v=20260925";
 
 const GET_CATALOGUE_URL="https://europe-west9-carnet-du-chef.cloudfunctions.net/getCatalogue";
 const euro=new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"});
@@ -9,7 +9,7 @@ const labels={
  brunch:{title:"Formule Brunch",description:"La pause conviviale."},
  fromages:{title:"Plateaux de fromages",description:"Une sélection raffinée."}
 };
-let data={formules:[],produits:[]};
+let data={formules:[],produits:[],petitDejeunerElements:[]};
 let productsByCategory=new Map();
 
 function categoryOf(f){
@@ -270,7 +270,7 @@ function renderHome(){
  if(special.length){
    const sec=document.createElement("section");
    sec.className="catalogue-section";
-   sec.innerHTML='<div class="section-heading"><div><h2>Formules spéciales</h2><p>Des créations uniques pour les occasions particulières.</p></div><a class="section-link" href="commande.html?categorie=speciales">Voir toutes les formules →</a></div><div class="formula-grid">'+special.slice(0,4).map(f=>tile(f)).join("")+'</div>';
+   sec.innerHTML='<div class="section-heading"><div><h2>Formules spéciales</h2><p>Des créations uniques pour les occasions particulières.</p></div><a class="section-link" href="commande.html?categorie=speciales">Voir toutes les formules →</a></div><div class="formula-grid">'+special.slice(0,4).map(f=>categoryOf(f)==="petit-dejeuner"?petitDejeunerTile(f):tile(f)).join("")+'</div>';
    host.appendChild(sec);
  }
 }
@@ -287,7 +287,7 @@ function renderCategory(){
  if(description) description.textContent=info.description;
  const items=data.formules.filter(f=>categoryOf(f)===cat);
  const grid=document.querySelector("#category-grid");
- grid.innerHTML=items.length?items.map(f=>tile(f,true)).join(""):'<p class="catalogue-empty">Aucune formule disponible dans cette catégorie.</p>';
+ grid.innerHTML=items.length?items.map(f=>categoryOf(f)==="petit-dejeuner"?petitDejeunerTile(f,true):tile(f,true)).join(""):'<p class="catalogue-empty">Aucune formule disponible dans cette catégorie.</p>';
  const quick=grid.querySelectorAll("[data-open-formula]");
  quick.forEach(button=>button.addEventListener("click",()=>{ const f=items.find(x=>x.id===button.dataset.openFormula); renderFormulaDetail(f); document.querySelector("#formula-detail")?.scrollIntoView({behavior:"smooth",block:"center"}); }));
  const selected=params.get("formule");
@@ -408,7 +408,85 @@ function renderProductOptions(select, category, previewContainer, forcedProductI
   });
 }
 
+
+function petitDejeunerElementName(elementId){
+ const element=(data.petitDejeunerElements||[]).find(x=>x.id===elementId);
+ return element?.nom||elementId||"Élément";
+}
+
+function petitDejeunerTile(f,detail=false){
+ const href="commande.html?categorie=petit-dejeuner&formule="+encodeURIComponent(f.id||"");
+ const action=detail
+   ? '<a class="btn btn-secondary" href="'+href+'">Voir les détails</a>'
+   : '<a class="btn btn-secondary" href="'+href+'">Voir les détails</a>';
+ return '<article class="'+(detail?"category-card":"formula-tile")+'">'+image(f.photo,f.nom)+'<div class="'+(detail?"category-card-body":"formula-tile-body")+'"><h'+(detail?"2":"3")+'>'+escapeHtml(f.nom||"Petit Déjeuner du Chef")+'</h'+(detail?"2":"3")+'><p class="desc">'+escapeHtml(f.description||"")+'</p><div class="price">'+(Array.isArray(f.formats)&&f.formats.length?euro.format(Number(f.formats[0]?.prix)||0):"Sur mesure")+'</div><div class="tile-actions">'+action+'</div></div></article>';
+}
+
+function renderPetitDejeunerDetail(formule){
+ const old=document.querySelector("#formula-detail");old?.remove();
+ if(!formule)return;
+
+ const section=document.createElement("section");
+ section.id="formula-detail";
+ section.className="formula-detail";
+
+ const formats=Array.isArray(formule.formats)?formule.formats.filter(x=>x):[];
+
+ section.innerHTML='<div class="formula-detail-image">'+image(formule.photo,formule.nom)+'</div><div><p class="eyebrow">Petit déjeuner</p><h2>'+escapeHtml(formule.nom||"Petit Déjeuner du Chef")+'</h2><p class="detail-description">'+escapeHtml(formule.description||"")+'</p><div class="detail-composition"></div></div>';
+
+ document.querySelector("#category-grid")?.before(section);
+
+ const comp=section.querySelector(".detail-composition");
+
+ if(!formats.length){
+   comp.innerHTML='<p class="catalogue-empty">Aucun format disponible pour le moment.</p>';
+   return;
+ }
+
+ comp.innerHTML='<div class="pdj-formats">'+formats.map((format,index)=>{
+   const composition=Array.isArray(format.composition)?format.composition.filter(x=>Number(x.quantite)>0):[];
+   const elements=composition.map(item=>{
+     const qty=Number(item.quantite)||0;
+     return '<li>'+escapeHtml(petitDejeunerElementName(item.elementId))+(qty>1?' × '+qty:'')+'</li>';
+   }).join("");
+
+   return '<article class="pdj-format"><h3>'+escapeHtml(format.nom||"Format")+'</h3><p>'+Number(format.personnes||1)+' personne'+(Number(format.personnes||1)>1?"s":"")+'</p><ul>'+elements+'</ul><div class="price">'+euro.format(Number(format.prix)||0)+'</div><button type="button" class="btn btn-primary" data-pdj-add-format="'+index+'">Ajouter au panier</button></article>';
+ }).join("")+'</div>';
+
+  comp.querySelectorAll("[data-pdj-add-format]").forEach((button)=>{
+    button.addEventListener("click",()=>{
+      const index=Number(button.dataset.pdjAddFormat);
+      const format=formats[index];
+      if(!format)return;
+
+      const composition=Array.isArray(format.composition)
+        ? format.composition.filter(x=>Number(x.quantite)>0)
+        : [];
+
+      const enrichedFormat={
+        ...format,
+        composition:composition.map(item=>({
+          ...item,
+          elementNom:petitDejeunerElementName(item.elementId)
+        }))
+      };
+
+      addPetitDejeunerToCart({
+        formule,
+        format:enrichedFormat,
+        quantite:1
+      });
+    });
+  });
+}
+
 function renderFormulaDetail(formule){
+ if(categoryOf(formule)==="petit-dejeuner"){
+  renderPetitDejeunerDetail(formule);
+  return;
+ }
+
+
  const old=document.querySelector("#formula-detail");old?.remove();
  if(!formule)return;
  const section=document.createElement("section");section.id="formula-detail";section.className="formula-detail";
@@ -517,7 +595,9 @@ function renderSideCart(){
    const name=line.type==="produit"?String(line.produitNom||line.formuleNom||"Produit"):String(line.formuleNom||"Formule");
    const components=line.type==="produit"
      ?"À la carte · "+String(line.categorie||"Produit")
-     :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
+     :line.type==="petit-dejeuner"
+       ?String(line.formatNom||"Format")+" · "+String(Number(line.personnes)||1)+" personne"+((Number(line.personnes)||1)>1?"s":"")+" · "+(line.composants||[]).map(x=>String(x.elementNom||x.elementId||"Élément")+(Number(x.quantiteParFormat)>1?" × "+Number(x.quantiteParFormat):"")).join(" · ")
+       :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
    return '<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(name)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml(components)+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>';
  };
  lines.innerHTML=cart.lines.map(lineMarkup).join("");
@@ -532,7 +612,9 @@ function renderFullCart(){
    const name=line.type==="produit"?String(line.produitNom||line.formuleNom||"Produit"):String(line.formuleNom||"Formule");
    const components=line.type==="produit"
      ?"À la carte · "+String(line.categorie||"Produit")
-     :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
+     :line.type==="petit-dejeuner"
+       ?String(line.formatNom||"Format")+" · "+String(Number(line.personnes)||1)+" personne"+((Number(line.personnes)||1)>1?"s":"")+" · "+(line.composants||[]).map(x=>String(x.elementNom||x.elementId||"Élément")+(Number(x.quantiteParFormat)>1?" × "+Number(x.quantiteParFormat):"")).join(" · ")
+       :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
    return '<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(name)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml(components)+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>';
  };
  lines.innerHTML=cart.lines.map(lineMarkup).join("");
@@ -546,7 +628,7 @@ async function load(){
  try{
   const r=await fetch(GET_CATALOGUE_URL,{cache:"no-store"});if(!r.ok)throw new Error();
   data=await r.json();normalize();
-  if(!Array.isArray(data.formules)||!Array.isArray(data.produits))throw new Error();
+  if(!Array.isArray(data.formules)||!Array.isArray(data.produits)||!Array.isArray(data.petitDejeunerElements))throw new Error();
   productsByCategory=new Map();
   data.produits.filter(p=>p?.actif!==false).forEach(p=>{
     const category=String(p.categorie||"").trim();

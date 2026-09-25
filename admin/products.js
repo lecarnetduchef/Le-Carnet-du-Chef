@@ -15,7 +15,10 @@ const CATEGORY_MAP = {
   formules: "Formule",
   plats: "Plat",
   boissons: "Boisson",
-  desserts: "Dessert"
+  desserts: "Dessert",
+  "petit-dejeuner": "Petit déjeuner",
+  brunch: "Brunch",
+  fromages: "Fromage"
 };
 
 const pageCategoryKey = String(document.body.dataset.category || "").trim().toLowerCase();

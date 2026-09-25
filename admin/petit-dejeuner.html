@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Petit Déjeuner du Chef — Espace admin — Le Carnet du Chef</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../favicon/favicon.ico" sizes="any">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="admin.css">
+
+  <style>
+    .pdj-card {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .pdj-element,
+    .pdj-format {
+      border: 1px solid rgba(0,0,0,.1);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: #faf9f6;
+    }
+
+    .pdj-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 1rem;
+    }
+
+    .pdj-grid-full {
+      grid-column: 1 / -1;
+    }
+
+    .pdj-products {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(0,0,0,.08);
+    }
+
+    .pdj-products-list {
+      display: grid;
+      gap: .4rem;
+      margin-top: .6rem;
+    }
+
+    .pdj-format-composition {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(0,0,0,.08);
+    }
+
+    .pdj-format-item {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 1rem;
+      align-items: center;
+      padding: .45rem 0;
+    }
+
+    .pdj-actions {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .pdj-remove {
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 700px) {
+      .pdj-grid,
+      .pdj-format-item {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body class="admin-body" data-category="petit-dejeuner">
+
+<div id="category-app" class="admin-app" hidden>
+
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-brand">
+      Le Carnet <span>du Chef</span>
+    </div>
+
+    <nav class="admin-nav">
+      <a class="admin-nav-item" href="index.html">⌂ <span>Tableau de bord</span></a>
+      <a class="admin-nav-item" href="index.html">▣ <span>Commandes</span></a>
+
+      <a class="admin-nav-item" href="index.html">🍽️ <span>Produits / Menus</span></a>
+
+      <div class="admin-nav-submenu">
+        <a class="admin-nav-item admin-nav-subitem" href="formules.html">• <span>Formules</span></a>
+        <a class="admin-nav-item admin-nav-subitem" href="plats.html">• <span>Plats</span></a>
+        <a class="admin-nav-item admin-nav-subitem" href="boissons.html">• <span>Boissons</span></a>
+        <a class="admin-nav-item admin-nav-subitem" href="desserts.html">• <span>Desserts</span></a>
+        <a class="admin-nav-item admin-nav-subitem" href="petit-dejeuner.html">• <span>Petits déjeuners</span></a>
+        <a class="admin-nav-item admin-nav-subitem" href="brunch.html">• <span>Brunch</span></a>
+        <a class="admin-nav-item admin-nav-subitem" href="fromages.html">• <span>Fromages</span></a>
+      </div>
+
+      <a class="admin-nav-item" href="index.html">▤ <span>Stocks</span></a>
+      <a class="admin-nav-item" href="index.html">✉ <span>Demandes</span></a>
+      <a class="admin-nav-item" href="index.html">▤ <span>Devis</span></a>
+      <a class="admin-nav-item" href="index.html">▧ <span>Factures</span></a>
+      <a class="admin-nav-item" href="index.html">€ <span>Paiements</span></a>
+      <a class="admin-nav-item" href="index.html">↩ <span>Remboursements</span></a>
+      <a class="admin-nav-item" href="index.html">◎ <span>Clients</span></a>
+      <a class="admin-nav-item" href="index.html">⚙ <span>Paramètres</span></a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+
+    <header class="admin-topbar">
+      <div class="admin-topbar-title">
+        <button id="category-menu-toggle" class="admin-mobile-menu" type="button">☰</button>
+        <div>
+          <p class="admin-eyebrow">ESPACE ADMIN</p>
+          <h1>Petit Déjeuner du Chef</h1>
+        </div>
+      </div>
+
+      <div class="admin-user">
+        <span>Connecté en tant que</span>
+        <strong id="category-user-email"></strong>
+      </div>
+
+      <button id="category-logout-btn" class="btn btn-secondary" type="button">
+        🚪 Se déconnecter
+      </button>
+    </header>
+
+    <main class="admin-content">
+
+      <div class="admin-section-heading">
+        <div>
+          <p class="admin-eyebrow">OFFRE COMMERCIALE</p>
+          <h2>Petit Déjeuner du Chef</h2>
+        </div>
+        <p class="muted">
+          Gérez ici exclusivement l’offre Petit Déjeuner du Chef, ses éléments,
+          ses formats et ses portions.
+        </p>
+      </div>
+
+      <form id="petit-dejeuner-form">
+
+        <section class="pdj-card">
+          <div class="admin-section-heading compact">
+            <div>
+              <p class="admin-eyebrow">IDENTITÉ DE L’OFFRE</p>
+              <h3>Informations générales</h3>
+            </div>
+          </div>
+
+          <div class="pdj-grid">
+
+            <div class="form-field">
+              <label for="pdj-name">Nom de l’offre</label>
+              <input id="pdj-name" type="text" value="Petit Déjeuner du Chef" required>
+            </div>
+
+            <div class="form-field">
+              <label for="pdj-active">Statut</label>
+              <label class="admin-checkbox">
+                <input id="pdj-active" type="checkbox" checked>
+                Offre active
+              </label>
+            </div>
+
+            <div class="form-field pdj-grid-full">
+              <label for="pdj-description">Description</label>
+              <textarea id="pdj-description" rows="3"
+                placeholder="Présentez l’offre Petit Déjeuner du Chef."></textarea>
+            </div>
+
+            <div class="form-field pdj-grid-full">
+              <label for="pdj-photo">Photo (URL)</label>
+              <input id="pdj-photo" type="url" placeholder="URL de la photo">
+            </div>
+
+          </div>
+        </section>
+
+        <section class="pdj-card">
+
+          <div class="admin-section-heading compact">
+            <div>
+              <p class="admin-eyebrow">COMPOSITION</p>
+              <h3>Éléments du Petit Déjeuner</h3>
+            </div>
+            <p class="muted">
+              Définissez les éléments proposés dans l’offre.
+            </p>
+          </div>
+
+          <div id="pdj-elements"></div>
+
+          <button id="pdj-add-element" type="button" class="btn btn-secondary">
+            + Ajouter un élément
+          </button>
+
+        </section>
+
+        <section class="pdj-card">
+
+          <div class="admin-section-heading compact">
+            <div>
+              <p class="admin-eyebrow">FORMATS & PORTIONS</p>
+              <h3>Formats de vente</h3>
+            </div>
+            <p class="muted">
+              Chaque format possède son nombre de personnes, son prix et sa composition.
+            </p>
+          </div>
+
+          <div id="pdj-formats"></div>
+
+          <button id="pdj-add-format" type="button" class="btn btn-secondary">
+            + Ajouter un format
+          </button>
+
+        </section>
+
+        <div class="pdj-actions">
+          <button id="pdj-save" type="submit" class="btn btn-primary">
+            Enregistrer le Petit Déjeuner du Chef
+          </button>
+
+          <button id="pdj-reset" type="button" class="btn btn-secondary">
+            Réinitialiser
+          </button>
+        </div>
+
+        <div id="pdj-status" class="admin-alert" style="display:none;margin-top:1rem;"></div>
+
+      </form>
+
+    </main>
+  </div>
+</div>
+
+<script type="module" src="category-page.js"></script>
+<script type="module" src="petit-dejeuner.js"></script>
+
+</body>
+</html>

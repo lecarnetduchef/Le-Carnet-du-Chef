@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function admin() {
+      return request.auth != null;
+    }
+
+    match /demandes/{demandeId} {
+      allow read: if admin();
+
+      allow update: if admin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['statut', 'qualification', 'updatedAt']);
+
+      allow create: if false;
+      allow delete: if admin();
+    }
+
+    match /commandes/{commandeId} {
+      allow read, update: if admin();
+      allow create: if false;
+      allow delete: if admin();
+    }
+
+    match /produits/{produitId} {
+      allow read, write: if admin();
+    }
+
+    match /formules/{formuleId} {
+      allow read, write: if admin();
+    }
+
+    match /petitDejeunerElements/{elementId} {
+      allow read, write: if admin();
+    }
+
+    match /menuPdfs/{menuId} {
+      allow read: if true;
+      allow write: if admin();
+    }
+
+    match /siteContent/{documentId} {
+      allow read: if documentId == 'chefPresentation' || documentId == 'commandes';
+      allow write: if admin();
+    }
+
+    match /devis/{devisId} {
+      allow read, write: if admin();
+    }
+
+    match /factures/{factureId} {
+      allow read, write: if admin();
+    }
+
+    match /paiements/{paiementId} {
+      allow read, write: if admin();
+    }
+
+    match /remboursements/{remboursementId} {
+      allow read, write: if admin();
+    }
+
+    match /clients/{clientId} {
+      allow read, write: if admin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

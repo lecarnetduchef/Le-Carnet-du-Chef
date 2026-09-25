@@ -86,6 +86,45 @@ export function addToCart({ formule, quantite, composants }) {
   window.dispatchEvent(new CustomEvent('cdc-cart-updated', { detail: getCart() }));
 }
 
+export function addPetitDejeunerToCart({ formule, format, quantite }) {
+  const quantity = Math.max(1, Number.parseInt(quantite, 10) || 1);
+  const formuleId = String(formule?.id || "");
+  const formatId = String(format?.id || "");
+
+  if (!formuleId || !formatId) return;
+
+  const key = `petit-dejeuner::${formuleId}::${formatId}`;
+  const existing = cart.lines.find((line) => line.lineId === key);
+
+  const composition = (Array.isArray(format?.composition) ? format.composition : [])
+    .filter((item) => Number(item?.quantite) > 0)
+    .map((item) => ({
+      elementId: String(item?.elementId || ""),
+      elementNom: String(item?.elementNom || ""),
+      quantiteParFormat: Number(item?.quantite) || 1
+    }));
+
+  if (existing) {
+    existing.quantite += quantity;
+  } else {
+    cart.lines.push({
+      lineId: key,
+      type: "petit-dejeuner",
+      formuleId,
+      formuleNom: String(formule?.nom || "Petit Déjeuner du Chef"),
+      formatId,
+      formatNom: String(format?.nom || "Format"),
+      personnes: Number(format?.personnes) || 1,
+      prixUnitaire: Number(format?.prix) || 0,
+      quantite: quantity,
+      composants: composition
+    });
+  }
+
+  saveCart();
+  window.dispatchEvent(new CustomEvent("cdc-cart-updated", { detail: getCart() }));
+}
+
 export function updateLineQuantity(lineId, quantity) {
   const line = cart.lines.find((item) => item.lineId === lineId);
   if (!line) return;
@@ -152,6 +191,17 @@ function renderCart() {
 
     if (line.type === "produit") {
       components.textContent = `À la carte · ${line.categorie || "Produit"}`;
+    } else if (line.type === "petit-dejeuner") {
+      const format = line.formatNom || "Format";
+      const personnes = Number(line.personnes) || 1;
+      const composition = (Array.isArray(line.composants) ? line.composants : [])
+        .map((item) => {
+          const nom = item.elementNom || item.elementId || "Élément";
+          const quantite = Number(item.quantiteParFormat) || 1;
+          return `${nom}${quantite > 1 ? ` × ${quantite}` : ""}`;
+        })
+        .join(" · ");
+      components.textContent = `${format} · ${personnes} personne${personnes > 1 ? "s" : ""}${composition ? " · " + composition : ""}`;
     } else {
       components.textContent = (Array.isArray(line.composants) ? line.composants : [])
         .map((item) =>

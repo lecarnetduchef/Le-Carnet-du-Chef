@@ -20,7 +20,9 @@ function closeMobileNavigation() {
 }
 
 function setProductsSubmenu(open) {
-  subItems.forEach((item) => { item.hidden = !open; });
+  const submenu = document.querySelector(".admin-nav-submenu");
+  if (!submenu) return;
+  submenu.hidden = !open;
 }
 
 function initProductsParentNavigation() {
@@ -28,8 +30,8 @@ function initProductsParentNavigation() {
     .find((item) => item.querySelector("span")?.textContent?.trim() === "Produits / Menus");
   if (!parent) return;
 
-  setProductsSubmenu(false);
-  parent.setAttribute("aria-expanded", "false");
+  setProductsSubmenu(true);
+  parent.setAttribute("aria-expanded", "true");
   parent.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -81,6 +83,5 @@ onAuthStateChanged(auth, async (user) => {
   if (userEmail) userEmail.textContent = user.email || "administrateur";
   if (pageTitle) pageTitle.textContent = document.body.dataset.categoryLabel || "Administration";
   closeMobileNavigation();
-  setProductsSubmenu(false);
   if (productsSection) productsSection.hidden = false;
 });

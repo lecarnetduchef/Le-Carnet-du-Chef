@@ -26,8 +26,13 @@
           <a class="admin-nav-item admin-nav-subitem" data-category="plats" href="plats.html">• <span>Plats</span></a>
           <a class="admin-nav-item admin-nav-subitem" data-category="boissons" href="boissons.html">• <span>Boissons</span></a>
           <a class="admin-nav-item admin-nav-subitem" data-category="desserts" href="desserts.html">• <span>Desserts</span></a>
-        </div>
-        <a class="admin-nav-item" href="index.html">▤ <span>Stocks</span></a>
+        <a class="admin-nav-item admin-nav-subitem" data-category="petit-dejeuner" href="petit-dejeuner.html">• <span>Petits déjeuners</span></a>
+<a class="admin-nav-item admin-nav-subitem" data-category="brunch" href="brunch.html">• <span>Brunch</span></a>
+<a class="admin-nav-item admin-nav-subitem" data-category="fromages" href="fromages.html">• <span>Fromages</span></a>
+
+</div>
+
+<a class="admin-nav-item" href="index.html">▤ <span>Stocks</span></a>
         <a class="admin-nav-item" href="index.html">✉ <span>Demandes</span></a>
         <a class="admin-nav-item" href="index.html">▤ <span>Devis</span></a>
         <a class="admin-nav-item" href="index.html">▧ <span>Factures</span></a>
@@ -102,6 +107,46 @@
               <label class="admin-checkbox"><input id="formule-active" type="checkbox" checked> Formule active</label>
               <label class="admin-checkbox"><input id="formule-bloquee" type="checkbox"> Formule bloquée — choix imposés</label>
             </div>
+
+            <div class="admin-section-heading compact" style="margin-top:2rem;">
+              <div><p class="admin-eyebrow">TYPE D’OFFRE</p><h3>Structure de l’offre</h3></div>
+              <p class="muted">Choisissez une formule classique ou une offre composée avec formats et portions.</p>
+            </div>
+
+            <div class="formule-offer-type">
+              <label class="admin-checkbox">
+                <input id="formule-type-classique" name="formule-type-offre" type="radio" value="formule" checked>
+                Formule classique
+              </label>
+              <label class="admin-checkbox">
+                <input id="formule-type-composee" name="formule-type-offre" type="radio" value="composee">
+                Offre composée
+              </label>
+            </div>
+
+            <section id="formule-composee-editor" hidden>
+              <div class="admin-section-heading compact" style="margin-top:1.5rem;">
+                <div><p class="admin-eyebrow">OFFRE COMPOSÉE</p><h3>Composition</h3></div>
+                <p class="muted">Construisez les éléments inclus dans l’offre.</p>
+              </div>
+
+              <div id="formule-composee-elements" class="formule-composee-elements"></div>
+
+              <button id="formule-add-element" type="button" class="btn btn-secondary">
+                Ajouter un élément
+              </button>
+
+              <div class="admin-section-heading compact" style="margin-top:2rem;">
+                <div><p class="admin-eyebrow">FORMATS</p><h3>Formats et portions</h3></div>
+                <p class="muted">Créez une ou plusieurs tailles de vente avec leur prix et leur composition.</p>
+              </div>
+
+              <div id="formule-composee-formats" class="formule-composee-formats"></div>
+
+              <button id="formule-add-format" type="button" class="btn btn-secondary">
+                Ajouter un format
+              </button>
+            </section>
 
             <div class="admin-section-heading compact" style="margin-top:2rem;">
               <div><p class="admin-eyebrow">COMPOSITION</p><h3>Produits inclus</h3></div>

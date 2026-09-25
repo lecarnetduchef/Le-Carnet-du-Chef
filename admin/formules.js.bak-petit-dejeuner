@@ -40,9 +40,6 @@ const cancelButton = document.querySelector("#formule-cancel-btn");
 let compositionRows = [];
 
 const CATEGORIES = ["Plat", "Boisson", "Dessert"];
-
-const isPetitDejeunerPage =
-  document.body?.dataset.category === "petit-dejeuner";
 let currentFormules = [];
 let currentProducts = [];
 let currentUser = null;
@@ -605,17 +602,11 @@ function resetForm() {
   form.reset();
   idInput.value = "";
   orderInput.value = "0";
-  categoryInput.value = isPetitDejeunerPage ? "petit-dejeuner" : "chef";
+  categoryInput.value = "chef";
   activeInput.checked = true;
   if (blockedInput) blockedInput.checked = false;
-
-  if (isPetitDejeunerPage) {
-    if (typeClassiqueInput) typeClassiqueInput.checked = false;
-    if (typeComposeeInput) typeComposeeInput.checked = true;
-  } else {
-    if (typeClassiqueInput) typeClassiqueInput.checked = true;
-    if (typeComposeeInput) typeComposeeInput.checked = false;
-  }
+  if (typeClassiqueInput) typeClassiqueInput.checked = true;
+  if (typeComposeeInput) typeComposeeInput.checked = false;
   if (composeeElements) composeeElements.innerHTML = "";
   if (composeeFormats) composeeFormats.innerHTML = "";
   refreshOfferTypeFields();
@@ -812,12 +803,7 @@ async function loadFormules() {
   try {
     const formulesQuery = query(collection(db, "formules"), orderBy("ordre", "asc"));
     const snapshot = await getDocs(formulesQuery);
-    currentFormules = snapshot.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .filter((formule) =>
-        !isPetitDejeunerPage ||
-        formule.categorieFormule === "petit-dejeuner"
-      );
+    currentFormules = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     renderFormules();
     setStatus(`${currentFormules.length} formule${currentFormules.length > 1 ? "s" : ""} chargée${currentFormules.length > 1 ? "s" : ""}.`);
   } catch (error) {

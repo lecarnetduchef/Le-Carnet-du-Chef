@@ -41,7 +41,7 @@
 </aside>
 </div></div></main>
 <footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></div></div></footer>
-<script src="../js/config.js"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js"></script><script>
+<script src="../js/config.js"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js?v=20260925"></script><script>
     (() => {
       const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
       const ALLOWED_CITY_POSTCODES = {
@@ -300,7 +300,21 @@
           const strong = document.createElement("strong");
           strong.textContent = line.formuleNom + " × " + line.quantite;
           const small = document.createElement("small");
-          small.textContent = (line.composants || []).map(x => x.produitNom).join(" · ");
+          if (line.type === "petit-dejeuner") {
+            const format = line.formatNom || "Format";
+            const personnes = Number(line.personnes) || 1;
+            const composition = (line.composants || [])
+              .map((item) => {
+                const nom = item.elementNom || item.elementId || "Élément";
+                const quantite = Number(item.quantiteParFormat) || 1;
+                return `${nom}${quantite > 1 ? ` × ${quantite}` : ""}`;
+              })
+              .join(" · ");
+
+            small.textContent = `${format} · ${personnes} personne${personnes > 1 ? "s" : ""}${composition ? " · " + composition : ""}`;
+          } else {
+            small.textContent = (line.composants || []).map(x => x.produitNom).join(" · ");
+          }
           left.append(strong, small);
           const price = document.createElement("span");
           price.textContent = euro.format(lineTotal);
@@ -420,7 +434,23 @@
           left.appendChild(title);
           const components = document.createElement("div");
           components.className = "summary-components";
-          components.textContent = (line.composants || []).map((item) => `${item.categorie} : ${item.produitNom} × ${item.quantiteParFormule}`).join(" · ");
+          if (line.type === "petit-dejeuner") {
+            const format = line.formatNom || "Format";
+            const personnes = Number(line.personnes) || 1;
+            const composition = (line.composants || [])
+              .map((item) => {
+                const nom = item.elementNom || item.elementId || "Élément";
+                const quantite = Number(item.quantiteParFormat) || 1;
+                return `${nom}${quantite > 1 ? ` × ${quantite}` : ""}`;
+              })
+              .join(" · ");
+
+            components.textContent = `${format} · ${personnes} personne${personnes > 1 ? "s" : ""}${composition ? " · " + composition : ""}`;
+          } else {
+            components.textContent = (line.composants || [])
+              .map((item) => `${item.categorie} : ${item.produitNom} × ${item.quantiteParFormule}`)
+              .join(" · ");
+          }
           left.appendChild(components);
           const price = document.createElement("span");
           price.textContent = euro.format(lineTotal);

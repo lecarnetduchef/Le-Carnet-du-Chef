@@ -1,6 +1,7 @@
 const MAX_LINES = 50;
 const MAX_QUANTITY = 50;
-const CATEGORIES = new Set(["Plat", "Boisson", "Dessert"]);
+const FORMULA_CATEGORIES = new Set(["Plat", "Boisson", "Dessert"]);
+const PRODUCT_CATEGORIES = new Set(["Plat", "Boisson", "Dessert", "Petit déjeuner", "Brunch", "Fromage"]);
 const RECEPTIONS = new Set(["retrait", "livraison"]);
 const SLOTS = new Set(["midi", "soir"]);
 const TIME_ZONE = "Europe/Paris";
@@ -43,22 +44,32 @@ function composition(formule) {
   const map = new Map();
   for (const item of formule.composition) {
     const category = text(item?.categorie), quantity = Number(item?.quantite);
-    if (!CATEGORIES.has(category) || !Number.isInteger(quantity) || quantity <= 0 || map.has(category)) fail(`Composition invalide pour ${formule.id}.`, "INVALID_FORMULA_COMPOSITION");
+    if (!FORMULA_CATEGORIES.has(category) || !Number.isInteger(quantity) || quantity <= 0 || map.has(category)) fail(`Composition invalide pour ${formule.id}.`, "INVALID_FORMULA_COMPOSITION");
     map.set(category, quantity);
   }
   return map;
 }
 
-async function validateCartIntent(input, { getFormules, getProduits } = {}) {
+async function validateCartIntent(input, { getFormules, getProduits, getPetitDejeunerElements } = {}) {
   if (typeof getFormules !== "function" || typeof getProduits !== "function") fail("Catalogue serveur indisponible.", "SERVER_CATALOG_UNAVAILABLE");
   const lines = Array.isArray(input?.lignes) ? input.lignes : [];
   if (!lines.length) fail("Le panier est vide.", "EMPTY_CART");
   if (lines.length > MAX_LINES) fail(`Maximum ${MAX_LINES} lignes.`, "TOO_MANY_LINES");
 
-  const [formules, produits] = await Promise.all([getFormules(), getProduits()]);
+  if (typeof getPetitDejeunerElements !== "function") {
+    fail("Catalogue Petit Déjeuner indisponible.", "PETIT_DEJEUNER_CATALOG_UNAVAILABLE");
+  }
+
+  const [formules, produits, petitDejeunerElements] = await Promise.all([
+    getFormules(),
+    getProduits(),
+    getPetitDejeunerElements()
+  ]);
   const formulas = new Map(formules.map(x => [x.id, x]));
   const products = new Map(produits.map(x => [x.id, x]));
+  const petitDejeunerMap = new Map(petitDejeunerElements.map(x => [x.id, x]));
   const demanded = new Map();
+  const demandedPetitDejeuner = new Map();
   const validated = [];
 
   lines.forEach((line, i) => {
@@ -72,7 +83,7 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
       if (product.actif !== true) fail(`Ligne ${i + 1}: produit inactif.`, "PRODUCT_INACTIVE");
 
       const category = text(line?.categorie);
-      if (!CATEGORIES.has(category)) fail(`Ligne ${i + 1}: catégorie produit invalide.`, "INVALID_PRODUCT_CATEGORY");
+      if (!PRODUCT_CATEGORIES.has(category)) fail(`Ligne ${i + 1}: catégorie produit invalide.`, "INVALID_PRODUCT_CATEGORY");
       if (String(product.categorie || "") !== category) fail(`Ligne ${i + 1}: catégorie produit incorrecte.`, "PRODUCT_CATEGORY_MISMATCH");
 
       const quantity = Number(line?.quantite);
@@ -108,6 +119,111 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
       return;
     }
 
+    if (lineType === "petit-dejeuner") {
+      const formuleId = text(line?.formuleId);
+      const formule = formulas.get(formuleId);
+
+      if (!formule) fail(`Ligne ${i + 1}: formule inconnue.`, "INVALID_FORMULA");
+      if (formule.actif !== true) fail(`Ligne ${i + 1}: formule inactive.`, "FORMULA_INACTIVE");
+      if (String(formule.categorieFormule || "") !== "petit-dejeuner") {
+        fail(`Ligne ${i + 1}: formule Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_FORMULA");
+      }
+
+      const quantity = Number(line?.quantite);
+      if (!Number.isInteger(quantity) || quantity <= 0 || quantity > MAX_QUANTITY) {
+        fail(`Ligne ${i + 1}: quantité invalide.`, "INVALID_QUANTITY");
+      }
+
+      const formatId = text(line?.formatId);
+      const format = Array.isArray(formule.formats)
+        ? formule.formats.find((item) => text(item?.id) === formatId)
+        : null;
+
+      if (!format) fail(`Ligne ${i + 1}: format Petit Déjeuner inconnu.`, "INVALID_PETIT_DEJEUNER_FORMAT");
+
+      const serverPrice = Number(format.prix);
+      if (!Number.isFinite(serverPrice) || serverPrice < 0) {
+        fail(`Ligne ${i + 1}: prix serveur invalide.`, "INVALID_SERVER_PRICE");
+      }
+
+      const expectedComposition = Array.isArray(format.composition)
+        ? format.composition.filter((item) => Number(item?.quantite) > 0)
+        : [];
+
+      const receivedComposition = Array.isArray(line?.composants)
+        ? line.composants
+        : [];
+
+      if (receivedComposition.length !== expectedComposition.length) {
+        fail(`Ligne ${i + 1}: composition Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_COMPOSITION");
+      }
+
+      const expected = new Map(
+        expectedComposition.map((item) => [
+          text(item?.elementId),
+          Number(item?.quantite)
+        ])
+      );
+
+      const seen = new Set();
+      const cleanComponents = [];
+
+      for (const raw of receivedComposition) {
+        const elementId = text(raw?.elementId);
+        const requestedQuantity = Number(raw?.quantiteParFormat);
+        const expectedQuantity = expected.get(elementId);
+        const element = petitDejeunerMap.get(elementId);
+
+        if (!element || !expected.has(elementId) || seen.has(elementId)) {
+          fail(`Ligne ${i + 1}: élément Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_ELEMENT");
+        }
+
+        if (!Number.isInteger(requestedQuantity) || requestedQuantity !== expectedQuantity) {
+          fail(`Ligne ${i + 1}: quantité d’élément Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_QUANTITY");
+        }
+
+        if (element.actif !== true) {
+          fail(`Ligne ${i + 1}: élément Petit Déjeuner inactif.`, "PETIT_DEJEUNER_ELEMENT_INACTIVE");
+        }
+
+        const available = Number(element.stockDisponible);
+        if (!Number.isInteger(available) || available <= 0) {
+          fail(`Ligne ${i + 1}: élément Petit Déjeuner indisponible.`, "PETIT_DEJEUNER_ELEMENT_UNAVAILABLE");
+        }
+
+        demandedPetitDejeuner.set(
+          elementId,
+          (demandedPetitDejeuner.get(elementId) || 0) + quantity * requestedQuantity
+        );
+
+        seen.add(elementId);
+        cleanComponents.push({
+          elementId: element.id,
+          elementNom: String(element.nom || ""),
+          quantiteParFormat: expectedQuantity
+        });
+      }
+
+      if (seen.size !== expected.size) {
+        fail(`Ligne ${i + 1}: composition Petit Déjeuner incomplète.`, "INCOMPLETE_PETIT_DEJEUNER_COMPOSITION");
+      }
+
+      validated.push({
+        lineIndex: i,
+        type: "petit-dejeuner",
+        formuleId: formule.id,
+        formuleNom: String(formule.nom || "Petit Déjeuner du Chef"),
+        formatId: format.id,
+        formatNom: String(format.nom || "Format"),
+        personnes: Number(format.personnes) || 1,
+        prixUnitaire: serverPrice,
+        quantite: quantity,
+        composants: cleanComponents
+      });
+
+      return;
+    }
+
     const formuleId = text(line?.formuleId), formule = formulas.get(formuleId);
     if (!formule) fail(`Ligne ${i + 1}: formule inconnue.`, "INVALID_FORMULA");
     if (formule.actif !== true) fail(`Ligne ${i + 1}: formule inactive.`, "FORMULA_INACTIVE");
@@ -123,7 +239,7 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
       for (const item of Array.isArray(formule.composition) ? formule.composition : []) {
         const category = text(item?.categorie);
         const produitId = text(item?.produitId);
-        if (!CATEGORIES.has(category) || !produitId || blockedComposition.has(category)) {
+        if (!FORMULA_CATEGORIES.has(category) || !produitId || blockedComposition.has(category)) {
           fail(`Ligne ${i + 1}: composition bloquée invalide.`, "INVALID_BLOCKED_FORMULA");
         }
         blockedComposition.set(category, produitId);
@@ -140,7 +256,7 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
 
     for (const raw of components) {
       const produitId = text(raw?.produitId), category = text(raw?.categorie);
-      if (!produitId || !CATEGORIES.has(category) || seen.has(category)) fail(`Ligne ${i + 1}: composant invalide.`, "INVALID_COMPONENT");
+      if (!produitId || !FORMULA_CATEGORIES.has(category) || seen.has(category)) fail(`Ligne ${i + 1}: composant invalide.`, "INVALID_COMPONENT");
       if (!required.has(category)) fail(`Ligne ${i + 1}: ${category} non demandée par la formule.`, "UNEXPECTED_COMPONENT_CATEGORY");
       const product = products.get(produitId);
       if (!product) fail(`Ligne ${i + 1}: produit introuvable.`, "INVALID_PRODUCT");
@@ -193,6 +309,17 @@ async function validateCartIntent(input, { getFormules, getProduits } = {}) {
     const product = products.get(productId), available = Number(product.stockDisponible);
     if (!Number.isInteger(available) || available < 0) fail(`Stock serveur invalide pour ${product.nom || productId}.`, "INVALID_SERVER_STOCK");
     if (need > available) fail(`Stock insuffisant pour ${product.nom || productId}.`, "INSUFFICIENT_STOCK");
+  }
+
+  for (const [elementId, need] of demandedPetitDejeuner) {
+    const element = petitDejeunerMap.get(elementId);
+    const available = Number(element?.stockDisponible);
+    if (!Number.isInteger(available) || available < 0) {
+      fail(`Stock serveur invalide pour ${element?.nom || elementId}.`, "INVALID_SERVER_STOCK");
+    }
+    if (need > available) {
+      fail(`Stock insuffisant pour ${element?.nom || elementId}.`, "INSUFFICIENT_STOCK");
+    }
   }
 
   return { lignes: validated, limites: { maxLignes: MAX_LINES, maxQuantiteParLigne: MAX_QUANTITY } };
