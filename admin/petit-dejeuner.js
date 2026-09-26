@@ -132,6 +132,10 @@ function renderLibrary() {
     const row = document.createElement("div");
     row.className = "pdj-element";
 
+    const stock = Number.isInteger(Number(element.stockDisponible))
+      ? Math.max(0, Number(element.stockDisponible))
+      : 0;
+
     row.innerHTML = `
       <div class="pdj-grid">
         <div>
@@ -141,7 +145,25 @@ function renderLibrary() {
           </div>
         </div>
 
-        <div style="display:flex;align-items:center;justify-content:flex-end;">
+        <div class="form-field">
+          <label>Stock disponible</label>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            class="pdj-library-stock"
+            value="${stock}"
+          >
+        </div>
+
+        <div style="display:flex;align-items:end;justify-content:flex-end;gap:8px;">
+          <button
+            type="button"
+            class="btn btn-secondary pdj-library-save-stock"
+          >
+            Enregistrer
+          </button>
+
           <button
             type="button"
             class="btn btn-secondary pdj-library-delete"
@@ -151,6 +173,34 @@ function renderLibrary() {
         </div>
       </div>
     `;
+
+    row
+      .querySelector(".pdj-library-save-stock")
+      ?.addEventListener("click", async () => {
+        const input = row.querySelector(".pdj-library-stock");
+        const value = Number(input?.value);
+
+        if (!Number.isInteger(value) || value < 0) {
+          status("Le stock doit être un nombre entier positif ou nul.", true);
+          return;
+        }
+
+        try {
+          await updateDoc(
+            doc(db, "petitDejeunerElements", element.id),
+            {
+              stockDisponible: value,
+              updatedAt: serverTimestamp()
+            }
+          );
+
+          element.stockDisponible = value;
+          status(`Stock de « ${element.nom} » enregistré : ${value}.`);
+        } catch (error) {
+          console.error(error);
+          status("Impossible d’enregistrer le stock.", true);
+        }
+      });
 
     row
       .querySelector(".pdj-library-delete")
@@ -208,6 +258,7 @@ async function createLibraryElement() {
         nom,
         unite,
         actif: true,
+        stockDisponible: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }
@@ -217,7 +268,8 @@ async function createLibraryElement() {
       id: created.id,
       nom,
       unite,
-      actif: true
+      actif: true,
+      stockDisponible: 0
     });
 
     libraryElements.sort((a, b) =>
@@ -280,6 +332,7 @@ async function migrateExistingElements(elements) {
         nom,
         unite: element.unite || "piece",
         actif: true,
+        stockDisponible: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }
@@ -289,7 +342,8 @@ async function migrateExistingElements(elements) {
       id: created.id,
       nom,
       unite: element.unite || "piece",
-      actif: true
+      actif: true,
+      stockDisponible: 0
     };
 
     libraryElements.push(libraryElement);

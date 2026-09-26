@@ -122,6 +122,21 @@ async function synchroniserFermetureGlobale() {
       dateFin: fermetureExceptionnelle.dateFin?.timestampValue || null
     };
 
+    const horairesOffres = fields.horairesOffres?.mapValue?.fields || {};
+    const lireHoraireOffre = (nom) => {
+      const horaire = horairesOffres[nom]?.mapValue?.fields || {};
+      return {
+        debut: horaire.debut?.stringValue || "",
+        fin: horaire.fin?.stringValue || ""
+      };
+    };
+
+    CDC_CONFIG.commandes.horairesOffres = {
+      petitDejeuner: lireHoraireOffre("petitDejeuner"),
+      brunch: lireHoraireOffre("brunch"),
+      fromages: lireHoraireOffre("fromages")
+    };
+
     if (modeManuel === "ouvert" || modeManuel === "ferme") CDC_CONFIG.commandes.modeManuel = modeManuel;
     else if (legacyClosed) CDC_CONFIG.commandes.modeManuel = "ferme";
     else CDC_CONFIG.commandes.modeManuel = null;
@@ -149,6 +164,8 @@ async function synchroniserFermetureGlobale() {
       window.location.replace("commande.html");
       return;
     }
+
+    window.dispatchEvent(new CustomEvent("cdc-config-ready"));
   } catch (error) {
     console.error("Impossible de lire l'état global des commandes :", error);
     if (window.location.pathname.endsWith("/commande.html")) {

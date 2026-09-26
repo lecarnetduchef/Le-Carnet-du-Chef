@@ -390,13 +390,29 @@ function enhanceOrderDetail() {
 
           const quantiteFormule = Number(ligne.quantite || 0);
 
-          const groups = [
-            ["Plat", "Plat"],
-            ["Boisson", "Boisson"],
-            ["Dessert", "Dessert"]
+          const preferredCategories = ["Plat", "Boisson", "Dessert"];
+
+          const categories = [
+            ...preferredCategories.filter((categorie) =>
+              composants.some(
+                (c) =>
+                  String(c.categorie || "").toLowerCase() ===
+                  categorie.toLowerCase()
+              )
+            ),
+            ...[...new Set(
+              composants
+                .map((c) => String(c.categorie || "").trim())
+                .filter(Boolean)
+            )].filter(
+              (categorie) =>
+                !preferredCategories.some(
+                  (item) => item.toLowerCase() === categorie.toLowerCase()
+                )
+            )
           ];
 
-          return groups.map(([categorie, titre]) => {
+          return categories.map((categorie) => {
             const items = composants.filter(
               (c) =>
                 String(c.categorie || "").toLowerCase() ===
@@ -407,7 +423,7 @@ function enhanceOrderDetail() {
 
             return `
               <div style="margin-top:8px">
-                <strong>${titre}</strong>
+                <strong>${esc(categorie)}</strong>
                 <ul style="margin:4px 0 0 20px;padding:0">
                   ${items.map((c) => {
                     const parFormule =
@@ -432,6 +448,7 @@ function enhanceOrderDetail() {
               </div>
             `;
           }).join("");
+
         };
 
         const detailHtml = lignes.length

@@ -49,7 +49,20 @@ async function createPayment(request) {
     const validatedCart = await validateCartIntent({ lignes: input.lignes }, { getFormules, getProduits, getPetitDejeunerElements });
     stage = "schedule";
     const config = await getCommandesConfig();
-    const schedule = validateScheduleIntent({ modeReception: input.modeReception, creneau: input.creneau, date: input.date }, config);
+    const offerTypes = [...new Set(
+      validatedCart.lignes
+        .map(line => line.type)
+        .filter(Boolean)
+    )];
+    const schedule = validateScheduleIntent(
+      {
+        modeReception: input.modeReception,
+        creneau: input.creneau,
+        date: input.date,
+        offerTypes
+      },
+      config
+    );
     let distanceKm = null;
     if (schedule.modeReception === "livraison") {
       stage = "delivery";
@@ -87,6 +100,13 @@ async function createPayment(request) {
     };
   } catch (error) {
     if (error instanceof CreatePaymentError) throw error;
+    console.error("Erreur createPayment :", {
+      stage,
+      name: error?.name,
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+    });
     throw safeBusinessError(error, stage);
   }
 }

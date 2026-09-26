@@ -1,13 +1,14 @@
 import { auth, db } from "../js/firebase-init.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { collection, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import "./commandes-config.js";
+import "./commandes-config.js?v=20260926";
 
 const STATUS_VALUES = ["nouvelle", "en_preparation", "prete", "terminee", "annulee"];
 const STATUS_LABELS = { nouvelle: "Nouvelle", en_preparation: "En préparation", prete: "Prête", terminee: "Terminée", annulee: "Annulée" };
 const elements = {};
 let orders = [];
 let activeFilter = "all";
+let activeOfferFilter = "all";
 let selectedOrder = null;
 
 function statusClass(status) {
@@ -40,6 +41,14 @@ function init() {
     button.addEventListener("click", () => {
       activeFilter = button.dataset.orderFilter || "all";
       document.querySelectorAll("[data-order-filter]").forEach((item) => item.classList.toggle("active", item === button));
+      renderList();
+    });
+  });
+
+  document.querySelectorAll("[data-order-offer-filter]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeOfferFilter = button.dataset.orderOfferFilter || "all";
+      document.querySelectorAll("[data-order-offer-filter]").forEach((item) => item.classList.toggle("active", item === button));
       renderList();
     });
   });
@@ -81,19 +90,51 @@ async function loadOrders() {
 function getFilteredOrders() {
   return orders.filter((order) => {
     if (!isPaidOrder(order)) return false;
+
     const status = normalizeStatus(order.statut);
     const mode = normalizeText(order.modeReception);
+
+    let matchesStatus = true;
+
     switch (activeFilter) {
-      case "new": return status === "nouvelle";
-      case "preparing": return status === "en_preparation";
-      case "ready": return status === "prete";
-      case "completed": return status === "terminee";
-      case "cancelled": return status === "annulee";
-      case "pickup": return mode.includes("retrait");
-      case "delivery": return mode.includes("livraison");
+      case "new":
+        matchesStatus = status === "nouvelle";
+        break;
+      case "preparing":
+        matchesStatus = status === "en_preparation";
+        break;
+      case "ready":
+        matchesStatus = status === "prete";
+        break;
+      case "completed":
+        matchesStatus = status === "terminee";
+        break;
+      case "cancelled":
+        matchesStatus = status === "annulee";
+        break;
+      case "pickup":
+        matchesStatus = mode.includes("retrait");
+        break;
+      case "delivery":
+        matchesStatus = mode.includes("livraison");
+        break;
       case "all":
-      default: return true;
+      default:
+        matchesStatus = true;
+        break;
     }
+
+    if (!matchesStatus) return false;
+
+    if (activeOfferFilter === "all") return true;
+
+    const lignes = Array.isArray(order.lignes) ? order.lignes : [];
+
+    return lignes.some(
+      (ligne) =>
+        String(ligne.type || "formule").toLowerCase() ===
+        activeOfferFilter
+    );
   });
 }
 
@@ -194,9 +235,20 @@ function renderDetail(order) {
             `
             : `<div style="margin-top:10px;" class="muted">Aucune composition enregistrée.</div>`;
 
+          const typeLabels = {
+            "petit-dejeuner": "Petit Déjeuner",
+            "brunch": "Brunch",
+            "fromages": "Plateaux de fromages",
+            "box": "Box",
+            "formule": "Formule"
+          };
+          const typeLabel = typeLabels[String(ligne.type || "formule").toLowerCase()] || "Offre";
+
           return `
             <div style="margin:15px 0;padding:12px;border:1px solid #ddd;border-radius:8px;">
-              <div><strong>${escapeHtml(ligne.formuleNom || ligne.formuleId || "Formule")}</strong></div>
+              <div><strong>${escapeHtml(ligne.formuleNom || ligne.formuleId || "Offre")}</strong></div>
+              <div style="margin-top:5px;">Type : <strong>${escapeHtml(typeLabel)}</strong></div>
+              ${ligne.formatNom ? `<div style="margin-top:5px;">Format : <strong>${escapeHtml(ligne.formatNom)}</strong>${Number(ligne.personnes || 0) > 0 ? ` — ${escapeHtml(String(ligne.personnes))} personne${Number(ligne.personnes) > 1 ? "s" : ""}` : ""}</div>` : ""}
               <div style="margin-top:6px;">Quantité : <strong>${escapeHtml(String(quantite))}</strong></div>
               <div>Prix unitaire : ${escapeHtml(formatAmount(prixUnitaire))}</div>
               <div>Sous-total : <strong>${escapeHtml(formatAmount(sousTotal))}</strong></div>

@@ -3,7 +3,7 @@ const MAX_QUANTITY = 50;
 const FORMULA_CATEGORIES = new Set(["Plat", "Boisson", "Dessert"]);
 const PRODUCT_CATEGORIES = new Set(["Plat", "Boisson", "Dessert", "Petit déjeuner", "Brunch", "Fromage"]);
 const RECEPTIONS = new Set(["retrait", "livraison"]);
-const SLOTS = new Set(["midi", "soir"]);
+const SLOTS = new Set(["midi", "soir", "petit-dejeuner", "brunch", "fromages"]);
 const TIME_ZONE = "Europe/Paris";
 
 class ValidationError extends Error {
@@ -198,10 +198,11 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
 
         seen.add(elementId);
         cleanComponents.push({
-          elementId: element.id,
-          elementNom: String(element.nom || ""),
-          quantiteParFormat: expectedQuantity
-        });
+      produitId: element.id,
+      produitNom: String(element.nom || ""),
+      categorie: "Petit déjeuner",
+      quantiteParFormule: expectedQuantity
+    });
       }
 
       if (seen.size !== expected.size) {
@@ -327,42 +328,126 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
 
 function validateScheduleIntent(input, config, now = new Date()) {
   if (!config || typeof config !== "object") fail("Configuration des commandes indisponible.", "COMMAND_CONFIG_UNAVAILABLE");
-  const modeReception = text(input?.modeReception).toLowerCase(), creneau = text(input?.creneau).toLowerCase(), date = text(input?.date);
+
+  const modeReception = text(input?.modeReception).toLowerCase();
+  const creneau = text(input?.creneau).toLowerCase();
+  const date = text(input?.date);
+
+  const offerTypes = Array.isArray(input?.offerTypes)
+    ? [...new Set(input.offerTypes.map(value => text(value).toLowerCase()).filter(Boolean))]
+    : [];
+
   if (!RECEPTIONS.has(modeReception)) fail("Mode de réception invalide.", "INVALID_RECEPTION");
   if (!SLOTS.has(creneau)) fail("Créneau invalide.", "INVALID_SLOT");
   if (!Number.isFinite(dateMs(date))) fail("Date invalide.", "INVALID_DATE");
 
-  const slotKey = `${modeReception}|${creneau}`;
-  const commercialSlots = new Set([
-    "retrait|midi",
-    "livraison|midi",
-    "retrait|soir",
-    "livraison|soir",
-  ]);
-  if (!commercialSlots.has(slotKey)) fail("Couple mode de réception / créneau invalide.", "INVALID_RECEPTION_SLOT");
+  const dedicatedTypes = new Set(["petit-dejeuner", "brunch", "fromages"]);
+  const dedicatedOffers = offerTypes.filter(type => dedicatedTypes.has(type));
+  const hasDedicatedOffer = dedicatedOffers.length > 0;
+  const hasGenericOffer = offerTypes.some(type => !dedicatedTypes.has(type));
 
-  const today = parisDate(now), todayMs = dateMs(today), requestedMs = dateMs(date);
-  if (requestedMs < todayMs || requestedMs > todayMs + 3 * 86400000) fail("La date doit être comprise entre J et J+3.", "DATE_OUT_OF_RANGE");
+  if (hasDedicatedOffer && hasGenericOffer) {
+    fail(
+      "Les offres dédiées doivent être commandées séparément des Formules et Box.",
+      "MIXED_OFFER_SCHEDULE"
+    );
+  }
+
+  if (dedicatedOffers.length > 1) {
+    fail("Ces offres doivent être commandées séparément.", "MULTIPLE_DEDICATED_OFFERS");
+  }
+
+  const paris = parisParts(now);
+  const today = parisDate(now);
+  const todayMs = dateMs(today);
+  const requestedMs = dateMs(date);
+
+  if (requestedMs < todayMs || requestedMs > todayMs + 3 * 86400000) {
+    fail("La date doit être comprise entre J et J+3.", "DATE_OUT_OF_RANGE");
+  }
+
+  if (hasDedicatedOffer) {
+    const dedicatedType = dedicatedOffers[0];
+    const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+
+    if (dedicatedType === "petit-dejeuner") {
+      if (weekday === 0 || weekday === 6) {
+        fail(
+          "Le Petit Déjeuner est disponible uniquement du lundi au vendredi.",
+          "PETIT_DEJEUNER_DAY_CLOSED"
+        );
+      }
+
+      if (creneau !== "petit-dejeuner") {
+        fail("Le créneau du Petit Déjeuner est invalide.", "INVALID_RECEPTION_SLOT");
+      }
+    }
+
+    if (dedicatedType === "brunch") {
+      if (weekday !== 0) {
+        fail(
+          "Le Brunch est disponible uniquement le dimanche.",
+          "BRUNCH_DAY_CLOSED"
+        );
+      }
+
+      if (creneau !== "brunch") {
+        fail("Le créneau du Brunch est invalide.", "INVALID_RECEPTION_SLOT");
+      }
+    }
+
+    if (dedicatedType === "fromages" && creneau !== "fromages") {
+      fail(
+        "Le créneau des plateaux de fromages est invalide.",
+        "INVALID_RECEPTION_SLOT"
+      );
+    }
+  } else {
+    if (!["midi", "soir"].includes(creneau)) {
+      fail("Le créneau des Formules et Box est invalide.", "INVALID_RECEPTION_SLOT");
+    }
+  }
 
   const modeManuel = config.modeManuel;
   if (modeManuel === "ferme") fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
   if (modeManuel === "ouvert") return { date, modeReception, creneau, timeZone: TIME_ZONE };
 
-  if (config.fermetureManuelleGlobale === true) fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
+  if (config.fermetureManuelleGlobale === true) {
+    fail("Les commandes sont fermées.", "GLOBAL_CLOSURE");
+  }
 
   const exceptional = config.fermetureExceptionnelle;
   if (exceptional?.active === true) {
-    const start = dateOnly(exceptional.dateDebut), end = dateOnly(exceptional.dateFin);
-    if (!start || !end || (date >= start && date <= end)) fail("Fermeture exceptionnelle active.", "EXCEPTIONAL_CLOSURE");
+    const start = dateOnly(exceptional.dateDebut);
+    const end = dateOnly(exceptional.dateFin);
+    if (!start || !end || (date >= start && date <= end)) {
+      fail("Fermeture exceptionnelle active.", "EXCEPTIONAL_CLOSURE");
+    }
   }
-  if (creneau === "midi" && config.fermetureManuelleDejeuner === true) fail("Service déjeuner fermé.", "LUNCH_CLOSURE");
-  if (creneau === "soir" && config.fermetureManuelleDiner === true) fail("Service soir fermé.", "DINNER_CLOSURE");
 
-  if (date === today) {
-    const p = parisParts(now), current = p.hour * 60 + p.minute;
-    const cutoff = minutes(creneau === "midi" ? config.limiteDejeuner : config.limiteDiner, creneau === "midi" ? "limiteDejeuner" : "limiteDiner");
-    if (current >= cutoff) fail("La limite de commande est dépassée.", "ORDER_CUTOFF_PASSED");
+  if (creneau === "midi" && config.fermetureManuelleDejeuner === true) {
+    fail("Service déjeuner fermé.", "LUNCH_CLOSURE");
   }
+
+  if (creneau === "soir" && config.fermetureManuelleDiner === true) {
+    fail("Service soir fermé.", "DINNER_CLOSURE");
+  }
+
+  // Les offres dédiées utilisent leurs propres horaires de réception/livraison.
+  // Une commande peut être passée à l'avance : aucun cutoff de commande
+  // Midi/Soir ne doit donc leur être appliqué.
+  if (!hasDedicatedOffer && date === today) {
+    const current = paris.hour * 60 + paris.minute;
+    const cutoff = minutes(
+      creneau === "midi" ? config.limiteDejeuner : config.limiteDiner,
+      creneau === "midi" ? "limiteDejeuner" : "limiteDiner"
+    );
+
+    if (current >= cutoff) {
+      fail("La limite de commande est dépassée.", "ORDER_CUTOFF_PASSED");
+    }
+  }
+
   return { date, modeReception, creneau, timeZone: TIME_ZONE };
 }
 

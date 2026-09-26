@@ -815,8 +815,9 @@ async function loadFormules() {
     currentFormules = snapshot.docs
       .map((item) => ({ id: item.id, ...item.data() }))
       .filter((formule) =>
-        !isPetitDejeunerPage ||
-        formule.categorieFormule === "petit-dejeuner"
+        isPetitDejeunerPage
+          ? formule.categorieFormule === "petit-dejeuner"
+          : formule.categorieFormule !== "petit-dejeuner"
       );
     renderFormules();
     setStatus(`${currentFormules.length} formule${currentFormules.length > 1 ? "s" : ""} chargée${currentFormules.length > 1 ? "s" : ""}.`);
@@ -838,14 +839,33 @@ async function saveFormule(event) {
     if (!nom) throw new Error("Le nom de la formule est obligatoire.");
 
     const composee = isComposeeOffer();
+    const isPetitDejeuner = categoryInput.value === "petit-dejeuner";
+    const existingFormule = idInput.value.trim()
+      ? currentFormules.find((formule) => formule.id === idInput.value.trim())
+      : null;
     const prix = composee ? 0 : toPrice(priceInput.value);
     const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
-
     const composition = composee ? [] : getCompositionFromForm();
-    const composeeElementsData = composee ? getComposeeElementsFromForm() : [];
-    const composeeFormatsData = composee ? getComposeeFormatsFromForm() : [];
-
-    if (composee) {
+    const composeeElementsData =
+      composee && isPetitDejeuner && existingFormule
+        ? (Array.isArray(existingFormule.composition) ? existingFormule.composition : [])
+        : composee
+          ? getComposeeElementsFromForm()
+          : [];
+    const composeeFormatsData =
+      composee && isPetitDejeuner && existingFormule
+        ? (Array.isArray(existingFormule.formats) ? existingFormule.formats : [])
+        : composee
+          ? getComposeeFormatsFromForm()
+          : [];
+    if (composee && isPetitDejeuner) {
+      if (!existingFormule) {
+        throw new Error("Le Petit Déjeuner existant est introuvable.");
+      }
+      if (!composeeElementsData.length || !composeeFormatsData.length) {
+        throw new Error("La composition du Petit Déjeuner est incomplète.");
+      }
+    } else if (composee) {
       if (!composeeElementsData.length) {
         throw new Error("L’offre composée doit contenir au moins un élément.");
       }

@@ -41,7 +41,7 @@
 </aside>
 </div></div></main>
 <footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></div></div></footer>
-<script src="../js/config.js"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js?v=20260925"></script><script>
+<script src="../js/config.js?v=20260926"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js?v=20260925"></script><script>
     (() => {
       const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
       const ALLOWED_CITY_POSTCODES = {
@@ -223,17 +223,71 @@
         const dateValue = dateSelect.value;
         slotSelect.innerHTML = "";
         slotSelect.disabled = true;
+
         if (!mode || !dateValue) {
           slotSelect.innerHTML = '<option value="">Choisissez d’abord le mode de réception et la date</option>';
+          return;
+        }
+
+        const cart = getCartSnapshot();
+        const offerTypes = [...new Set(
+          (cart.lines || [])
+            .map((line) => String(line.type || "formule").toLowerCase())
+            .filter(Boolean)
+        )];
+
+        const dedicatedTypes = ["petit-dejeuner", "brunch", "fromages"];
+        const dedicatedOffers = dedicatedTypes.filter((type) => offerTypes.includes(type));
+        const hasDedicatedOffer = dedicatedOffers.length > 0;
+        const hasGenericOffer = offerTypes.some((type) => !dedicatedTypes.includes(type));
+
+        if (hasDedicatedOffer && hasGenericOffer) {
+          slotSelect.innerHTML = '<option value="">Ces offres doivent être commandées séparément des Formules / Box.</option>';
+          return;
+        }
+
+        if (hasDedicatedOffer) {
+          if (dedicatedOffers.length > 1) {
+            slotSelect.innerHTML = '<option value="">Ces offres doivent être commandées séparément.</option>';
+            return;
+          }
+
+          const dedicatedType = dedicatedOffers[0];
+          const weekday = new Date(`${dateValue}T12:00:00Z`).getUTCDay();
+
+          if (dedicatedType === "petit-dejeuner" && (weekday === 0 || weekday === 6)) {
+            slotSelect.innerHTML = '<option value="">Le Petit Déjeuner est disponible uniquement du lundi au vendredi.</option>';
+            return;
+          }
+
+          if (dedicatedType === "brunch" && weekday !== 0) {
+            slotSelect.innerHTML = '<option value="">Le Brunch est disponible uniquement le dimanche.</option>';
+            return;
+          }
+
+          const horairesOffres = commandConfig().commandes?.horairesOffres || {};
+          const configKey = dedicatedType === "petit-dejeuner" ? "petitDejeuner" : dedicatedType;
+          const config = horairesOffres[configKey] || {};
+          const debut = String(config.debut || "");
+          const fin = String(config.fin || "");
+
+          if (!debut || !fin) {
+            slotSelect.innerHTML = '<option value="">Aucun horaire configuré pour cette offre.</option>';
+            return;
+          }
+
+          const option = document.createElement("option");
+          option.value = dedicatedType;
+          option.textContent = `${mode === "retrait" ? "Retrait" : "Livraison"} — ${debut} – ${fin}`;
+          slotSelect.appendChild(option);
+          slotSelect.disabled = false;
           return;
         }
 
         const today = dateValue === todayValue;
         const services = [];
 
-        // Aujourd'hui : un service passé ne doit JAMAIS apparaître.
-        // Déjeuner : commande jusqu'à 11h30.
-        // Soir : commande jusqu'à 20h00.
+        // Formules classiques + Box : fonctionnement Midi / Soir inchangé.
         if (!today || canOrderToday("midi")) services.push("midi");
         if (!today || canOrderToday("soir")) services.push("soir");
 
@@ -243,14 +297,25 @@
         }
 
         const horaires = commandConfig().horaires || {};
+
         services.forEach((service) => {
           const option = document.createElement("option");
-          option.value = `${service}_${mode}`;
-          const key = service === "midi" ? (mode === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison") : (mode === "retrait" ? "soirRetrait" : "soirLivraison");
-          const horairesText = horaires[key] || (service === "midi" ? (mode === "retrait" ? "11h30 – 12h00" : "12h00 – 13h00") : (mode === "retrait" ? "19h30 – 20h00" : "20h00 – 21h00"));
+          option.value = `${service}|${mode}`;
+
+          const key = service === "midi"
+            ? (mode === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison")
+            : (mode === "retrait" ? "soirRetrait" : "soirLivraison");
+
+          const horairesText = horaires[key] || (
+            service === "midi"
+              ? (mode === "retrait" ? "11h30 – 12h00" : "12h00 – 13h00")
+              : (mode === "retrait" ? "19h30 – 20h00" : "20h00 – 21h00")
+          );
+
           option.textContent = `${serviceLabel(service)} — ${horairesText}`;
           slotSelect.appendChild(option);
         });
+
         slotSelect.disabled = false;
       }
 
@@ -338,6 +403,27 @@
             }
             if (!Number.isInteger(Number(line.quantite)) || Number(line.quantite) <= 0) {
               return "Une quantité de produit est invalide.";
+            }
+            continue;
+          }
+
+          if (lineType === "petit-dejeuner") {
+            if (!line.formuleId || !line.formuleNom) {
+              return "Une ligne de Petit Déjeuner est incomplète. Revenez au catalogue et vérifiez votre commande.";
+            }
+            if (!Number.isInteger(Number(line.quantite)) || Number(line.quantite) <= 0) {
+              return "Une quantité de Petit Déjeuner est invalide.";
+            }
+            if (!Array.isArray(line.composants) || !line.composants.length) {
+              return "La composition du Petit Déjeuner est invalide.";
+            }
+            for (const component of line.composants) {
+              if (!component.elementId || !component.elementNom) {
+                return "Un élément du Petit Déjeuner est incomplet.";
+              }
+              if (!Number.isInteger(Number(component.quantiteParFormat)) || Number(component.quantiteParFormat) <= 0) {
+                return "La quantité d’un élément du Petit Déjeuner est invalide.";
+              }
             }
             continue;
           }
@@ -514,21 +600,43 @@
         const cart = getCartSnapshot();
         const mode = form.querySelector('input[name="modeReception"]:checked')?.value || "";
         const slot = slotSelect.value || "";
-        const creneau = slot.startsWith("midi") ? "midi" : slot.startsWith("soir") ? "soir" : "";
+        const creneau = slot.includes("|")
+          ? slot.split("|")[0]
+          : (slot === "petit-dejeuner" || slot === "brunch" || slot === "fromages")
+            ? slot
+            : (slot.startsWith("midi") ? "midi" : slot.startsWith("soir") ? "soir" : "");
 
         return {
           requestId: activeRequestId,
-          lignes: cart.lines.map((line) => ({
-            type: String(line.type || "formule"),
-            formuleId: String(line.formuleId || ""),
-            produitId: String(line.produitId || ""),
-            categorie: String(line.categorie || ""),
-            quantite: Number(line.quantite),
-            composants: (line.composants || []).map((component) => ({
-              produitId: String(component.produitId || ""),
-              categorie: String(component.categorie || "")
-            }))
-          })),
+          lignes: cart.lines.map((line) => {
+            const lineType = String(line.type || "formule").toLowerCase();
+
+            if (lineType === "petit-dejeuner") {
+              return {
+                type: "petit-dejeuner",
+                formuleId: String(line.formuleId || ""),
+                formatId: String(line.formatId || ""),
+                quantite: Number(line.quantite),
+                composants: (line.composants || []).map((component) => ({
+                  elementId: String(component.elementId || ""),
+                  elementNom: String(component.elementNom || ""),
+                  quantiteParFormat: Number(component.quantiteParFormat)
+                }))
+              };
+            }
+
+            return {
+              type: String(line.type || "formule"),
+              formuleId: String(line.formuleId || ""),
+              produitId: String(line.produitId || ""),
+              categorie: String(line.categorie || ""),
+              quantite: Number(line.quantite),
+              composants: (line.composants || []).map((component) => ({
+                produitId: String(component.produitId || ""),
+                categorie: String(component.categorie || "")
+              }))
+            };
+          }),
           client: {
             prenom: form.prenom.value.trim(),
             nom: form.nom.value.trim(),
@@ -581,7 +689,7 @@
           INVALID_ORDER_DATA: "Les informations de commande sont invalides.",
           INVALID_SERVER_PRICING: "Le calcul serveur de la commande est invalide."
         };
-        return messages[error?.code] || "La commande n’a pas pu être validée. Veuillez réessayer.";
+        return messages[error?.code] || `La commande n’a pas pu être validée. Code : ${error?.code || "INCONNU"}.`;
       }
 
       async function submitOrder() {
@@ -684,8 +792,6 @@ window.location.assign(data.checkoutUrl);
 
       refreshCheckoutFromCart();
 
-      setTimeout(() => {
-        refreshSlots();
-      }, 800);
+      window.addEventListener("cdc-config-ready", refreshSlots);
     })();
   </script></body></html>

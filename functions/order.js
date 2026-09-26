@@ -28,6 +28,9 @@ function buildLines(pricing) {
     type: String(line.type || "formule"),
     formuleId: String(line.formuleId || ""),
     formuleNom: String(line.formuleNom || ""),
+    formatId: String(line.formatId || ""),
+    formatNom: String(line.formatNom || ""),
+    personnes: Number(line.personnes || 0),
     produitId: String(line.produitId || ""),
     produitNom: String(line.produitNom || ""),
     categorie: String(line.categorie || ""),
@@ -212,17 +215,50 @@ async function finalizePaidOrder({ requestId, transactionId, paidAt = null, stri
 
     const requirements = requiredStockByProduct(attempt.orderData);
     const stockEntries = [...requirements.entries()];
-    const productRefs = stockEntries.map(([productId]) => db.collection("produits").doc(productId));
-    const productSnapshots = productRefs.length ? await transaction.getAll(...productRefs) : [];
+    const stockTargets = stockEntries.map(([productId, needed]) => {
+      const isPetitDejeuner = Array.isArray(attempt.orderData?.lignes)
+        && attempt.orderData.lignes.some(
+          (line) =>
+            String(line?.type || "").toLowerCase() === "petit-dejeuner"
+            && Array.isArray(line?.composants)
+            && line.composants.some(
+              (component) => String(component?.produitId || "").trim() === productId
+            )
+        );
+
+      return {
+        productId,
+        needed,
+        collection: isPetitDejeuner ? "petitDejeunerElements" : "produits"
+      };
+    });
+
+    const stockRefs = stockTargets.map(({ productId, collection }) =>
+      db.collection(collection).doc(productId)
+    );
+    const stockSnapshots = stockRefs.length
+      ? await transaction.getAll(...stockRefs)
+      : [];
     const paidAtValue = paidAt || Timestamp.now();
 
-    for (let i = 0; i < productSnapshots.length; i += 1) {
-      const snapshot = productSnapshots[i];
-      const [productId, needed] = stockEntries[i];
-      if (!snapshot.exists) fail(`Produit ${productId} introuvable lors de la finalisation.`, "STOCK_PRODUCT_NOT_FOUND");
+    for (let i = 0; i < stockSnapshots.length; i += 1) {
+      const snapshot = stockSnapshots[i];
+      const target = stockTargets[i];
+
+      if (!snapshot.exists) {
+        fail(
+          `${target.collection === "petitDejeunerElements" ? "Élément Petit Déjeuner" : "Produit"} ${target.productId} introuvable lors de la finalisation.`,
+          "STOCK_PRODUCT_NOT_FOUND"
+        );
+      }
+
       const available = Number(snapshot.data()?.stockDisponible);
-      if (!Number.isInteger(available) || available < needed) {
-        fail(`Stock insuffisant pour ${productId} lors de la finalisation.`, "INSUFFICIENT_STOCK_AFTER_PAYMENT");
+
+      if (!Number.isInteger(available) || available < target.needed) {
+        fail(
+          `Stock insuffisant pour ${target.productId} lors de la finalisation.`,
+          "INSUFFICIENT_STOCK_AFTER_PAYMENT"
+        );
       }
     }
 
@@ -244,10 +280,14 @@ async function finalizePaidOrder({ requestId, transactionId, paidAt = null, stri
       },
     });
 
-    for (let i = 0; i < productSnapshots.length; i += 1) {
-      const [productId, needed] = stockEntries[i];
-      const current = Number(productSnapshots[i].data().stockDisponible);
-      transaction.update(productRefs[i], { stockDisponible: current - needed, updatedAt: Timestamp.now() });
+    for (let i = 0; i < stockSnapshots.length; i += 1) {
+      const target = stockTargets[i];
+      const current = Number(stockSnapshots[i].data().stockDisponible);
+
+      transaction.update(stockRefs[i], {
+        stockDisponible: current - target.needed,
+        updatedAt: Timestamp.now()
+      });
     }
 
     transaction.update(attemptRef, {
