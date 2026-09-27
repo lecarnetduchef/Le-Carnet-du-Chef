@@ -48,6 +48,13 @@ service cloud.firestore {
       allow read, write: if admin();
     }
 
+    // Phase 2 — moteur Offre composée.
+    // Accès réservé aux utilisateurs authentifiés comme pour les
+    // autres surfaces Admin existantes. Aucun accès public.
+    match /offreElements/{elementId} {
+      allow read, write: if admin();
+    }
+
     match /menuPdfs/{menuId} {
       allow read: if true;
       allow write: if admin();
