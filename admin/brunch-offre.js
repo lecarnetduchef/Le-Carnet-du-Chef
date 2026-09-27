@@ -1,17 +1,12 @@
 import { auth, db, FIREBASE_READY } from "../js/firebase-init.js";
-
 import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  createComposedOfferEngine,
+  ELEMENT_UNITS
+} from "./composed-offer-engine.js";
 
+const engine = createComposedOfferEngine({ db });
+
+const app = document.querySelector("#category-app");
 const form = document.querySelector("#brunch-form");
 const elementsContainer = document.querySelector("#brunch-elements");
 const formatsContainer = document.querySelector("#brunch-formats");
@@ -24,21 +19,10 @@ const photoInput = document.querySelector("#brunch-photo");
 
 let currentUser = null;
 let currentOffer = null;
-let libraryElements = [];
-
-const UNITS = [
-  "piece",
-  "portion",
-  "g",
-  "kg",
-  "cl",
-  "L",
-  "thermos",
-  "plateau",
-  "box"
-];
+let elements = [];
 
 function status(message = "", error = false) {
+  if (!statusEl) return;
   statusEl.textContent = message;
   statusEl.className = `admin-alert ${error ? "admin-alert-error" : "admin-alert-success"}`;
   statusEl.style.display = message ? "block" : "none";
@@ -53,894 +37,379 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-/* =========================================================
-   BIBLIOTHÈQUE DES ÉLÉMENTS PETIT DÉJEUNER
-   ========================================================= */
+function getTestOfferInput() {
+  return {
+    nom: "Brunch — TEST MOTEUR",
+    categorie: "brunch",
+    categorieFormule: "brunch",
+    typeOffre: "composee",
+    actif: false,
+    description: "Offre technique inactive utilisée pour valider le moteur Offre composée.",
+    photo: "",
+    ordre: -9999,
+    formats: []
+  };
+}
 
-function injectLibraryEditor() {
-  const compositionSection = elementsContainer?.closest(".brunch-card");
-  if (!compositionSection || document.querySelector("#brunch-library")) return;
+function ensureExperimentalUi() {
+  const section = document.querySelector("#brunch-library");
+  if (section) return;
 
-  const librarySection = document.createElement("section");
-  librarySection.className = "brunch-card";
-  librarySection.id = "brunch-library";
+  const host = elementsContainer?.closest(".brunch-card");
+  if (!host) return;
 
-  librarySection.innerHTML = `
+  const wrapper = document.createElement("section");
+  wrapper.className = "brunch-card";
+  wrapper.id = "brunch-library";
+  wrapper.innerHTML = `
     <div class="admin-section-heading compact">
       <div>
-        <p class="admin-eyebrow">BIBLIOTHÈQUE PETIT DÉJEUNER</p>
-        <h3>Éléments disponibles</h3>
+        <p class="admin-eyebrow">PHASE 2 — MOTEUR COMMUN</p>
+        <h3>Brunch expérimental</h3>
       </div>
       <p class="muted">
-        Créez ici les éléments propres au Brunch.
-        Ils pourront ensuite être ajoutés à vos formules.
+        Cette interface utilise exclusivement <strong>offreElements</strong>.
+        Les anciennes collections Brunch ne sont ni lues ni écrites ici.
       </p>
     </div>
 
-    <div id="brunch-library-list"></div>
+    <div class="brunch-actions">
+      <button id="brunch-engine-offer" type="button" class="btn btn-secondary">
+        Créer / charger l’offre test inactive
+      </button>
+      <span id="brunch-engine-offer-state" class="muted"></span>
+    </div>
 
-    <div class="brunch-library-create">
+    <div id="brunch-engine-element-form" hidden>
       <div class="brunch-grid">
         <div class="form-field">
-          <label for="brunch-library-name">Nom de l’élément</label>
-          <input
-            id="brunch-library-name"
-            type="text"
-            placeholder="Ex. Boisson chaude"
-          >
+          <label for="brunch-engine-name">Nom</label>
+          <input id="brunch-engine-name" type="text" placeholder="Café 1">
         </div>
-
         <div class="form-field">
-          <label for="brunch-library-unit">Unité</label>
-          <select id="brunch-library-unit">
-            ${UNITS.map(unit => `
-              <option value="${unit}">${escapeHtml(unit)}</option>
+          <label for="brunch-engine-unit">Unité</label>
+          <select id="brunch-engine-unit">
+            ${ELEMENT_UNITS.map((unit) => `<option value="${escapeHtml(unit)}">${escapeHtml(unit)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="brunch-engine-stock">Stock</label>
+          <input id="brunch-engine-stock" type="number" min="0" step="1" value="0">
+        </div>
+        <div class="form-field">
+          <label class="admin-checkbox">
+            <input id="brunch-engine-active" type="checkbox" checked>
+            Élément actif
+          </label>
+        </div>
+      </div>
+      <div class="brunch-actions">
+        <button id="brunch-engine-save-element" type="button" class="btn btn-primary">
+          Créer l’élément
+        </button>
+        <button id="brunch-engine-cancel-element" type="button" class="btn btn-secondary">
+          Annuler
+        </button>
+      </div>
+    </div>
+
+    <div id="brunch-engine-elements-list"></div>
+  `;
+
+  host.parentNode.insertBefore(wrapper, host);
+
+  document.querySelector("#brunch-engine-offer")
+    ?.addEventListener("click", createOrLoadTestOffer);
+
+  document.querySelector("#brunch-engine-save-element")
+    ?.addEventListener("click", saveElement);
+
+  document.querySelector("#brunch-engine-cancel-element")
+    ?.addEventListener("click", resetElementForm);
+}
+
+async function createOrLoadTestOffer() {
+  if (!currentUser) return;
+
+  try {
+    const offers = await engine.listOffers({ categorie: "brunch" });
+    currentOffer = offers.find(
+      (offer) => offer.nom === "Brunch — TEST MOTEUR"
+    ) || null;
+
+    if (!currentOffer) {
+      currentOffer = await engine.createOffer(getTestOfferInput());
+      status("Offre « Brunch — TEST MOTEUR » créée et inactive.");
+    } else {
+      status("Offre « Brunch — TEST MOTEUR » chargée.");
+    }
+
+    document.querySelector("#brunch-engine-element-form").hidden = false;
+    document.querySelector("#brunch-engine-offer-state").textContent =
+      `OffreId : ${currentOffer.id}`;
+
+    await reloadElements();
+  } catch (error) {
+    console.error(error);
+    status(error?.message || "Impossible de charger l’offre test.", true);
+  }
+}
+
+async function reloadElements() {
+  if (!currentOffer) return;
+
+  elements = await engine.listElements({
+    offreId: currentOffer.id
+  });
+
+  renderEngineElements();
+}
+
+function renderEngineElements() {
+  const list = document.querySelector("#brunch-engine-elements-list");
+  if (!list) return;
+
+  if (!elements.length) {
+    list.innerHTML = `
+      <p class="muted">
+        Aucun élément dans offreElements pour cette offre.
+      </p>
+    `;
+    return;
+  }
+
+  list.innerHTML = elements.map((element) => `
+    <div class="brunch-element" data-element-id="${escapeHtml(element.id)}">
+      <div class="brunch-grid">
+        <div class="form-field">
+          <label>Nom</label>
+          <input class="engine-name" value="${escapeHtml(element.nom)}">
+        </div>
+        <div class="form-field">
+          <label>Unité</label>
+          <select class="engine-unit">
+            ${ELEMENT_UNITS.map((unit) => `
+              <option value="${escapeHtml(unit)}" ${unit === element.unite ? "selected" : ""}>
+                ${escapeHtml(unit)}
+              </option>
             `).join("")}
           </select>
         </div>
-      </div>
-
-      <button id="brunch-library-add" type="button" class="btn btn-secondary">
-        + Enregistrer cet élément
-      </button>
-    </div>
-  `;
-
-  compositionSection.parentNode.insertBefore(librarySection, compositionSection);
-
-  document
-    .querySelector("#brunch-library-add")
-    ?.addEventListener("click", createLibraryElement);
-}
-
-function renderLibrary() {
-  const list = document.querySelector("#brunch-library-list");
-  if (!list) return;
-
-  list.innerHTML = "";
-
-  if (!libraryElements.length) {
-    list.innerHTML = `
-      <p class="muted">
-        Aucun élément enregistré pour le moment.
-      </p>
-    `;
-    return;
-  }
-
-  libraryElements.forEach(element => {
-    const row = document.createElement("div");
-    row.className = "brunch-element";
-
-    const stock = Number.isInteger(Number(element.stockDisponible))
-      ? Math.max(0, Number(element.stockDisponible))
-      : 0;
-
-    row.innerHTML = `
-      <div class="brunch-grid">
-        <div>
-          <strong>${escapeHtml(element.nom)}</strong>
-          <div class="muted">
-            Unité : ${escapeHtml(element.unite || "piece")}
-          </div>
-        </div>
-
         <div class="form-field">
           <label>Stock disponible</label>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            class="brunch-library-stock"
-            value="${stock}"
-          >
+          <input class="engine-stock" type="number" min="0" step="1"
+            value="${Number(element.stockDisponible || 0)}">
         </div>
-
-        <div style="display:flex;align-items:end;justify-content:flex-end;gap:8px;">
-          <button
-            type="button"
-            class="btn btn-secondary brunch-library-save-stock"
-          >
-            Enregistrer
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-secondary brunch-library-delete"
-          >
-            Supprimer
-          </button>
+        <div class="form-field">
+          <label class="admin-checkbox">
+            <input class="engine-active" type="checkbox" ${element.actif !== false ? "checked" : ""}>
+            Actif
+          </label>
         </div>
       </div>
-    `;
 
-    row
-      .querySelector(".brunch-library-save-stock")
-      ?.addEventListener("click", async () => {
-        const input = row.querySelector(".brunch-library-stock");
-        const value = Number(input?.value);
+      <div class="brunch-actions">
+        <button type="button" class="btn btn-primary engine-save">Enregistrer</button>
+        <button type="button" class="btn btn-secondary engine-delete">Supprimer</button>
+      </div>
 
-        if (!Number.isInteger(value) || value < 0) {
-          status("Le stock doit être un nombre entier positif ou nul.", true);
-          return;
+      <p class="muted">
+        offreId : ${escapeHtml(element.offreId || "")}
+      </p>
+    </div>
+  `).join("");
+
+  list.querySelectorAll(".brunch-element").forEach((row) => {
+    const id = row.dataset.elementId;
+
+    row.querySelector(".engine-save")?.addEventListener("click", async () => {
+      try {
+        const name = row.querySelector(".engine-name")?.value.trim() || "";
+        const unite = row.querySelector(".engine-unit")?.value || "piece";
+        const stockDisponible = Number(row.querySelector(".engine-stock")?.value);
+        const actif = row.querySelector(".engine-active")?.checked === true;
+
+        if (!name) throw new Error("Le nom de l’élément est obligatoire.");
+        if (!Number.isInteger(stockDisponible) || stockDisponible < 0) {
+          throw new Error("Le stock doit être un nombre entier positif ou nul.");
         }
 
-        try {
-          await updateDoc(
-            doc(db, "brunchElements", element.id),
-            {
-              stockDisponible: value,
-              updatedAt: serverTimestamp()
-            }
-          );
+        const existing = elements.find((item) => item.id === id);
+        await engine.updateElement(id, {
+          ...existing,
+          offreId: currentOffer.id,
+          categorie: "brunch",
+          nom: name,
+          unite,
+          stockDisponible,
+          actif
+        });
 
-          element.stockDisponible = value;
-          status(`Stock de « ${element.nom} » enregistré : ${value}.`);
-        } catch (error) {
-          console.error(error);
-          status("Impossible d’enregistrer le stock.", true);
-        }
-      });
+        await reloadElements();
+        status(`« ${name} » enregistré. Stock persistant : ${stockDisponible}.`);
+      } catch (error) {
+        console.error(error);
+        status(error?.message || "Impossible d’enregistrer l’élément.", true);
+      }
+    });
 
-    row
-      .querySelector(".brunch-library-delete")
-      ?.addEventListener("click", async () => {
-        if (!confirm(`Supprimer « ${element.nom} » de la bibliothèque Brunch ?`)) {
-          return;
-        }
+    row.querySelector(".engine-delete")?.addEventListener("click", async () => {
+      const existing = elements.find((item) => item.id === id);
+      if (!existing) return;
 
-        try {
-          await deleteDoc(doc(db, "brunchElements", element.id));
+      if (!window.confirm(`Supprimer « ${existing.nom} » ?`)) return;
 
-          libraryElements = libraryElements.filter(
-            item => item.id !== element.id
-          );
-
-          renderLibrary();
-          renderFormulaElements();
-
-          status(`« ${element.nom} » a été supprimé.`);
-        } catch (error) {
-          console.error(error);
-          status("Impossible de supprimer cet élément.", true);
-        }
-      });
-
-    list.appendChild(row);
+      try {
+        await engine.deleteElement(id);
+        await reloadElements();
+        status(`« ${existing.nom} » supprimé de offreElements.`);
+      } catch (error) {
+        console.error(error);
+        status(error?.message || "Impossible de supprimer l’élément.", true);
+      }
+    });
   });
 }
 
-async function createLibraryElement() {
-  const nameInput = document.querySelector("#brunch-library-name");
-  const unitInput = document.querySelector("#brunch-library-unit");
+function resetElementForm() {
+  document.querySelector("#brunch-engine-name").value = "";
+  document.querySelector("#brunch-engine-unit").value = "piece";
+  document.querySelector("#brunch-engine-stock").value = "0";
+  document.querySelector("#brunch-engine-active").checked = true;
+}
 
-  const nom = nameInput?.value.trim() || "";
-  const unite = unitInput?.value || "piece";
-
-  if (!nom) {
-    status("Indiquez le nom de l’élément Brunch.", true);
-    return;
-  }
-
-  if (
-    libraryElements.some(
-      item => String(item.nom || "").trim().toLowerCase() === nom.toLowerCase()
-    )
-  ) {
-    status(`L’élément « ${nom} » existe déjà.`, true);
+async function saveElement() {
+  if (!currentOffer) {
+    status("Chargez d’abord l’offre test inactive.", true);
     return;
   }
 
   try {
-    const created = await addDoc(
-      collection(db, "brunchElements"),
-      {
-        nom,
-        unite,
-        actif: true,
-        stockDisponible: 0,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }
-    );
+    const nom = document.querySelector("#brunch-engine-name").value.trim();
+    const unite = document.querySelector("#brunch-engine-unit").value;
+    const stockDisponible = Number(document.querySelector("#brunch-engine-stock").value);
+    const actif = document.querySelector("#brunch-engine-active").checked;
 
-    libraryElements.push({
-      id: created.id,
+    if (!nom) throw new Error("Le nom de l’élément est obligatoire.");
+    if (!Number.isInteger(stockDisponible) || stockDisponible < 0) {
+      throw new Error("Le stock doit être un nombre entier positif ou nul.");
+    }
+
+    const created = await engine.createElement({
+      offreId: currentOffer.id,
+      categorie: "brunch",
       nom,
       unite,
-      actif: true,
-      stockDisponible: 0
+      stockDisponible,
+      actif
     });
 
-    libraryElements.sort((a, b) =>
-      String(a.nom).localeCompare(String(b.nom), "fr")
-    );
+    resetElementForm();
+    await reloadElements();
 
-    nameInput.value = "";
-
-    renderLibrary();
-    renderFormulaElements();
-
-    status(`« ${nom} » a été enregistré dans le Brunch.`);
+    status(`« ${created.nom} » créé dans offreElements avec stock ${created.stockDisponible}.`);
   } catch (error) {
     console.error(error);
-    status("Impossible d’enregistrer cet élément.", true);
+    status(error?.message || "Impossible de créer l’élément.", true);
   }
 }
 
-async function loadLibrary() {
-  const snapshot = await getDocs(
-    query(
-      collection(db, "brunchElements"),
-      orderBy("nom", "asc")
-    )
-  );
-
-  libraryElements = snapshot.docs.map(item => ({
-    id: item.id,
-    ...item.data()
-  }));
-}
-
-/*
- * Migration douce de l'ancienne composition :
- * si la bibliothèque est vide et qu'une ancienne offre existe,
- * ses éléments sont automatiquement enregistrés dans la bibliothèque.
+/**
+ * Composition de démonstration : elementId + quantite uniquement.
+ * Aucun categorieProduit / produitId / produitsAutorises n'est généré.
  */
-async function migrateExistingElements(elements) {
-  if (!elements.length) return;
+async function testComposition() {
+  if (!currentOffer || !elements.length) return;
 
-  for (const element of elements) {
-    const nom = String(element.nom || "").trim();
+  const composition = [{
+    elementId: elements[0].id,
+    quantite: 1
+  }];
 
-    if (!nom) continue;
+  await engine.validateCompositionForOffer(currentOffer.id, composition);
 
-    const existing = libraryElements.find(
-      item =>
-        String(item.nom || "").trim().toLowerCase() ===
-        nom.toLowerCase()
-    );
+  const formats = [{
+    id: "test-format",
+    nom: "Test",
+    personnes: 1,
+    prix: 0,
+    composition
+  }];
 
-    if (existing) {
-      element.elementId = existing.id;
-      continue;
-    }
-
-    const created = await addDoc(
-      collection(db, "brunchElements"),
-      {
-        nom,
-        unite: element.unite || "piece",
-        actif: true,
-        stockDisponible: 0,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }
-    );
-
-    const libraryElement = {
-      id: created.id,
-      nom,
-      unite: element.unite || "piece",
-      actif: true,
-      stockDisponible: 0
-    };
-
-    libraryElements.push(libraryElement);
-    element.elementId = created.id;
-  }
-
-  libraryElements.sort((a, b) =>
-    String(a.nom).localeCompare(String(b.nom), "fr")
-  );
+  await engine.replaceFormats(currentOffer.id, formats);
 }
 
-/* =========================================================
-   FORMULE PETIT DÉJEUNER
-   ========================================================= */
-
-function renderFormulaElements(savedComposition = []) {
-  if (!elementsContainer) return;
-
-  const saved = Array.isArray(savedComposition)
-    ? savedComposition
-    : [];
-
-  elementsContainer.innerHTML = "";
-
-  if (!libraryElements.length) {
-    elementsContainer.innerHTML = `
-      <p class="muted">
-        Enregistrez d’abord des éléments dans la bibliothèque Brunch.
-      </p>
-    `;
-    refreshAllFormatCompositions();
-    return;
-  }
-
-  saved.forEach(item => {
-    addFormulaElement(item);
-  });
-
-  refreshAllFormatCompositions();
-}
-
-function addFormulaElement(data = {}) {
-  const row = document.createElement("div");
-  row.className = "brunch-element";
-
-  const savedId = String(data.elementId || "");
-  const savedQuantity = Number(data.quantite || 1);
-
-  row.dataset.elementId =
-    savedId || `element-${Math.random().toString(36).slice(2, 10)}`;
-
-  row.innerHTML = `
-    <div class="brunch-grid">
-      <div class="form-field">
-        <label>Élément Brunch</label>
-        <select class="brunch-formula-element">
-          <option value="">Choisir un élément</option>
-          ${libraryElements.map(element => `
-            <option
-              value="${escapeHtml(element.id)}"
-              ${element.id === savedId ? "selected" : ""}
-            >
-              ${escapeHtml(element.nom)}
-            </option>
-          `).join("")}
-        </select>
-      </div>
-
-      <div class="form-field">
-        <label>Quantité</label>
-        <input
-          class="brunch-element-quantity"
-          type="number"
-          min="1"
-          step="1"
-          value="${savedQuantity}"
-        >
-      </div>
-    </div>
-
-    <button type="button" class="btn btn-secondary brunch-remove">
-      Retirer de la formule
-    </button>
-  `;
-
-  elementsContainer.appendChild(row);
-
-  row
-    .querySelector(".brunch-remove")
-    ?.addEventListener("click", () => {
-      row.remove();
-      refreshAllFormatCompositions();
-    });
-
-  row
-    .querySelector(".brunch-formula-element")
-    ?.addEventListener("change", refreshAllFormatCompositions);
-}
-
-function readElements() {
-  return Array.from(
-    elementsContainer.querySelectorAll(".brunch-element")
-  ).map((row, index) => {
-    const elementId =
-      row.querySelector(".brunch-formula-element")?.value || "";
-
-    const quantite = Number(
-      row.querySelector(".brunch-element-quantity")?.value
-    );
-
-    if (!elementId) {
-      throw new Error(
-        `Choisissez l’élément Brunch ${index + 1}.`
-      );
-    }
-
-    if (!Number.isInteger(quantite) || quantite <= 0) {
-      throw new Error(
-        `La quantité de l’élément ${index + 1} est invalide.`
-      );
-    }
-
-    const libraryElement = libraryElements.find(
-      item => item.id === elementId
-    );
-
-    if (!libraryElement) {
-      throw new Error("Un élément Brunch sélectionné est introuvable.");
-    }
-
-    return {
-      id: elementId,
-      elementId,
-      nom: libraryElement.nom || "",
-      unite: libraryElement.unite || "piece",
-      quantite
-    };
-  });
-}
-
-/* =========================================================
-   FORMATS
-   ========================================================= */
-
-function renderFormatComposition(formatRow, savedComposition = []) {
-  const list = formatRow.querySelector(
-    ".brunch-format-composition-list"
-  );
-
-  if (!list) return;
-
-  const saved = new Map(
-    (Array.isArray(savedComposition) ? savedComposition : []).map(
-      item => [
-        String(item.elementId || ""),
-        Number(item.quantite || 0)
-      ]
-    )
-  );
-
-  list.innerHTML = "";
-
-  const selectedElements = Array.from(
-    elementsContainer.querySelectorAll(".brunch-element")
-  )
-    .map(row => {
-      const id =
-        row.querySelector(".brunch-formula-element")?.value || "";
-
-      const element = libraryElements.find(
-        item => item.id === id
-      );
-
-      return id && element
-        ? { id, element }
-        : null;
-    })
-    .filter(Boolean);
-
-  selectedElements.forEach(({ id, element }) => {
-    const wrapper = document.createElement("label");
-    wrapper.className = "brunch-format-item";
-
-    const title = document.createElement("span");
-    title.textContent = element.nom;
-
-    const input = document.createElement("input");
-    input.type = "number";
-    input.min = "0";
-    input.step = "1";
-    input.className = "brunch-format-element-quantity";
-    input.dataset.elementId = id;
-    input.value = String(saved.get(id) ?? 0);
-
-    wrapper.append(title, input);
-    list.appendChild(wrapper);
-  });
-}
-
-function refreshAllFormatCompositions() {
-  formatsContainer
-    .querySelectorAll(".brunch-format")
-    .forEach(row => {
-      const existing = Array.from(
-        row.querySelectorAll(".brunch-format-element-quantity")
-      ).map(input => ({
-        elementId: input.dataset.elementId,
-        quantite: Number(input.value) || 0
-      }));
-
-      renderFormatComposition(row, existing);
-    });
-}
-
-function addFormat(data = {}) {
-  const row = document.createElement("div");
-  row.className = "brunch-format";
-
-  row.dataset.formatId =
-    data.id ||
-    `format-${Math.random().toString(36).slice(2, 10)}`;
-
-  row.innerHTML = `
-    <div class="brunch-grid">
-      <div class="form-field">
-        <label>Nom du format</label>
-        <input
-          class="brunch-format-name"
-          type="text"
-          value="${escapeHtml(data.nom || "")}"
-          placeholder="Ex. Individuel"
-        >
-      </div>
-
-      <div class="form-field">
-        <label>Nombre de personnes</label>
-        <input
-          class="brunch-format-people"
-          type="number"
-          min="1"
-          step="1"
-          value="${Number(data.personnes || 1)}"
-        >
-      </div>
-
-      <div class="form-field">
-        <label>Prix (€)</label>
-        <input
-          class="brunch-format-price"
-          type="number"
-          min="0"
-          step="0.01"
-          value="${Number(data.prix ?? 0).toFixed(2)}"
-        >
-      </div>
-    </div>
-
-    <div class="brunch-format-composition">
-      <strong>Composition de ce format</strong>
-      <div class="brunch-format-composition-list"></div>
-    </div>
-
-    <button type="button" class="btn btn-secondary brunch-remove">
-      Supprimer ce format
-    </button>
-  `;
-
-  formatsContainer.appendChild(row);
-
-  row
-    .querySelector(".brunch-remove")
-    ?.addEventListener("click", () => row.remove());
-
-  renderFormatComposition(row, data.composition || []);
-}
-
-function readFormats(elements) {
-  const elementIds = new Set(
-    elements.map(item => item.elementId)
-  );
-
-  return Array.from(
-    formatsContainer.querySelectorAll(".brunch-format")
-  ).map((row, index) => {
-    const nom =
-      row.querySelector(".brunch-format-name")?.value.trim() || "";
-
-    const personnes = Number(
-      row.querySelector(".brunch-format-people")?.value
-    );
-
-    const prix = Number(
-      row.querySelector(".brunch-format-price")?.value
-    );
-
-    if (!nom) {
-      throw new Error(
-        `Le nom du format ${index + 1} est obligatoire.`
-      );
-    }
-
-    if (!Number.isInteger(personnes) || personnes <= 0) {
-      throw new Error(
-        `Le nombre de personnes du format ${index + 1} est invalide.`
-      );
-    }
-
-    if (!Number.isFinite(prix) || prix < 0) {
-      throw new Error(
-        `Le prix du format ${index + 1} est invalide.`
-      );
-    }
-
-    const composition = Array.from(
-      row.querySelectorAll(".brunch-format-element-quantity")
-    )
-      .map(input => ({
-        elementId: String(input.dataset.elementId || ""),
-        quantite: Number(input.value)
-      }))
-      .filter(item => item.elementId && item.quantite > 0);
-
-    composition.forEach(item => {
-      if (!elementIds.has(item.elementId)) {
-        throw new Error(
-          `La composition du format « ${nom} » contient un élément qui n’est plus dans la formule.`
-        );
-      }
-
-      if (!Number.isInteger(item.quantite) || item.quantite < 0) {
-        throw new Error(
-          `La quantité du format « ${nom} » est invalide.`
-        );
-      }
-    });
-
-    return {
-      id:
-        row.dataset.formatId ||
-        `format-${index + 1}`,
-      nom,
-      personnes,
-      prix,
-      composition
-    };
-  });
-}
-
-/* =========================================================
-   CHARGEMENT
-   ========================================================= */
-
-async function loadOffer() {
-  const snapshot = await getDocs(
-    query(
-      collection(db, "formules"),
-      orderBy("ordre", "asc")
-    )
-  );
-
-  const offers = snapshot.docs.map(item => ({
-    id: item.id,
-    ...item.data()
-  }));
-
-  currentOffer =
-    offers.find(item =>
-      item.categorieFormule === "brunch" &&
-      String(item.nom || "").trim().toLowerCase() ===
-        "petit déjeuner du chef"
-    ) ||
-    offers.find(
-      item => item.categorieFormule === "brunch"
-    ) ||
-    null;
-
-  if (!currentOffer) {
-    renderFormulaElements([]);
-    return;
-  }
-
-  nameInput.value =
-    currentOffer.nom || "Brunch du Chef";
-
-  activeInput.checked =
-    currentOffer.actif !== false;
-
-  descriptionInput.value =
-    currentOffer.description || "";
-
-  photoInput.value =
-    currentOffer.photo || "";
-
-  const oldElements = Array.isArray(currentOffer.composition)
-    ? currentOffer.composition
-    : [];
-
-  await migrateExistingElements(oldElements);
-
-  renderLibrary();
-  renderFormulaElements(oldElements);
-
-  formatsContainer.innerHTML = "";
-
-  const formats = Array.isArray(currentOffer.formats)
-    ? currentOffer.formats
-    : [];
-
-  formats.forEach(addFormat);
-
-  refreshAllFormatCompositions();
-
-  status("Brunch du Chef chargé.");
-}
-
-async function saveOffer(event) {
-  event.preventDefault();
-
-  if (!currentUser || !FIREBASE_READY) return;
-
-  saveButton.disabled = true;
-  status("Enregistrement en cours…");
-
-  try {
-    if (!libraryElements.length) {
-      throw new Error(
-        "Créez d’abord au moins un élément dans la bibliothèque Brunch."
-      );
-    }
-
-    const elements = readElements();
-    const formats = readFormats(elements);
-
-    if (!elements.length) {
-      throw new Error(
-        "Ajoutez au moins un élément à la formule."
-      );
-    }
-
-    if (!formats.length) {
-      throw new Error(
-        "Ajoutez au moins un format de vente."
-      );
-    }
-
-    const data = {
-      nom:
-        nameInput.value.trim() ||
-        "Brunch du Chef",
-
-      prix: 0,
-
-      description:
-        descriptionInput.value.trim(),
-
-      photo:
-        photoInput.value.trim(),
-
-      ordre:
-        currentOffer?.ordre ?? 0,
-
-      categorieFormule:
-        "brunch",
-
-      typeOffre:
-        "composee",
-
-      actif:
-        activeInput.checked,
-
-      bloquee:
-        false,
-
-      composition:
-        elements,
-
-      formats,
-
-      updatedAt:
-        serverTimestamp()
-    };
-
-    if (currentOffer?.id) {
-      await updateDoc(
-        doc(db, "formules", currentOffer.id),
-        data
-      );
-    } else {
-      const created = await addDoc(
-        collection(db, "formules"),
-        {
-          ...data,
-          createdAt: serverTimestamp()
-        }
-      );
-
-      currentOffer = {
-        id: created.id,
-        ...data
-      };
-    }
-
+/**
+ * La page Brunch expérimentale n'écrit volontairement PAS dans
+ * brunchElements. Le comportement historique reste donc intact sur
+ * main et dans les anciennes données.
+ */
+function initLegacySafePage() {
+  if (!form) return;
+
+  // La page Phase 2 ne sauvegarde pas l'offre Brunch de production.
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
     status(
-      "Brunch du Chef enregistré avec succès."
-    );
-  } catch (error) {
-    console.error(error);
-    status(
-      error?.message ||
-        "Impossible d’enregistrer l’offre.",
+      "Phase 2 : cette interface expérimentale ne modifie pas l’offre Brunch de production.",
       true
     );
-  } finally {
-    saveButton.disabled = false;
-  }
-}
+  });
 
-function resetPage() {
-  if (currentOffer) {
-    loadOffer().catch(error => {
+  document.querySelector("#brunch-reset")?.addEventListener("click", () => {
+    status("Réinitialisation non disponible en mode expérimental.");
+  });
+
+  document.querySelector("#brunch-add-element")?.addEventListener("click", () => {
+    status("Utilisez la bibliothèque Phase 2 pour créer un élément offreElements.");
+  });
+
+  document.querySelector("#brunch-add-format")?.addEventListener("click", async () => {
+    try {
+      await testComposition();
+      status("Composition test enregistrée : elementId + quantite.");
+    } catch (error) {
       console.error(error);
-      status(
-        "Impossible de recharger l’offre.",
-        true
-      );
-    });
-    return;
-  }
+      status(error?.message || "Impossible de tester la composition.", true);
+    }
+  });
 
-  nameInput.value =
-    "Brunch du Chef";
-
+  // Les champs historiques restent visibles pour conserver la structure visuelle,
+  // mais aucune écriture de production n'est effectuée par cette branche.
+  nameInput.value = "Brunch du Chef";
   activeInput.checked = true;
-
   descriptionInput.value = "";
   photoInput.value = "";
-
-  elementsContainer.innerHTML = "";
-  formatsContainer.innerHTML = "";
-
-  renderLibrary();
-  renderFormulaElements([]);
+  elementsContainer.innerHTML = `
+    <p class="muted">
+      Mode expérimental Phase 2 : les éléments affichés ici proviennent uniquement
+      de <strong>offreElements</strong>.
+    </p>
+  `;
+  formatsContainer.innerHTML = `
+    <p class="muted">
+      Les formats de test sont enregistrés uniquement dans l’offre « Brunch — TEST MOTEUR ».
+    </p>
+  `;
+  saveButton.textContent = "Enregistrement production désactivé en Phase 2";
 }
 
-injectLibraryEditor();
+ensureExperimentalUi();
+initLegacySafePage();
 
-document
-  .querySelector("#brunch-add-element")
-  ?.addEventListener("click", () => {
-    if (!libraryElements.length) {
-      status(
-        "Créez d’abord un élément dans la bibliothèque Brunch.",
-        true
-      );
-      return;
-    }
-
-    addFormulaElement();
-    refreshAllFormatCompositions();
-  });
-
-document
-  .querySelector("#brunch-add-format")
-  ?.addEventListener("click", () => {
-    addFormat();
-    refreshAllFormatCompositions();
-  });
-
-document
-  .querySelector("#brunch-reset")
-  ?.addEventListener("click", resetPage);
-
-form?.addEventListener("submit", saveOffer);
-
-auth.onAuthStateChanged(async user => {
+auth.onAuthStateChanged(async (user) => {
   currentUser = user;
+  if (!user || !FIREBASE_READY) {
+    app && (app.hidden = true);
+    return;
+  }
 
-  if (!user) return;
+  app && (app.hidden = false);
 
   try {
-    await loadLibrary();
-    injectLibraryEditor();
-    await loadOffer();
-
-    if (!currentOffer) {
-      renderLibrary();
-      renderFormulaElements([]);
-      status(
-        "Créez vos éléments Brunch, puis votre formule."
-      );
-    }
+    await reloadElements();
   } catch (error) {
     console.error(error);
-    status(
-      error?.message ||
-        "Impossible de charger le Brunch du Chef.",
-      true
-    );
+    status(error?.message || "Impossible de charger offreElements.", true);
   }
 });
