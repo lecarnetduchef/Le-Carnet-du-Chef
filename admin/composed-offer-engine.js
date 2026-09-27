@@ -173,7 +173,8 @@ export function normalizeOffer(offer = {}) {
     description: asText(offer?.description),
     photo: asText(offer?.photo),
     ordre: finiteNumber(offer?.ordre, 0),
-    formats
+    formats,
+    composition: normalizeComposition(offer?.composition)
   };
 }
 
@@ -215,6 +216,7 @@ function offerPayload(input) {
     photo: offer.photo,
     ordre: offer.ordre,
     formats: offer.formats,
+    composition: offer.composition || [],
     updatedAt: serverTimestamp()
   };
 }
@@ -365,6 +367,16 @@ export function createComposedOfferEngine({
         throw new Error("offreId obligatoire pour un élément d'offre composée.");
       }
 
+      const offer = await this.getOffer(element.offreId);
+
+      if (!offer) {
+        throw new Error("L'offre propriétaire de cet élément est introuvable.");
+      }
+
+      if (element.categorie && asText(offer.categorieFormule) !== element.categorie) {
+        throw new Error("La catégorie de l'élément ne correspond pas à l'offre.");
+      }
+
       const created = await addDoc(elementsRef, {
         ...elementPayload(element),
         createdAt: serverTimestamp()
@@ -380,15 +392,42 @@ export function createComposedOfferEngine({
       const id = asText(elementId);
       if (!id) throw new Error("Identifiant d'élément obligatoire.");
 
+      const current = await this.getElement(id);
+
+      if (!current) {
+        throw new Error("Élément introuvable.");
+      }
+
+      const element = normalizeElement({
+        ...current,
+        ...input,
+        id
+      });
+
+      if (!element.offreId) {
+        throw new Error("offreId obligatoire pour un élément d'offre composée.");
+      }
+
+      if (asText(current.offreId) !== element.offreId) {
+        throw new Error("Un élément existant ne peut pas être réaffecté silencieusement à une autre offre.");
+      }
+
+      const offer = await this.getOffer(element.offreId);
+
+      if (!offer) {
+        throw new Error("L'offre propriétaire de cet élément est introuvable.");
+      }
+
+      if (element.categorie && asText(offer.categorieFormule) !== element.categorie) {
+        throw new Error("La catégorie de l'élément ne correspond pas à l'offre.");
+      }
+
       const ref = doc(db, elementCollection, id);
-      await updateDoc(ref, elementPayload(input));
+      await updateDoc(ref, elementPayload(element));
 
       return {
         id,
-        ...normalizeElement({
-          ...input,
-          id
-        })
+        ...element
       };
     },
 
@@ -410,6 +449,45 @@ export function createComposedOfferEngine({
     normalizeFormat,
     normalizeComposition,
 
+    async validateCompositionForOffer(offerId, composition = []) {
+      const id = asText(offerId);
+      if (!id) throw new Error("Identifiant d'offre obligatoire.");
+
+      const offer = await this.getOffer(id);
+      if (!offer) throw new Error("Offre introuvable.");
+
+      const normalized = normalizeComposition(composition);
+      const composedItems = normalized.filter((item) => item.elementId);
+
+      if (composedItems.length !== normalized.length) {
+        throw new Error("Une offre composée ne peut utiliser que elementId + quantite.");
+      }
+
+      const elements = await Promise.all(
+        composedItems.map((item) => this.getElement(item.elementId))
+      );
+
+      elements.forEach((element, index) => {
+        if (!element) {
+          throw new Error(`Élément introuvable : ${composedItems[index].elementId}.`);
+        }
+
+        if (asText(element.offreId) !== id) {
+          throw new Error(
+            `L'élément « ${element.nom || element.id} » n'appartient pas à cette offre.`
+          );
+        }
+
+        if (element.actif === false) {
+          throw new Error(
+            `L'élément « ${element.nom || element.id} » est inactif.`
+          );
+        }
+      });
+
+      return normalized;
+    },
+
     async replaceFormats(offerId, formats) {
       const id = asText(offerId);
       if (!id) throw new Error("Identifiant d'offre obligatoire.");
@@ -418,6 +496,10 @@ export function createComposedOfferEngine({
       }
 
       const normalizedFormats = formats.map(normalizeFormat);
+
+      for (const format of normalizedFormats) {
+        await this.validateCompositionForOffer(id, format.composition);
+      }
 
       await updateDoc(doc(db, offerCollection, id), {
         formats: normalizedFormats,
