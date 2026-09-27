@@ -10,6 +10,7 @@ const sidebar = document.querySelector("#category-sidebar");
 const mobileMenu = document.querySelector("#category-menu-toggle");
 const subItems = Array.from(document.querySelectorAll(".admin-nav-subitem[data-category]"));
 const productsSection = document.querySelector("#products-section");
+const isOfferPage = document.body.dataset.offerPage === "true";
 const saveStatus = document.querySelector("#save-status");
 
 const MENU_IDS = [1, 2, 3];
@@ -83,5 +84,5 @@ onAuthStateChanged(auth, async (user) => {
   if (userEmail) userEmail.textContent = user.email || "administrateur";
   if (pageTitle) pageTitle.textContent = document.body.dataset.categoryLabel || "Administration";
   closeMobileNavigation();
-  if (productsSection) productsSection.hidden = false;
+  if (productsSection) productsSection.hidden = isOfferPage;
 });

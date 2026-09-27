@@ -365,7 +365,7 @@
           const strong = document.createElement("strong");
           strong.textContent = line.formuleNom + " × " + line.quantite;
           const small = document.createElement("small");
-          if (line.type === "petit-dejeuner") {
+          if (["petit-dejeuner", "brunch", "box", "fromages"].includes(String(line.type || "").toLowerCase())) {
             const format = line.formatNom || "Format";
             const personnes = Number(line.personnes) || 1;
             const composition = (line.composants || [])
@@ -407,22 +407,22 @@
             continue;
           }
 
-          if (lineType === "petit-dejeuner") {
-            if (!line.formuleId || !line.formuleNom) {
-              return "Une ligne de Petit Déjeuner est incomplète. Revenez au catalogue et vérifiez votre commande.";
+          if (["petit-dejeuner", "brunch", "box", "fromages"].includes(lineType)) {
+            if (!line.formuleId || !line.formuleNom || !line.formatId) {
+              return "Une ligne d’offre composée est incomplète. Revenez au catalogue et vérifiez votre commande.";
             }
             if (!Number.isInteger(Number(line.quantite)) || Number(line.quantite) <= 0) {
-              return "Une quantité de Petit Déjeuner est invalide.";
+              return "Une quantité d’offre composée est invalide.";
             }
             if (!Array.isArray(line.composants) || !line.composants.length) {
-              return "La composition du Petit Déjeuner est invalide.";
+              return "La composition de l’offre composée est invalide.";
             }
             for (const component of line.composants) {
               if (!component.elementId || !component.elementNom) {
-                return "Un élément du Petit Déjeuner est incomplet.";
+                return "Un élément de l’offre composée est incomplet.";
               }
               if (!Number.isInteger(Number(component.quantiteParFormat)) || Number(component.quantiteParFormat) <= 0) {
-                return "La quantité d’un élément du Petit Déjeuner est invalide.";
+                return "La quantité d’un élément de l’offre composée est invalide.";
               }
             }
             continue;
@@ -520,7 +520,7 @@
           left.appendChild(title);
           const components = document.createElement("div");
           components.className = "summary-components";
-          if (line.type === "petit-dejeuner") {
+          if (["petit-dejeuner", "brunch", "box", "fromages"].includes(String(line.type || "").toLowerCase())) {
             const format = line.formatNom || "Format";
             const personnes = Number(line.personnes) || 1;
             const composition = (line.composants || [])
@@ -611,9 +611,9 @@
           lignes: cart.lines.map((line) => {
             const lineType = String(line.type || "formule").toLowerCase();
 
-            if (lineType === "petit-dejeuner") {
+            if (["petit-dejeuner", "brunch", "box", "fromages"].includes(lineType)) {
               return {
-                type: "petit-dejeuner",
+                type: lineType,
                 formuleId: String(line.formuleId || ""),
                 formatId: String(line.formatId || ""),
                 quantite: Number(line.quantite),

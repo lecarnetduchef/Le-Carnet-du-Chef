@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Petit Déjeuner du Chef — Espace admin — Le Carnet du Chef</title>
+  <title>Plateaux de fromages du Chef — Espace admin — Le Carnet du Chef</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="../favicon/favicon.ico" sizes="any">
   <link rel="stylesheet" href="../css/variables.css">
@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="admin.css">
 
   <style>
-    .pdj-card {
+    .fromages-card {
       background: #fff;
       border: 1px solid rgba(0,0,0,.08);
       border-radius: 14px;
@@ -19,8 +19,8 @@
       margin-bottom: 1.5rem;
     }
 
-    .pdj-element,
-    .pdj-format {
+    .fromages-element,
+    .fromages-format {
       border: 1px solid rgba(0,0,0,.1);
       border-radius: 12px;
       padding: 1rem;
@@ -28,35 +28,35 @@
       background: #faf9f6;
     }
 
-    .pdj-grid {
+    .fromages-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0,1fr));
       gap: 1rem;
     }
 
-    .pdj-grid-full {
+    .fromages-grid-full {
       grid-column: 1 / -1;
     }
 
-    .pdj-products {
+    .fromages-products {
       margin-top: 1rem;
       padding-top: 1rem;
       border-top: 1px solid rgba(0,0,0,.08);
     }
 
-    .pdj-products-list {
+    .fromages-products-list {
       display: grid;
       gap: .4rem;
       margin-top: .6rem;
     }
 
-    .pdj-format-composition {
+    .fromages-format-composition {
       margin-top: 1rem;
       padding-top: 1rem;
       border-top: 1px solid rgba(0,0,0,.08);
     }
 
-    .pdj-format-item {
+    .fromages-format-item {
       display: grid;
       grid-template-columns: 1fr 120px;
       gap: 1rem;
@@ -64,27 +64,27 @@
       padding: .45rem 0;
     }
 
-    .pdj-actions {
+    .fromages-actions {
       display: flex;
       gap: .75rem;
       flex-wrap: wrap;
       margin-top: 1rem;
     }
 
-    .pdj-remove {
+    .fromages-remove {
       margin-top: 1rem;
     }
 
     @media (max-width: 700px) {
-      .pdj-grid,
-      .pdj-format-item {
+      .fromages-grid,
+      .fromages-format-item {
         grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 
-<body class="admin-body" data-offer-page="true" data-category="petit-dejeuner">
+<body class="admin-body" data-offer-page="true" data-category="fromages">
 
 <div id="category-app" class="admin-app" hidden>
 
@@ -128,7 +128,7 @@
         <button id="category-menu-toggle" class="admin-mobile-menu" type="button">☰</button>
         <div>
           <p class="admin-eyebrow">ESPACE ADMIN</p>
-          <h1>Petit Déjeuner du Chef</h1>
+          <h1>Plateaux de fromages du Chef</h1>
         </div>
       </div>
 
@@ -147,17 +147,17 @@
       <div class="admin-section-heading">
         <div>
           <p class="admin-eyebrow">OFFRE COMMERCIALE</p>
-          <h2>Petit Déjeuner du Chef</h2>
+          <h2>Plateaux de fromages du Chef</h2>
         </div>
         <p class="muted">
-          Gérez ici exclusivement l’offre Petit Déjeuner du Chef, ses éléments,
+          Gérez ici exclusivement l’offre Plateaux de fromages du Chef, ses éléments,
           ses formats et ses portions.
         </p>
       </div>
 
-      <form id="petit-dejeuner-form">
+      <form id="fromages-form">
 
-        <section class="pdj-card">
+        <section class="fromages-card">
           <div class="admin-section-heading compact">
             <div>
               <p class="admin-eyebrow">IDENTITÉ DE L’OFFRE</p>
@@ -165,56 +165,56 @@
             </div>
           </div>
 
-          <div class="pdj-grid">
+          <div class="fromages-grid">
 
             <div class="form-field">
-              <label for="pdj-name">Nom de l’offre</label>
-              <input id="pdj-name" type="text" value="Petit Déjeuner du Chef" required>
+              <label for="fromages-name">Nom de l’offre</label>
+              <input id="fromages-name" type="text" value="Plateaux de fromages du Chef" required>
             </div>
 
             <div class="form-field">
-              <label for="pdj-active">Statut</label>
+              <label for="fromages-active">Statut</label>
               <label class="admin-checkbox">
-                <input id="pdj-active" type="checkbox" checked>
+                <input id="fromages-active" type="checkbox" checked>
                 Offre active
               </label>
             </div>
 
-            <div class="form-field pdj-grid-full">
-              <label for="pdj-description">Description</label>
-              <textarea id="pdj-description" rows="3"
-                placeholder="Présentez l’offre Petit Déjeuner du Chef."></textarea>
+            <div class="form-field fromages-grid-full">
+              <label for="fromages-description">Description</label>
+              <textarea id="fromages-description" rows="3"
+                placeholder="Présentez l’offre Plateaux de fromages du Chef."></textarea>
             </div>
 
-            <div class="form-field pdj-grid-full">
-              <label for="pdj-photo">Photo (URL)</label>
-              <input id="pdj-photo" type="url" placeholder="URL de la photo">
+            <div class="form-field fromages-grid-full">
+              <label for="fromages-photo">Photo (URL)</label>
+              <input id="fromages-photo" type="url" placeholder="URL de la photo">
             </div>
 
           </div>
         </section>
 
-        <section class="pdj-card">
+        <section class="fromages-card">
 
           <div class="admin-section-heading compact">
             <div>
               <p class="admin-eyebrow">COMPOSITION</p>
-              <h3>Éléments du Petit Déjeuner</h3>
+              <h3>Éléments du Plateaux de fromages</h3>
             </div>
             <p class="muted">
               Définissez les éléments proposés dans l’offre.
             </p>
           </div>
 
-          <div id="pdj-elements"></div>
+          <div id="fromages-elements"></div>
 
-          <button id="pdj-add-element" type="button" class="btn btn-secondary">
+          <button id="fromages-add-element" type="button" class="btn btn-secondary">
             + Ajouter un élément
           </button>
 
         </section>
 
-        <section class="pdj-card">
+        <section class="fromages-card">
 
           <div class="admin-section-heading compact">
             <div>
@@ -226,25 +226,25 @@
             </p>
           </div>
 
-          <div id="pdj-formats"></div>
+          <div id="fromages-formats"></div>
 
-          <button id="pdj-add-format" type="button" class="btn btn-secondary">
+          <button id="fromages-add-format" type="button" class="btn btn-secondary">
             + Ajouter un format
           </button>
 
         </section>
 
-        <div class="pdj-actions">
-          <button id="pdj-save" type="submit" class="btn btn-primary">
-            Enregistrer le Petit Déjeuner du Chef
+        <div class="fromages-actions">
+          <button id="fromages-save" type="submit" class="btn btn-primary">
+            Enregistrer le Plateaux de fromages du Chef
           </button>
 
-          <button id="pdj-reset" type="button" class="btn btn-secondary">
+          <button id="fromages-reset" type="button" class="btn btn-secondary">
             Réinitialiser
           </button>
         </div>
 
-        <div id="pdj-status" class="admin-alert" style="display:none;margin-top:1rem;"></div>
+        <div id="fromages-status" class="admin-alert" style="display:none;margin-top:1rem;"></div>
 
       </form>
 
@@ -252,8 +252,8 @@
   </div>
 </div>
 
-<script type="module" src="category-page.js"></script>
-<script type="module" src="petit-dejeuner.js"></script>
+<script type="module" src="fromages-offre.js"></script>
 
+  <script type="module" src="category-page.js"></script>
 </body>
 </html>

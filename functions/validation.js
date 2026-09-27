@@ -50,26 +50,56 @@ function composition(formule) {
   return map;
 }
 
-async function validateCartIntent(input, { getFormules, getProduits, getPetitDejeunerElements } = {}) {
+async function validateCartIntent(input, { getFormules, getProduits, getPetitDejeunerElements, getBrunchElements, getBoxElements, getFromagesElements } = {}) {
   if (typeof getFormules !== "function" || typeof getProduits !== "function") fail("Catalogue serveur indisponible.", "SERVER_CATALOG_UNAVAILABLE");
   const lines = Array.isArray(input?.lignes) ? input.lignes : [];
   if (!lines.length) fail("Le panier est vide.", "EMPTY_CART");
   if (lines.length > MAX_LINES) fail(`Maximum ${MAX_LINES} lignes.`, "TOO_MANY_LINES");
 
-  if (typeof getPetitDejeunerElements !== "function") {
-    fail("Catalogue Petit Déjeuner indisponible.", "PETIT_DEJEUNER_CATALOG_UNAVAILABLE");
+  const elementGetters = {
+    "petit-dejeuner": getPetitDejeunerElements,
+    brunch: getBrunchElements,
+    box: getBoxElements,
+    fromages: getFromagesElements
+  };
+
+  for (const [type, getter] of Object.entries(elementGetters)) {
+    if (typeof getter !== "function") {
+      fail(
+        `Catalogue ${type} indisponible.`,
+        `${type.toUpperCase().replace(/-/g, "_")}_CATALOG_UNAVAILABLE`
+      );
+    }
   }
 
-  const [formules, produits, petitDejeunerElements] = await Promise.all([
+  const [
+    formules,
+    produits,
+    petitDejeunerElements,
+    brunchElements,
+    boxElements,
+    fromagesElements
+  ] = await Promise.all([
     getFormules(),
     getProduits(),
-    getPetitDejeunerElements()
+    getPetitDejeunerElements(),
+    getBrunchElements(),
+    getBoxElements(),
+    getFromagesElements()
   ]);
+
   const formulas = new Map(formules.map(x => [x.id, x]));
   const products = new Map(produits.map(x => [x.id, x]));
-  const petitDejeunerMap = new Map(petitDejeunerElements.map(x => [x.id, x]));
+
+  const elementMaps = {
+    "petit-dejeuner": new Map(petitDejeunerElements.map(x => [x.id, x])),
+    brunch: new Map(brunchElements.map(x => [x.id, x])),
+    box: new Map(boxElements.map(x => [x.id, x])),
+    fromages: new Map(fromagesElements.map(x => [x.id, x]))
+  };
+
   const demanded = new Map();
-  const demandedPetitDejeuner = new Map();
+  const demandedComposed = new Map();
   const validated = [];
 
   lines.forEach((line, i) => {
@@ -119,14 +149,42 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
       return;
     }
 
-    if (lineType === "petit-dejeuner") {
+    if (["petit-dejeuner", "brunch", "box", "fromages"].includes(lineType)) {
+      const composedLabels = {
+        "petit-dejeuner": "Petit Déjeuner",
+        brunch: "Brunch",
+        box: "Box",
+        fromages: "Plateaux de fromages"
+      };
+
+      const composedCategories = {
+        "petit-dejeuner": "Petit déjeuner",
+        brunch: "Brunch",
+        box: "Box",
+        fromages: "Fromage"
+      };
+
+      const composedCodes = {
+        "petit-dejeuner": "PETIT_DEJEUNER",
+        brunch: "BRUNCH",
+        box: "BOX",
+        fromages: "FROMAGES"
+      };
+
+      const label = composedLabels[lineType];
+      const code = composedCodes[lineType];
+      const elementMap = elementMaps[lineType];
+
       const formuleId = text(line?.formuleId);
       const formule = formulas.get(formuleId);
 
       if (!formule) fail(`Ligne ${i + 1}: formule inconnue.`, "INVALID_FORMULA");
       if (formule.actif !== true) fail(`Ligne ${i + 1}: formule inactive.`, "FORMULA_INACTIVE");
-      if (String(formule.categorieFormule || "") !== "petit-dejeuner") {
-        fail(`Ligne ${i + 1}: formule Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_FORMULA");
+      if (String(formule.categorieFormule || "") !== lineType) {
+        fail(
+          `Ligne ${i + 1}: formule ${label} invalide.`,
+          `INVALID_${code}_FORMULA`
+        );
       }
 
       const quantity = Number(line?.quantite);
@@ -139,7 +197,12 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
         ? formule.formats.find((item) => text(item?.id) === formatId)
         : null;
 
-      if (!format) fail(`Ligne ${i + 1}: format Petit Déjeuner inconnu.`, "INVALID_PETIT_DEJEUNER_FORMAT");
+      if (!format) {
+        fail(
+          `Ligne ${i + 1}: format ${label} inconnu.`,
+          `INVALID_${code}_FORMAT`
+        );
+      }
 
       const serverPrice = Number(format.prix);
       if (!Number.isFinite(serverPrice) || serverPrice < 0) {
@@ -155,7 +218,10 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
         : [];
 
       if (receivedComposition.length !== expectedComposition.length) {
-        fail(`Ligne ${i + 1}: composition Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_COMPOSITION");
+        fail(
+          `Ligne ${i + 1}: composition ${label} invalide.`,
+          `INVALID_${code}_COMPOSITION`
+        );
       }
 
       const expected = new Map(
@@ -172,48 +238,69 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
         const elementId = text(raw?.elementId);
         const requestedQuantity = Number(raw?.quantiteParFormat);
         const expectedQuantity = expected.get(elementId);
-        const element = petitDejeunerMap.get(elementId);
+        const element = elementMap.get(elementId);
 
         if (!element || !expected.has(elementId) || seen.has(elementId)) {
-          fail(`Ligne ${i + 1}: élément Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_ELEMENT");
+          fail(
+            `Ligne ${i + 1}: élément ${label} invalide.`,
+            `INVALID_${code}_ELEMENT`
+          );
         }
 
         if (!Number.isInteger(requestedQuantity) || requestedQuantity !== expectedQuantity) {
-          fail(`Ligne ${i + 1}: quantité d’élément Petit Déjeuner invalide.`, "INVALID_PETIT_DEJEUNER_QUANTITY");
+          fail(
+            `Ligne ${i + 1}: quantité d’élément ${label} invalide.`,
+            `INVALID_${code}_QUANTITY`
+          );
         }
 
         if (element.actif !== true) {
-          fail(`Ligne ${i + 1}: élément Petit Déjeuner inactif.`, "PETIT_DEJEUNER_ELEMENT_INACTIVE");
+          fail(
+            `Ligne ${i + 1}: élément ${label} inactif.`,
+            `${code}_ELEMENT_INACTIVE`
+          );
         }
 
         const available = Number(element.stockDisponible);
         if (!Number.isInteger(available) || available <= 0) {
-          fail(`Ligne ${i + 1}: élément Petit Déjeuner indisponible.`, "PETIT_DEJEUNER_ELEMENT_UNAVAILABLE");
+          fail(
+            `Ligne ${i + 1}: élément ${label} indisponible.`,
+            `${code}_ELEMENT_UNAVAILABLE`
+          );
         }
 
-        demandedPetitDejeuner.set(
+        if (!demandedComposed.has(lineType)) {
+          demandedComposed.set(lineType, new Map());
+        }
+
+        const demandedElements = demandedComposed.get(lineType);
+        demandedElements.set(
           elementId,
-          (demandedPetitDejeuner.get(elementId) || 0) + quantity * requestedQuantity
+          (demandedElements.get(elementId) || 0) + quantity * requestedQuantity
         );
 
         seen.add(elementId);
+
         cleanComponents.push({
-      produitId: element.id,
-      produitNom: String(element.nom || ""),
-      categorie: "Petit déjeuner",
-      quantiteParFormule: expectedQuantity
-    });
+          produitId: element.id,
+          produitNom: String(element.nom || ""),
+          categorie: composedCategories[lineType],
+          quantiteParFormule: expectedQuantity
+        });
       }
 
       if (seen.size !== expected.size) {
-        fail(`Ligne ${i + 1}: composition Petit Déjeuner incomplète.`, "INCOMPLETE_PETIT_DEJEUNER_COMPOSITION");
+        fail(
+          `Ligne ${i + 1}: composition ${label} incomplète.`,
+          `INCOMPLETE_${code}_COMPOSITION`
+        );
       }
 
       validated.push({
         lineIndex: i,
-        type: "petit-dejeuner",
+        type: lineType,
         formuleId: formule.id,
-        formuleNom: String(formule.nom || "Petit Déjeuner du Chef"),
+        formuleNom: String(formule.nom || label),
         formatId: format.id,
         formatNom: String(format.nom || "Format"),
         personnes: Number(format.personnes) || 1,
@@ -312,14 +399,26 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
     if (need > available) fail(`Stock insuffisant pour ${product.nom || productId}.`, "INSUFFICIENT_STOCK");
   }
 
-  for (const [elementId, need] of demandedPetitDejeuner) {
-    const element = petitDejeunerMap.get(elementId);
-    const available = Number(element?.stockDisponible);
-    if (!Number.isInteger(available) || available < 0) {
-      fail(`Stock serveur invalide pour ${element?.nom || elementId}.`, "INVALID_SERVER_STOCK");
-    }
-    if (need > available) {
-      fail(`Stock insuffisant pour ${element?.nom || elementId}.`, "INSUFFICIENT_STOCK");
+  for (const [type, demandedElements] of demandedComposed) {
+    const elementMap = elementMaps[type];
+
+    for (const [elementId, need] of demandedElements) {
+      const element = elementMap.get(elementId);
+      const available = Number(element?.stockDisponible);
+
+      if (!Number.isInteger(available) || available < 0) {
+        fail(
+          `Stock serveur invalide pour ${element?.nom || elementId}.`,
+          "INVALID_SERVER_STOCK"
+        );
+      }
+
+      if (need > available) {
+        fail(
+          `Stock insuffisant pour ${element?.nom || elementId}.`,
+          "INSUFFICIENT_STOCK"
+        );
+      }
     }
   }
 

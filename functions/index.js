@@ -360,21 +360,32 @@ function projectCatalogueItem(item, { product = false } = {}) { const projected 
 const getCatalogue = onRequest({ region: "europe-west9", cors: true }, async (req, res) => {
   if (req.method !== "GET") { res.set("Allow", "GET"); return res.status(405).json({ ok: false, code: "METHOD_NOT_ALLOWED", message: "Method Not Allowed" }); }
   try {
-    const [formules, produits, petitDejeunerElementsSnapshot] = await Promise.all([
+    const [formules, produits, petitDejeunerElementsSnapshot, brunchElementsSnapshot, boxElementsSnapshot, fromagesElementsSnapshot] = await Promise.all([
       getFormules(),
       getProduits(),
-      db.collection("petitDejeunerElements").get()
+      db.collection("petitDejeunerElements").get(),
+      db.collection("brunchElements").get(),
+      db.collection("boxElements").get(),
+      db.collection("fromagesElements").get()
     ]);
 
-    const petitDejeunerElements = petitDejeunerElementsSnapshot.docs.map((doc) => ({
+    const mapElements = (snapshot) => snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data()
     }));
 
+    const petitDejeunerElements = mapElements(petitDejeunerElementsSnapshot);
+    const brunchElements = mapElements(brunchElementsSnapshot);
+    const boxElements = mapElements(boxElementsSnapshot);
+    const fromagesElements = mapElements(fromagesElementsSnapshot);
+
     return res.status(200).json({
       formules: formules.map((f) => projectCatalogueItem(f)),
       produits: produits.map((p) => projectCatalogueItem(p, { product: true })),
-      petitDejeunerElements
+      petitDejeunerElements,
+      brunchElements,
+      boxElements,
+      fromagesElements
     });
   }
   catch (error) { console.error("Erreur de lecture du catalogue public :", error); return res.status(500).json({ ok: false, code: "INTERNAL_ERROR", message: "Le catalogue ne peut pas être chargé pour le moment." }); }

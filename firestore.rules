@@ -36,6 +36,18 @@ service cloud.firestore {
       allow read, write: if admin();
     }
 
+    match /brunchElements/{elementId} {
+      allow read, write: if admin();
+    }
+
+    match /boxElements/{elementId} {
+      allow read, write: if admin();
+    }
+
+    match /fromagesElements/{elementId} {
+      allow read, write: if admin();
+    }
+
     match /menuPdfs/{menuId} {
       allow read: if true;
       allow write: if admin();

@@ -206,4 +206,4 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
 else init();
 
 import("./finance.js");
-import("./finance-enhancer.js");
+import("./finance-enhancer.js?v=20260927");

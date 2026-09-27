@@ -215,21 +215,38 @@ async function finalizePaidOrder({ requestId, transactionId, paidAt = null, stri
 
     const requirements = requiredStockByProduct(attempt.orderData);
     const stockEntries = [...requirements.entries()];
+    const stockCollections = {
+      "petit-dejeuner": "petitDejeunerElements",
+      brunch: "brunchElements",
+      box: "boxElements",
+      fromages: "fromagesElements"
+    };
+
     const stockTargets = stockEntries.map(([productId, needed]) => {
-      const isPetitDejeuner = Array.isArray(attempt.orderData?.lignes)
-        && attempt.orderData.lignes.some(
-          (line) =>
-            String(line?.type || "").toLowerCase() === "petit-dejeuner"
+      let collection = "produits";
+
+      if (Array.isArray(attempt.orderData?.lignes)) {
+        for (const line of attempt.orderData.lignes) {
+          const lineType = String(line?.type || "").toLowerCase();
+          const lineCollection = stockCollections[lineType];
+
+          if (
+            lineCollection
             && Array.isArray(line?.composants)
             && line.composants.some(
               (component) => String(component?.produitId || "").trim() === productId
             )
-        );
+          ) {
+            collection = lineCollection;
+            break;
+          }
+        }
+      }
 
       return {
         productId,
         needed,
-        collection: isPetitDejeuner ? "petitDejeunerElements" : "produits"
+        collection
       };
     });
 
