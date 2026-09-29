@@ -50,53 +50,24 @@ function composition(formule) {
   return map;
 }
 
-async function validateCartIntent(input, { getFormules, getProduits, getPetitDejeunerElements, getBrunchElements, getBoxElements, getFromagesElements } = {}) {
+async function validateCartIntent(input, { getFormules, getProduits } = {}) {
   if (typeof getFormules !== "function" || typeof getProduits !== "function") fail("Catalogue serveur indisponible.", "SERVER_CATALOG_UNAVAILABLE");
   const lines = Array.isArray(input?.lignes) ? input.lignes : [];
   if (!lines.length) fail("Le panier est vide.", "EMPTY_CART");
   if (lines.length > MAX_LINES) fail(`Maximum ${MAX_LINES} lignes.`, "TOO_MANY_LINES");
 
-  const elementGetters = {
-    "petit-dejeuner": getPetitDejeunerElements,
-    brunch: getBrunchElements,
-    box: getBoxElements,
-    fromages: getFromagesElements
-  };
-
-  for (const [type, getter] of Object.entries(elementGetters)) {
-    if (typeof getter !== "function") {
-      fail(
-        `Catalogue ${type} indisponible.`,
-        `${type.toUpperCase().replace(/-/g, "_")}_CATALOG_UNAVAILABLE`
-      );
-    }
-  }
-
-  const [
-    formules,
-    produits,
-    petitDejeunerElements,
-    brunchElements,
-    boxElements,
-    fromagesElements
-  ] = await Promise.all([
+  const [formules, produits] = await Promise.all([
     getFormules(),
-    getProduits(),
-    getPetitDejeunerElements(),
-    getBrunchElements(),
-    getBoxElements(),
-    getFromagesElements()
+    getProduits()
   ]);
 
   const formulas = new Map(formules.map(x => [x.id, x]));
   const products = new Map(produits.map(x => [x.id, x]));
-
-  const elementMaps = {
-    "petit-dejeuner": new Map(petitDejeunerElements.map(x => [x.id, x])),
-    brunch: new Map(brunchElements.map(x => [x.id, x])),
-    box: new Map(boxElements.map(x => [x.id, x])),
-    fromages: new Map(fromagesElements.map(x => [x.id, x]))
-  };
+  const composedElements = new Map(
+    produits
+      .filter((product) => product?.typeProduit === "elementCompose")
+      .map((product) => [product.id, product])
+  );
 
   const demanded = new Map();
   const demandedComposed = new Map();
@@ -173,7 +144,7 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
 
       const label = composedLabels[lineType];
       const code = composedCodes[lineType];
-      const elementMap = elementMaps[lineType];
+      const elementMap = composedElements;
 
       const formuleId = text(line?.formuleId);
       const formule = formulas.get(formuleId);
@@ -226,7 +197,7 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
 
       const expected = new Map(
         expectedComposition.map((item) => [
-          text(item?.elementId),
+          text(item?.produitId),
           Number(item?.quantite)
         ])
       );
@@ -235,12 +206,18 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
       const cleanComponents = [];
 
       for (const raw of receivedComposition) {
-        const elementId = text(raw?.elementId);
+        const elementId = text(raw?.produitId);
         const requestedQuantity = Number(raw?.quantiteParFormat);
         const expectedQuantity = expected.get(elementId);
         const element = elementMap.get(elementId);
 
-        if (!element || !expected.has(elementId) || seen.has(elementId)) {
+        if (
+          !element ||
+          !expected.has(elementId) ||
+          seen.has(elementId) ||
+          element.typeProduit !== "elementCompose" ||
+          String(element.categorieOffre || "") !== lineType
+        ) {
           fail(
             `Ligne ${i + 1}: élément ${label} invalide.`,
             `INVALID_${code}_ELEMENT`
@@ -390,7 +367,7 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
     if (seen.size !== required.size) fail(`Ligne ${i + 1}: composition incomplète.`, "INCOMPLETE_COMPONENTS");
     const price = Number(formule.prix);
     if (!Number.isFinite(price) || price < 0) fail(`Ligne ${i + 1}: prix serveur invalide.`, "INVALID_SERVER_PRICE");
-    validated.push({ lineIndex: i, formuleId: formule.id, formuleNom: String(formule.nom || ""), prixUnitaire: price, quantite: quantity, composants: cleanComponents });
+    validated.push({ lineIndex: i, type: "formule", formuleId: formule.id, formuleNom: String(formule.nom || ""), prixUnitaire: price, quantite: quantity, composants: cleanComponents });
   });
 
   for (const [productId, need] of demanded) {
@@ -400,7 +377,7 @@ async function validateCartIntent(input, { getFormules, getProduits, getPetitDej
   }
 
   for (const [type, demandedElements] of demandedComposed) {
-    const elementMap = elementMaps[type];
+    const elementMap = composedElements;
 
     for (const [elementId, need] of demandedElements) {
       const element = elementMap.get(elementId);
@@ -443,18 +420,6 @@ function validateScheduleIntent(input, config, now = new Date()) {
   const dedicatedTypes = new Set(["petit-dejeuner", "brunch", "fromages"]);
   const dedicatedOffers = offerTypes.filter(type => dedicatedTypes.has(type));
   const hasDedicatedOffer = dedicatedOffers.length > 0;
-  const hasGenericOffer = offerTypes.some(type => !dedicatedTypes.has(type));
-
-  if (hasDedicatedOffer && hasGenericOffer) {
-    fail(
-      "Les offres dédiées doivent être commandées séparément des Formules et Box.",
-      "MIXED_OFFER_SCHEDULE"
-    );
-  }
-
-  if (dedicatedOffers.length > 1) {
-    fail("Ces offres doivent être commandées séparément.", "MULTIPLE_DEDICATED_OFFERS");
-  }
 
   const paris = parisParts(now);
   const today = parisDate(now);
@@ -465,45 +430,222 @@ function validateScheduleIntent(input, config, now = new Date()) {
     fail("La date doit être comprise entre J et J+3.", "DATE_OUT_OF_RANGE");
   }
 
-  if (hasDedicatedOffer) {
-    const dedicatedType = dedicatedOffers[0];
-    const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  const scheduleLines = Array.isArray(input?.lignes)
+    ? input.lignes
+    : offerTypes.map(type => ({ type, nom: type }));
 
-    if (dedicatedType === "petit-dejeuner") {
-      if (weekday === 0 || weekday === 6) {
-        fail(
-          "Le Petit Déjeuner est disponible uniquement du lundi au vendredi.",
-          "PETIT_DEJEUNER_DAY_CLOSED"
-        );
-      }
+  const horaires = config.horaires && typeof config.horaires === "object"
+    ? config.horaires
+    : {};
 
-      if (creneau !== "petit-dejeuner") {
-        fail("Le créneau du Petit Déjeuner est invalide.", "INVALID_RECEPTION_SLOT");
-      }
-    }
+  const horairesOffres =
+    config.horairesOffres && typeof config.horairesOffres === "object"
+      ? config.horairesOffres
+      : {};
 
-    if (dedicatedType === "brunch") {
-      if (weekday !== 0) {
-        fail(
-          "Le Brunch est disponible uniquement le dimanche.",
-          "BRUNCH_DAY_CLOSED"
-        );
-      }
+  const parseRange = (value, label) => {
+    const raw = String(value || "").trim();
+    const match = raw.match(/(\\d{1,2})[h:](\\d{2})?\\s*[–-]\\s*(\\d{1,2})[h:](\\d{2})?/i);
 
-      if (creneau !== "brunch") {
-        fail("Le créneau du Brunch est invalide.", "INVALID_RECEPTION_SLOT");
-      }
-    }
-
-    if (dedicatedType === "fromages" && creneau !== "fromages") {
+    if (!match) {
       fail(
-        "Le créneau des plateaux de fromages est invalide.",
-        "INVALID_RECEPTION_SLOT"
+        `Horaire invalide pour ${label}.`,
+        "INVALID_OFFER_SCHEDULE"
       );
     }
-  } else {
-    if (!["midi", "soir"].includes(creneau)) {
-      fail("Le créneau des Formules et Box est invalide.", "INVALID_RECEPTION_SLOT");
+
+    const startHour = Number(match[1]);
+    const startMinute = Number(match[2] || 0);
+    const endHour = Number(match[3]);
+    const endMinute = Number(match[4] || 0);
+
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+
+    if (
+      startHour > 23 ||
+      endHour > 23 ||
+      startMinute > 59 ||
+      endMinute > 59 ||
+      endMinutes < startMinutes
+    ) {
+      fail(
+        `Horaire invalide pour ${label}.`,
+        "INVALID_OFFER_SCHEDULE"
+      );
+    }
+
+    return { debut: startMinutes, fin: endMinutes };
+  };
+
+  const getDedicatedRange = (type) => {
+    const key =
+      type === "petit-dejeuner"
+        ? "petitDejeuner"
+        : type;
+
+    const horaire = horairesOffres[key];
+
+    if (!horaire || typeof horaire !== "object") {
+      fail(
+        "Les horaires de cette offre sont indisponibles.",
+        "OFFER_SCHEDULE_UNAVAILABLE"
+      );
+    }
+
+    const debut = minutes(
+      horaire.debut,
+      `horairesOffres.${key}.debut`
+    );
+    const fin = minutes(
+      horaire.fin,
+      `horairesOffres.${key}.fin`
+    );
+
+    if (fin < debut) {
+      fail(
+        `Horaire invalide pour ${key}.`,
+        "INVALID_OFFER_SCHEDULE"
+      );
+    }
+
+    return { debut, fin };
+  };
+
+  const getReceptionRange = (slot) => {
+    const fallback = {
+      midi: {
+        retrait: "11h30 – 12h00",
+        livraison: "12h00 – 13h00"
+      },
+      soir: {
+        retrait: "19h30 – 20h00",
+        livraison: "20h00 – 21h00"
+      }
+    };
+
+    if (!["midi", "soir"].includes(slot)) {
+      return null;
+    }
+
+    const key =
+      slot === "midi"
+        ? (modeReception === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison")
+        : (modeReception === "retrait" ? "soirRetrait" : "soirLivraison");
+
+    return parseRange(
+      horaires[key] || fallback[slot][modeReception],
+      `horaires.${key}`
+    );
+  };
+
+  const selectedRange =
+    ["midi", "soir"].includes(creneau)
+      ? getReceptionRange(creneau)
+      : dedicatedTypes.has(creneau)
+        ? getDedicatedRange(creneau)
+        : null;
+
+  if (!selectedRange) {
+    fail(
+      "Le créneau sélectionné est incompatible avec le panier.",
+      "INVALID_RECEPTION_SLOT"
+    );
+  }
+
+  const rangesOverlap = (a, b) =>
+    Math.max(a.debut, b.debut) <= Math.min(a.fin, b.fin);
+
+  for (const line of scheduleLines) {
+    const type = String(line?.type || "").toLowerCase();
+
+    if (!dedicatedTypes.has(type)) {
+      continue;
+    }
+
+    const offerRange = getDedicatedRange(type);
+
+    if (!rangesOverlap(offerRange, selectedRange)) {
+      const nom = String(line?.nom || "Cette offre").trim() || "Cette offre";
+
+      fail(
+        `${nom} n'est pas disponible sur le créneau ${creneau} sélectionné.`,
+        "OFFER_SCHEDULE_INCOMPATIBLE"
+      );
+    }
+  }
+
+
+  const defaultOfferDays = {
+    formule: [1, 2, 3, 4, 5, 6, 7],
+    "petit-dejeuner": [1, 2, 3, 4, 5],
+    brunch: [7],
+    box: [1, 2, 3, 4, 5, 6, 7],
+    fromages: [1, 2, 3, 4, 5, 6, 7]
+  };
+
+  const joursOffres =
+    config.joursOffres && typeof config.joursOffres === "object"
+      ? config.joursOffres
+      : defaultOfferDays;
+
+  const isoWeekday =
+    new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
+
+  if (config.joursReposActive === true) {
+    const joursRepos = Array.isArray(config.joursRepos)
+      ? config.joursRepos
+      : [];
+
+    const repos = joursRepos.find((item) => item && item.date === date);
+
+    if (repos) {
+      const motif =
+        typeof repos.motif === "string" && repos.motif.trim()
+          ? ` : ${repos.motif.trim()}`
+          : "";
+
+      fail(
+        `Les commandes sont fermées ce jour-là${motif}.`,
+        "PLANNED_REST_DAY"
+      );
+    }
+  }
+
+  const offerDayMessages = {
+    formule: "Les Formules ne sont pas disponibles ce jour-là.",
+    "petit-dejeuner": "Le Petit Déjeuner n'est pas disponible ce jour-là.",
+    brunch: "Le Brunch n'est pas disponible ce jour-là.",
+    box: "Les Box ne sont pas disponibles ce jour-là.",
+    fromages: "Les plateaux de fromages ne sont pas disponibles ce jour-là."
+  };
+
+  const errorCodes = {
+    formule: "FORMULE_DAY_CLOSED",
+    "petit-dejeuner": "PETIT_DEJEUNER_DAY_CLOSED",
+    brunch: "BRUNCH_DAY_CLOSED",
+    box: "BOX_DAY_CLOSED",
+    fromages: "FROMAGES_DAY_CLOSED"
+  };
+
+  for (const offerType of offerTypes) {
+    const configuredDays = Array.isArray(joursOffres[offerType])
+      ? joursOffres[offerType]
+          .map(Number)
+          .filter(
+            (value) =>
+              Number.isInteger(value) &&
+              value >= 1 &&
+              value <= 7
+          )
+      : defaultOfferDays[offerType];
+
+    if (configuredDays && !configuredDays.includes(isoWeekday)) {
+      fail(
+        offerDayMessages[offerType] ||
+          "Cette offre n'est pas disponible ce jour-là.",
+        errorCodes[offerType] || "OFFER_DAY_CLOSED"
+      );
     }
   }
 
@@ -532,18 +674,55 @@ function validateScheduleIntent(input, config, now = new Date()) {
     fail("Service soir fermé.", "DINNER_CLOSURE");
   }
 
-  // Les offres dédiées utilisent leurs propres horaires de réception/livraison.
-  // Une commande peut être passée à l'avance : aucun cutoff de commande
-  // Midi/Soir ne doit donc leur être appliqué.
-  if (!hasDedicatedOffer && date === today) {
+  if (date === today) {
     const current = paris.hour * 60 + paris.minute;
-    const cutoff = minutes(
-      creneau === "midi" ? config.limiteDejeuner : config.limiteDiner,
-      creneau === "midi" ? "limiteDejeuner" : "limiteDiner"
-    );
 
-    if (current >= cutoff) {
-      fail("La limite de commande est dépassée.", "ORDER_CUTOFF_PASSED");
+    if (hasDedicatedOffer) {
+      const dedicatedType = dedicatedOffers[0];
+
+      const horairesOffres =
+        config.horairesOffres && typeof config.horairesOffres === "object"
+          ? config.horairesOffres
+          : {};
+
+      const horaireKey =
+        dedicatedType === "petit-dejeuner"
+          ? "petitDejeuner"
+          : dedicatedType;
+
+      const horaire =
+        horairesOffres[horaireKey] &&
+        typeof horairesOffres[horaireKey] === "object"
+          ? horairesOffres[horaireKey]
+          : null;
+
+      if (!horaire) {
+        fail(
+          "Les horaires de cette offre sont indisponibles.",
+          "OFFER_SCHEDULE_UNAVAILABLE"
+        );
+      }
+
+      const cutoff = minutes(
+        horaire.fin,
+        `horairesOffres.${horaireKey}.fin`
+      );
+
+      if (current >= cutoff) {
+        fail(
+          "La limite de commande pour cette offre est dépassée.",
+          "ORDER_CUTOFF_PASSED"
+        );
+      }
+    } else {
+      const cutoff = minutes(
+        creneau === "midi" ? config.limiteDejeuner : config.limiteDiner,
+        creneau === "midi" ? "limiteDejeuner" : "limiteDiner"
+      );
+
+      if (current >= cutoff) {
+        fail("La limite de commande est dépassée.", "ORDER_CUTOFF_PASSED");
+      }
     }
   }
 

@@ -230,92 +230,215 @@
         }
 
         const cart = getCartSnapshot();
-        const offerTypes = [...new Set(
-          (cart.lines || [])
-            .map((line) => String(line.type || "formule").toLowerCase())
-            .filter(Boolean)
-        )];
-
+        const lines = Array.isArray(cart.lines) ? cart.lines : [];
         const dedicatedTypes = ["petit-dejeuner", "brunch", "fromages"];
-        const dedicatedOffers = dedicatedTypes.filter((type) => offerTypes.includes(type));
-        const hasDedicatedOffer = dedicatedOffers.length > 0;
-        const hasGenericOffer = offerTypes.some((type) => !dedicatedTypes.includes(type));
 
-        if (hasDedicatedOffer && hasGenericOffer) {
-          slotSelect.innerHTML = '<option value="">Ces offres doivent être commandées séparément des Formules / Box.</option>';
-          return;
-        }
+        const dedicatedLines = lines.filter((line) =>
+          dedicatedTypes.includes(String(line?.type || "").toLowerCase())
+        );
 
-        if (hasDedicatedOffer) {
-          if (dedicatedOffers.length > 1) {
-            slotSelect.innerHTML = '<option value="">Ces offres doivent être commandées séparément.</option>';
-            return;
+        const hasDedicatedOffer = dedicatedLines.length > 0;
+        const hasGenericOffer = lines.some((line) =>
+          !dedicatedTypes.includes(String(line?.type || "formule").toLowerCase())
+        );
+
+        const parseRange = (value) => {
+          const match = String(value || "").match(
+            /(\d{1,2})[h:](\d{2})?\s*[–-]\s*(\d{1,2})[h:](\d{2})?/i
+          );
+
+          if (!match) return null;
+
+          const debut = Number(match[1]) * 60 + Number(match[2] || 0);
+          const fin = Number(match[3]) * 60 + Number(match[4] || 0);
+
+          if (!Number.isFinite(debut) || !Number.isFinite(fin) || fin < debut) {
+            return null;
           }
 
-          const dedicatedType = dedicatedOffers[0];
-          const weekday = new Date(`${dateValue}T12:00:00Z`).getUTCDay();
+          return { debut, fin };
+        };
 
-          if (dedicatedType === "petit-dejeuner" && (weekday === 0 || weekday === 6)) {
+        const compatible = (a, b) =>
+          a && b && Math.max(a.debut, b.debut) <= Math.min(a.fin, b.fin);
+
+        const config = commandConfig();
+        const horaires = config.horaires || {};
+        const horairesOffres = config.commandes?.horairesOffres || {};
+
+        const serviceRanges = {
+          midi: parseRange(
+            mode === "retrait"
+              ? (horaires.dejeunerRetrait || "11h30 – 12h00")
+              : (horaires.dejeunerLivraison || "12h00 – 13h00")
+          ),
+          soir: parseRange(
+            mode === "retrait"
+              ? (horaires.soirRetrait || "19h30 – 20h00")
+              : (horaires.soirLivraison || "20h00 – 21h00")
+          )
+        };
+
+        const dedicatedConfigKey = {
+          "petit-dejeuner": "petitDejeuner",
+          brunch: "brunch",
+          fromages: "fromages"
+        };
+
+        const dedicatedRanges = dedicatedLines.map((line) => {
+          const type = String(line?.type || "").toLowerCase();
+          const offerConfig = horairesOffres[dedicatedConfigKey[type]] || {};
+
+          return {
+            type,
+            nom: String(
+              line?.formuleNom ||
+              line?.nom ||
+              (type === "petit-dejeuner"
+                ? "Petit Déjeuner du Chef"
+                : type === "brunch"
+                  ? "Brunch"
+                  : "Plateau de fromages")
+            ),
+            range: parseRange(
+              offerConfig.debut && offerConfig.fin
+                ? `${offerConfig.debut} – ${offerConfig.fin}`
+                : ""
+            )
+          };
+        });
+
+        const weekday = new Date(`${dateValue}T12:00:00Z`).getUTCDay();
+
+        for (const offer of dedicatedRanges) {
+          if (offer.type === "petit-dejeuner" && (weekday === 0 || weekday === 6)) {
             slotSelect.innerHTML = '<option value="">Le Petit Déjeuner est disponible uniquement du lundi au vendredi.</option>';
             return;
           }
 
-          if (dedicatedType === "brunch" && weekday !== 0) {
+          if (offer.type === "brunch" && weekday !== 0) {
             slotSelect.innerHTML = '<option value="">Le Brunch est disponible uniquement le dimanche.</option>';
             return;
           }
 
-          const horairesOffres = commandConfig().commandes?.horairesOffres || {};
-          const configKey = dedicatedType === "petit-dejeuner" ? "petitDejeuner" : dedicatedType;
-          const config = horairesOffres[configKey] || {};
-          const debut = String(config.debut || "");
-          const fin = String(config.fin || "");
+          if (!offer.range) {
+            slotSelect.innerHTML = `<option value="">Aucun horaire configuré pour ${offer.nom}.</option>`;
+            return;
+          }
+        }
 
-          if (!debut || !fin) {
-            slotSelect.innerHTML = '<option value="">Aucun horaire configuré pour cette offre.</option>';
+        if (!hasDedicatedOffer) {
+          const today = dateValue === todayValue;
+          const services = [];
+
+          if (!today || canOrderToday("midi")) services.push("midi");
+          if (!today || canOrderToday("soir")) services.push("soir");
+
+          if (!services.length) {
+            slotSelect.innerHTML = '<option value="">Aucun créneau disponible pour cette date</option>';
             return;
           }
 
-          const option = document.createElement("option");
-          option.value = dedicatedType;
-          option.textContent = `${mode === "retrait" ? "Retrait" : "Livraison"} — ${debut} – ${fin}`;
-          slotSelect.appendChild(option);
+          services.forEach((service) => {
+            const option = document.createElement("option");
+            option.value = `${service}|${mode}`;
+
+            const key = service === "midi"
+              ? (mode === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison")
+              : (mode === "retrait" ? "soirRetrait" : "soirLivraison");
+
+            const horairesText = horaires[key] || (
+              service === "midi"
+                ? (mode === "retrait" ? "11h30 – 12h00" : "12h00 – 13h00")
+                : (mode === "retrait" ? "19h30 – 20h00" : "20h00 – 21h00")
+            );
+
+            option.textContent = `${serviceLabel(service)} — ${horairesText}`;
+            slotSelect.appendChild(option);
+          });
+
           slotSelect.disabled = false;
           return;
         }
 
         const today = dateValue === todayValue;
-        const services = [];
 
-        // Formules classiques + Box : fonctionnement Midi / Soir inchangé.
-        if (!today || canOrderToday("midi")) services.push("midi");
-        if (!today || canOrderToday("soir")) services.push("soir");
+        const compatibleServices = ["midi", "soir"].filter((service) => {
+          if (today && !canOrderToday(service)) return false;
 
-        if (!services.length) {
-          slotSelect.innerHTML = '<option value="">Aucun créneau disponible pour cette date</option>';
+          return dedicatedRanges.every((offer) =>
+            compatible(offer.range, serviceRanges[service])
+          );
+        });
+
+        if (hasGenericOffer) {
+          if (!compatibleServices.length) {
+            const names = dedicatedRanges.map((offer) => offer.nom).join(" + ");
+            slotSelect.innerHTML = `<option value="">Aucun créneau commun disponible pour ${names}.</option>`;
+            return;
+          }
+
+          compatibleServices.forEach((service) => {
+            const option = document.createElement("option");
+            option.value = `${service}|${mode}`;
+
+            const key = service === "midi"
+              ? (mode === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison")
+              : (mode === "retrait" ? "soirRetrait" : "soirLivraison");
+
+            const horairesText = horaires[key] || (
+              service === "midi"
+                ? (mode === "retrait" ? "11h30 – 12h00" : "12h00 – 13h00")
+                : (mode === "retrait" ? "19h30 – 20h00" : "20h00 – 21h00")
+            );
+
+            option.textContent = `${serviceLabel(service)} — ${horairesText}`;
+            slotSelect.appendChild(option);
+          });
+
+          slotSelect.disabled = false;
           return;
         }
 
-        const horaires = commandConfig().horaires || {};
-
-        services.forEach((service) => {
+        if (dedicatedRanges.length === 1) {
+          const offer = dedicatedRanges[0];
           const option = document.createElement("option");
-          option.value = `${service}|${mode}`;
+          option.value = offer.type;
 
-          const key = service === "midi"
-            ? (mode === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison")
-            : (mode === "retrait" ? "soirRetrait" : "soirLivraison");
+          const debutH = String(Math.floor(offer.range.debut / 60)).padStart(2, "0");
+          const debutM = String(offer.range.debut % 60).padStart(2, "0");
+          const finH = String(Math.floor(offer.range.fin / 60)).padStart(2, "0");
+          const finM = String(offer.range.fin % 60).padStart(2, "0");
 
-          const horairesText = horaires[key] || (
-            service === "midi"
-              ? (mode === "retrait" ? "11h30 – 12h00" : "12h00 – 13h00")
-              : (mode === "retrait" ? "19h30 – 20h00" : "20h00 – 21h00")
-          );
+          option.textContent =
+            `${mode === "retrait" ? "Retrait" : "Livraison"} — ${debutH}:${debutM} – ${finH}:${finM}`;
 
-          option.textContent = `${serviceLabel(service)} — ${horairesText}`;
           slotSelect.appendChild(option);
-        });
+          slotSelect.disabled = false;
+          return;
+        }
 
+        if (!compatibleServices.length) {
+          slotSelect.innerHTML = '<option value="">Les offres sélectionnées ne disposent pas d’un créneau commun.</option>';
+          return;
+        }
+
+        const firstService = compatibleServices[0];
+        const option = document.createElement("option");
+        option.value = `${firstService}|${mode}`;
+
+        const key = firstService === "midi"
+          ? (mode === "retrait" ? "dejeunerRetrait" : "dejeunerLivraison")
+          : (mode === "retrait" ? "soirRetrait" : "soirLivraison");
+
+        const horairesText = horaires[key] || (
+          firstService === "midi"
+            ? (mode === "retrait" ? "11h30 – 12h00" : "12h00 – 13h00")
+            : (mode === "retrait" ? "19h30 – 20h00" : "20h00 – 21h00")
+        );
+
+        option.textContent = `${serviceLabel(firstService)} — ${horairesText}`;
+        slotSelect.appendChild(option);
         slotSelect.disabled = false;
       }
 
@@ -418,9 +541,13 @@
               return "La composition de l’offre composée est invalide.";
             }
             for (const component of line.composants) {
-              if (!component.elementId || !component.elementNom) {
+              const componentId = component.produitId || component.elementId;
+              const componentNom = component.produitNom || component.elementNom;
+
+              if (!componentId || !componentNom) {
                 return "Un élément de l’offre composée est incomplet.";
               }
+
               if (!Number.isInteger(Number(component.quantiteParFormat)) || Number(component.quantiteParFormat) <= 0) {
                 return "La quantité d’un élément de l’offre composée est invalide.";
               }

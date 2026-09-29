@@ -4,7 +4,7 @@ const {
   getOrCreatePaymentAttempt,
   IdempotencyError,
 } = require("./idempotency");
-const { getFormules, getProduits, getPetitDejeunerElements, getBrunchElements, getBoxElements, getFromagesElements, getCommandesConfig } = require("./catalog");
+const { getFormules, getProduits, getCommandesConfig } = require("./catalog");
 const { validateCartIntent, validateScheduleIntent, ValidationError } = require("./validation");
 const { calculateValidatedOrder, PricingError } = require("./pricing");
 const { getDeliveryDistance } = require("./delivery");
@@ -46,7 +46,7 @@ async function createPayment(request) {
     const requestFingerprint = buildRequestFingerprint(input);
     const attempt = await getOrCreatePaymentAttempt(requestId, requestFingerprint);
     stage = "cart";
-    const validatedCart = await validateCartIntent({ lignes: input.lignes }, { getFormules, getProduits, getPetitDejeunerElements, getBrunchElements, getBoxElements, getFromagesElements });
+    const validatedCart = await validateCartIntent({ lignes: input.lignes }, { getFormules, getProduits });
     stage = "schedule";
     const config = await getCommandesConfig();
     const offerTypes = [...new Set(
@@ -54,15 +54,23 @@ async function createPayment(request) {
         .map(line => line.type)
         .filter(Boolean)
     )];
+
+    const scheduleLines = validatedCart.lignes.map(line => ({
+      type: String(line.type || "formule").toLowerCase(),
+      nom: String(line.formuleNom || line.produitNom || "Offre")
+    }));
+
     const schedule = validateScheduleIntent(
       {
         modeReception: input.modeReception,
         creneau: input.creneau,
         date: input.date,
-        offerTypes
+        offerTypes,
+        lignes: scheduleLines
       },
       config
     );
+
     let distanceKm = null;
     if (schedule.modeReception === "livraison") {
       stage = "delivery";
