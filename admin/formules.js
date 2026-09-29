@@ -11,6 +11,8 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
+import { createComposedOfferEngine } from "./composed-offer-engine.js";
+
 const section = document.querySelector("#formules-section");
 const list = document.querySelector("#formules-list");
 const form = document.querySelector("#formule-form");
@@ -33,6 +35,7 @@ const composeeElements = document.querySelector("#formule-composee-elements");
 const composeeFormats = document.querySelector("#formule-composee-formats");
 const addComposeeElementButton = document.querySelector("#formule-add-element");
 const addComposeeFormatButton = document.querySelector("#formule-add-format");
+const composedOfferEngine = createComposedOfferEngine({ db });
 const classicComposition = document.querySelector(".formule-composition-grid");
 
 const saveButton = document.querySelector("#formule-save-btn");
@@ -41,8 +44,6 @@ let compositionRows = [];
 
 const CATEGORIES = ["Plat", "Boisson", "Dessert"];
 
-const isPetitDejeunerPage =
-  document.body?.dataset.category === "petit-dejeuner";
 let currentFormules = [];
 let currentProducts = [];
 let currentUser = null;
@@ -123,15 +124,33 @@ function isComposeeOffer() {
 }
 
 function refreshOfferTypeFields() {
-  const composee = isComposeeOffer();
+  const specialComposedCategories = new Set([
+    "petit-dejeuner",
+    "brunch",
+    "box",
+    "fromages"
+  ]);
 
-  if (composeeEditor) {
-    composeeEditor.hidden = !composee;
+  const category = categoryInput?.value || "chef";
+  const forcedComposee = specialComposedCategories.has(category);
+  const composee = forcedComposee || isComposeeOffer();
+
+  if (forcedComposee) {
+    if (typeClassiqueInput) {
+      typeClassiqueInput.checked = false;
+      typeClassiqueInput.disabled = true;
+    }
+    if (typeComposeeInput) {
+      typeComposeeInput.checked = true;
+      typeComposeeInput.disabled = true;
+    }
+  } else {
+    if (typeClassiqueInput) typeClassiqueInput.disabled = false;
+    if (typeComposeeInput) typeComposeeInput.disabled = false;
   }
 
-  if (classicComposition) {
-    classicComposition.hidden = composee;
-  }
+  if (composeeEditor) composeeEditor.hidden = !composee;
+  if (classicComposition) classicComposition.hidden = composee;
 
   const compositionHeading = classicComposition?.previousElementSibling;
   if (compositionHeading?.classList.contains("admin-section-heading")) {
@@ -143,13 +162,8 @@ function refreshOfferTypeFields() {
     if (composee) blockedInput.checked = false;
   }
 
-  if (priceField) {
-    priceField.hidden = composee;
-  }
-
-  if (priceInput) {
-    priceInput.required = !composee;
-  }
+  if (priceField) priceField.hidden = composee;
+  if (priceInput) priceInput.required = !composee;
 }
 
 function escapeHtml(value) {
@@ -166,209 +180,109 @@ function createComposeeElementRow(data = {}) {
 
   const row = document.createElement("div");
   row.className = "formule-composee-element";
-  row.dataset.elementId = String(
-    data.id || `element-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+  const productId = String(
+    data.id || data.produitId || `new-product-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   );
 
-  const mode = data.mode === "impose" ? "impose" : "choix";
-  const selectedIds = Array.isArray(data.produitsAutorises)
-    ? data.produitsAutorises.map((item) => String(item.produitId || "")).filter(Boolean)
-    : [];
-  const savedCategory = String(data.categorieProduit || "");
-
-  const productCategories = [...new Set(
-    currentProducts
-      .map((product) => String(product?.categorie || "").trim())
-      .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, "fr"));
+  row.dataset.productId = productId;
+  row.dataset.newElement = data.id || data.produitId ? "false" : "true";
 
   row.innerHTML = `
     <div class="formule-composee-element-grid">
       <label>
         Nom de l’élément
-        <input type="text" class="formule-composee-element-name" value="${escapeHtml(data.nom || "")}" placeholder="Ex. Boisson chaude">
-      </label>
-
-      <label>
-        Catégorie de produit
-        <select class="formule-composee-element-category">
-          <option value="">Choisir une catégorie</option>
-          ${productCategories
-            .map((category) => `
-              <option value="${escapeHtml(category)}"${category === savedCategory ? " selected" : ""}>
-                ${escapeHtml(category)}
-              </option>
-            `)
-            .join("")}
-        </select>
-      </label>
-
-      <label>
-        Quantité
-        <input type="number" class="formule-composee-element-quantity" min="0" step="1" value="${Number(data.quantite || 1)}">
+        <input type="text"
+          class="formule-composee-element-name"
+          value="${escapeHtml(data.nom || "")}"
+          placeholder="Ex. Café 1">
       </label>
 
       <label>
         Unité
         <select class="formule-composee-element-unit">
           ${["piece", "portion", "g", "kg", "cl", "L", "thermos", "plateau", "box"]
-            .map((unit) => `<option value="${unit}"${data.unite === unit ? " selected" : ""}>${unit}</option>`)
+            .map((unit) => `
+              <option value="${unit}"${data.unite === unit ? " selected" : ""}>${unit}</option>
+            `)
             .join("")}
         </select>
       </label>
 
       <label>
-        Mode
-        <select class="formule-composee-element-mode">
-          <option value="choix"${mode === "choix" ? " selected" : ""}>Choix client</option>
-          <option value="impose"${mode === "impose" ? " selected" : ""}>Produit imposé</option>
-        </select>
+        Stock disponible
+        <input type="number"
+          class="formule-composee-element-stock"
+          min="0"
+          step="1"
+          value="${Number.isInteger(data.stockDisponible) ? data.stockDisponible : 0}">
       </label>
 
-      <div class="formule-composee-products">
-        <span class="formule-composee-products-title">Produits autorisés</span>
-        <div class="formule-composee-products-list"></div>
-      </div>
+      <label class="admin-checkbox" style="align-self:end;">
+        <input
+          type="checkbox"
+          class="formule-composee-element-active"
+          ${data.actif !== false ? "checked" : ""}>
+        Élément actif
+      </label>
 
       <button type="button" class="btn btn-secondary formule-composee-remove-element">
-        Supprimer
+        Retirer de l’offre
       </button>
     </div>
   `;
 
   composeeElements.appendChild(row);
 
-  const renderProducts = () => {
-    const container = row.querySelector(".formule-composee-products-list");
-    const categoryInput = row.querySelector(".formule-composee-element-category");
-    const modeInput = row.querySelector(".formule-composee-element-mode");
+  row.querySelector(".formule-composee-element-name")
+    ?.addEventListener("input", refreshAllComposeeFormatCompositions);
 
-    const category = categoryInput?.value || "";
-    const currentMode = modeInput?.value === "impose" ? "impose" : "choix";
+  row.querySelector(".formule-composee-remove-element")
+    ?.addEventListener("click", () => {
+      row.remove();
+      refreshAllComposeeFormatCompositions();
+    });
+}
 
-    if (!container) return;
+function getComposeeElementsFromForm() {
+  if (!composeeElements) return [];
 
-    const currentSelectedIds = Array.from(
-      container.querySelectorAll("input:checked, select option:checked")
-    )
-      .map((input) => input.value)
-      .filter(Boolean);
+  return Array.from(
+    composeeElements.querySelectorAll(".formule-composee-element")
+  ).map((row, index) => {
+    const nom =
+      row.querySelector(".formule-composee-element-name")?.value.trim() || "";
 
-    const idsToRestore = currentSelectedIds.length
-      ? currentSelectedIds
-      : selectedIds;
+    const unite =
+      row.querySelector(".formule-composee-element-unit")?.value || "piece";
 
-    container.innerHTML = "";
+    const stockDisponible = Number(
+      row.querySelector(".formule-composee-element-stock")?.value
+    );
 
-    if (!category) {
-      const empty = document.createElement("span");
-      empty.className = "muted";
-      empty.textContent = "Choisissez d’abord une catégorie de produit.";
-      container.appendChild(empty);
-      return;
+    const actif =
+      row.querySelector(".formule-composee-element-active")?.checked !== false;
+
+    if (!nom) {
+      throw new Error(`Le nom de l’élément ${index + 1} est obligatoire.`);
     }
 
-    const products = currentProducts
-      .filter((product) =>
-        product?.actif !== false &&
-        String(product?.categorie || "") === category
-      )
-      .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
-
-    if (!products.length) {
-      const empty = document.createElement("span");
-      empty.className = "muted";
-      empty.textContent = "Aucun produit disponible dans cette catégorie.";
-      container.appendChild(empty);
-      return;
+    if (!Number.isInteger(stockDisponible) || stockDisponible < 0) {
+      throw new Error(`Le stock de l’élément « ${nom} » est invalide.`);
     }
 
-    if (currentMode === "impose") {
-      const select = document.createElement("select");
-      select.className = "formule-composee-product-select";
-
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Choisir le produit imposé";
-      select.appendChild(placeholder);
-
-      products.forEach((product) => {
-        const option = document.createElement("option");
-        option.value = product.id || "";
-        option.textContent = product.nom || "Produit sans nom";
-        option.selected = idsToRestore.includes(product.id);
-        select.appendChild(option);
-      });
-
-      container.appendChild(select);
-      return;
-    }
-
-    products.forEach((product) => {
-      const label = document.createElement("label");
-      label.className = "admin-checkbox";
-
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.className = "formule-composee-allowed-product";
-      input.value = product.id || "";
-      input.checked = idsToRestore.includes(product.id);
-
-      const text = document.createElement("span");
-      text.textContent = product.nom || "Produit sans nom";
-
-      label.append(input, text);
-      container.appendChild(label);
-    });
-  };
-
-  renderProducts();
-
-  row.querySelector(".formule-composee-element-category")
-    ?.addEventListener("change", renderProducts);
-
-  row.querySelector(".formule-composee-element-mode")
-    ?.addEventListener("change", renderProducts);
-
-  row.querySelector(".formule-composee-element-name")?.addEventListener("input", () => {
-    composeeFormats?.querySelectorAll(".formule-composee-format").forEach((formatRow) => {
-      const composition = Array.from(
-        formatRow.querySelectorAll(".formule-composee-format-element-quantity")
-      ).map((input) => ({
-        elementId: input.dataset.elementId,
-        quantite: Number(input.value) || 0
-      }));
-
-      renderComposeeFormatComposition(formatRow, composition);
-    });
-  });
-
-  row.querySelector(".formule-composee-remove-element")?.addEventListener("click", () => {
-    row.remove();
-
-    composeeFormats?.querySelectorAll(".formule-composee-format").forEach((formatRow) => {
-      const composition = Array.from(
-        formatRow.querySelectorAll(".formule-composee-format-element-quantity")
-      ).map((input) => ({
-        elementId: input.dataset.elementId,
-        quantite: Number(input.value) || 0
-      }));
-
-      renderComposeeFormatComposition(formatRow, composition);
-    });
-  });
-
-  composeeFormats?.querySelectorAll(".formule-composee-format").forEach((formatRow) => {
-    const composition = Array.from(
-      formatRow.querySelectorAll(".formule-composee-format-element-quantity")
-    ).map((input) => ({
-      elementId: input.dataset.elementId,
-      quantite: Number(input.value) || 0
-    }));
-
-    renderComposeeFormatComposition(formatRow, composition);
+    return {
+      id: String(row.dataset.productId || ""),
+      produitId: String(row.dataset.productId || ""),
+      temporary: row.dataset.newElement === "true",
+      nom,
+      unite,
+      stockDisponible,
+      actif
+    };
   });
 }
+
 function createComposeeFormatRow(data = {}) {
   if (!composeeFormats) return;
 
@@ -421,7 +335,7 @@ function renderComposeeFormatComposition(row, composition = []) {
 
   const saved = new Map(
     (Array.isArray(composition) ? composition : []).map((item) => [
-      String(item.elementId || ""),
+      String(item.produitId || ""),
       item
     ])
   );
@@ -429,13 +343,13 @@ function renderComposeeFormatComposition(row, composition = []) {
   list.innerHTML = "";
 
   composeeElements.querySelectorAll(".formule-composee-element").forEach((elementRow) => {
-    const elementId = String(elementRow.dataset.elementId || "");
+    const productId = String(elementRow.dataset.productId || "");
     const elementName =
       elementRow.querySelector(".formule-composee-element-name")?.value.trim() || "";
 
-    if (!elementId || !elementName) return;
+    if (!productId || !elementName) return;
 
-    const item = saved.get(elementId) || {};
+    const item = saved.get(productId) || {};
     const field = document.createElement("label");
     field.className = "formule-composee-format-composition-item";
 
@@ -447,7 +361,7 @@ function renderComposeeFormatComposition(row, composition = []) {
     input.min = "0";
     input.step = "1";
     input.className = "formule-composee-format-element-quantity";
-    input.dataset.elementId = elementId;
+    input.dataset.produitId = productId;
     input.value = String(Number(item.quantite || 0));
 
     field.appendChild(name);
@@ -456,7 +370,44 @@ function renderComposeeFormatComposition(row, composition = []) {
   });
 }
 
+
+function refreshAllComposeeFormatCompositions() {
+  if (!composeeFormats) return;
+
+  composeeFormats
+    .querySelectorAll(".formule-composee-format")
+    .forEach((row) => {
+      const quantities = new Map();
+
+      row.querySelectorAll(".formule-composee-format-element-quantity")
+        .forEach((input) => {
+          const produitId = String(input.dataset.produitId || "");
+          if (produitId) {
+            quantities.set(produitId, Number(input.value) || 0);
+          }
+        });
+
+      renderComposeeFormatComposition(row, []);
+      
+      row.querySelectorAll(".formule-composee-format-element-quantity")
+        .forEach((input) => {
+          const produitId = String(input.dataset.produitId || "");
+          if (produitId && quantities.has(produitId)) {
+            input.value = String(quantities.get(produitId));
+          }
+        });
+    });
+}
+
+function initCategoryForComposeeOffers() {
+  categoryInput?.addEventListener("change", () => {
+    refreshOfferTypeFields();
+  });
+}
+
 function initComposeeEditors() {
+  initCategoryForComposeeOffers();
+
   addComposeeElementButton?.addEventListener("click", () => {
     createComposeeElementRow();
   });
@@ -466,100 +417,19 @@ function initComposeeEditors() {
   });
 }
 
-function getComposeeElementsFromForm() {
-  if (!composeeElements) return [];
-
-  return Array.from(
-    composeeElements.querySelectorAll(".formule-composee-element")
-  ).map((row, index) => {
-    const nom = row.querySelector(".formule-composee-element-name")?.value.trim() || "";
-    const categorieProduit =
-      row.querySelector(".formule-composee-element-category")?.value || "";
-    const quantite = Number(
-      row.querySelector(".formule-composee-element-quantity")?.value
-    );
-    const unite =
-      row.querySelector(".formule-composee-element-unit")?.value || "piece";
-    const mode =
-      row.querySelector(".formule-composee-element-mode")?.value || "choix";
-
-    if (!nom) {
-      throw new Error(`Le nom de l’élément ${index + 1} est obligatoire.`);
-    }
-
-    if (!categorieProduit) {
-      throw new Error(`La catégorie de produit de l’élément « ${nom} » est obligatoire.`);
-    }
-
-    if (!Number.isInteger(quantite) || quantite <= 0) {
-      throw new Error(`La quantité de l’élément ${index + 1} est invalide.`);
-    }
-
-    if (!["choix", "impose"].includes(mode)) {
-      throw new Error(`Le mode de l’élément ${index + 1} est invalide.`);
-    }
-
-    let selectedIds = [];
-
-    if (mode === "impose") {
-      const selectedId =
-        row.querySelector(".formule-composee-product-select")?.value || "";
-
-      if (!selectedId) {
-        throw new Error(`Le produit imposé de l’élément « ${nom} » est obligatoire.`);
-      }
-
-      selectedIds = [selectedId];
-    } else {
-      selectedIds = Array.from(
-        row.querySelectorAll(".formule-composee-allowed-product:checked")
-      )
-        .map((input) => input.value)
-        .filter(Boolean);
-
-      if (!selectedIds.length) {
-        throw new Error(`Sélectionnez au moins un produit pour l’élément « ${nom} ».`);
-      }
-    }
-
-    const produitsAutorises = selectedIds.map((produitId) => {
-      const product = currentProducts.find((entry) => entry.id === produitId);
-
-      if (!product) {
-        throw new Error(`Produit introuvable pour l’élément « ${nom} ».`);
-      }
-
-      if (String(product.categorie || "") !== categorieProduit) {
-        throw new Error(`Le produit sélectionné pour « ${nom} » ne correspond pas à sa catégorie.`);
-      }
-
-      return {
-        produitId,
-        produitNom: product.nom || ""
-      };
-    });
-
-    return {
-      id: String(row.dataset.elementId || `element-${index + 1}`),
-      nom,
-      categorieProduit,
-      quantite,
-      unite,
-      mode,
-      produitsAutorises
-    };
-  });
-}
 function getComposeeFormatsFromForm() {
   if (!composeeFormats) return [];
 
   return Array.from(
     composeeFormats.querySelectorAll(".formule-composee-format")
   ).map((row, index) => {
-    const nom = row.querySelector(".formule-composee-format-name")?.value.trim() || "";
+    const nom =
+      row.querySelector(".formule-composee-format-name")?.value.trim() || "";
+
     const personnes = Number(
       row.querySelector(".formule-composee-format-people")?.value
     );
+
     const prix = Number(
       row.querySelector(".formule-composee-format-price")?.value
     );
@@ -580,14 +450,16 @@ function getComposeeFormatsFromForm() {
       row.querySelectorAll(".formule-composee-format-element-quantity")
     )
       .map((input) => ({
-        elementId: String(input.dataset.elementId || ""),
+        produitId: String(input.dataset.produitId || ""),
         quantite: Number(input.value)
       }))
-      .filter((item) => item.elementId);
+      .filter((item) => item.produitId);
 
     for (const item of composition) {
       if (!Number.isInteger(item.quantite) || item.quantite < 0) {
-        throw new Error(`La quantité d’un élément du format ${index + 1} est invalide.`);
+        throw new Error(
+          `La quantité d’un élément du format ${index + 1} est invalide.`
+        );
       }
     }
 
@@ -605,17 +477,12 @@ function resetForm() {
   form.reset();
   idInput.value = "";
   orderInput.value = "0";
-  categoryInput.value = isPetitDejeunerPage ? "petit-dejeuner" : "chef";
+  categoryInput.value = "chef";
   activeInput.checked = true;
   if (blockedInput) blockedInput.checked = false;
 
-  if (isPetitDejeunerPage) {
-    if (typeClassiqueInput) typeClassiqueInput.checked = false;
-    if (typeComposeeInput) typeComposeeInput.checked = true;
-  } else {
-    if (typeClassiqueInput) typeClassiqueInput.checked = true;
-    if (typeComposeeInput) typeComposeeInput.checked = false;
-  }
+  if (typeClassiqueInput) typeClassiqueInput.checked = true;
+  if (typeComposeeInput) typeComposeeInput.checked = false;
   if (composeeElements) composeeElements.innerHTML = "";
   if (composeeFormats) composeeFormats.innerHTML = "";
   refreshOfferTypeFields();
@@ -624,7 +491,7 @@ function resetForm() {
   saveButton.textContent = "Créer la formule";
 }
 
-function fillForm(formule) {
+async function fillForm(formule) {
   idInput.value = formule.id;
   nameInput.value = formule.nom || "";
   priceInput.value = formule.prix ?? "";
@@ -647,13 +514,22 @@ function fillForm(formule) {
   if (composeeFormats) composeeFormats.innerHTML = "";
 
   if (composee) {
-    const elements = Array.isArray(formule.composition)
-      ? formule.composition
-      : [];
+    try {
+      const elements = await composedOfferEngine.listElements({
+        offreId: formule.id
+      });
 
-    elements.forEach((element) => {
-      createComposeeElementRow(element);
-    });
+      elements.forEach((element) => {
+        createComposeeElementRow(element);
+      });
+    } catch (error) {
+      console.error("Erreur de chargement des éléments de l’offre :", error);
+      setStatus(
+        `Impossible de charger les éléments : ${error?.message || "erreur inconnue"}`,
+        true
+      );
+      return;
+    }
 
     const formats = Array.isArray(formule.formats)
       ? formule.formats
@@ -674,6 +550,7 @@ function fillForm(formule) {
   saveButton.textContent = "Enregistrer les modifications";
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 function formuleRow(formule) {
   const row = document.createElement("article");
   row.className = `admin-row ${formule.actif === false ? "admin-row-off" : ""}`;
@@ -711,17 +588,23 @@ function formuleRow(formule) {
   composition.className = "formule-row-composition";
 
   if (formule.typeOffre === "composee") {
-    const elements = Array.isArray(formule.composition)
-      ? formule.composition
+    const elements = Array.isArray(formule.elements)
+      ? formule.elements
+          .map((ref) => {
+            const produitId = String(ref?.produitId || "");
+            return currentProducts.find(
+              (product) => String(product.id || "") === produitId
+            );
+          })
+          .filter(Boolean)
       : [];
 
     composition.textContent = elements.length
       ? elements
-          .map((item) => {
-            const nom = String(item.nom || "Élément");
-            const quantite = Number(item.quantite || 0);
-            const unite = String(item.unite || "piece");
-            return `${nom} × ${quantite} ${unite}`;
+          .map((element) => {
+            const nom = String(element.nom || "Élément");
+            const unite = String(element.unite || "piece");
+            return `${nom} · ${unite}`;
           })
           .join(" · ")
       : "Composition non définie";
@@ -750,7 +633,7 @@ function formuleRow(formule) {
   const editButton = document.createElement("button");
   editButton.type = "button";
   editButton.textContent = "Modifier";
-  editButton.addEventListener("click", () => fillForm(formule));
+  editButton.addEventListener("click", () => { void fillForm(formule); });
   actions.appendChild(editButton);
 
   const toggleButton = document.createElement("button");
@@ -813,12 +696,7 @@ async function loadFormules() {
     const formulesQuery = query(collection(db, "formules"), orderBy("ordre", "asc"));
     const snapshot = await getDocs(formulesQuery);
     currentFormules = snapshot.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .filter((formule) =>
-        isPetitDejeunerPage
-          ? formule.categorieFormule === "petit-dejeuner"
-          : formule.categorieFormule !== "petit-dejeuner"
-      );
+      .map((item) => ({ id: item.id, ...item.data() }));
     renderFormules();
     setStatus(`${currentFormules.length} formule${currentFormules.length > 1 ? "s" : ""} chargée${currentFormules.length > 1 ? "s" : ""}.`);
   } catch (error) {
@@ -831,6 +709,7 @@ async function loadFormules() {
 async function saveFormule(event) {
   event.preventDefault();
   if (!currentUser) return;
+
   saveButton.disabled = true;
   setStatus("Enregistrement en cours…");
 
@@ -839,55 +718,13 @@ async function saveFormule(event) {
     if (!nom) throw new Error("Le nom de la formule est obligatoire.");
 
     const composee = isComposeeOffer();
-    const isPetitDejeuner = categoryInput.value === "petit-dejeuner";
-    const existingFormule = idInput.value.trim()
-      ? currentFormules.find((formule) => formule.id === idInput.value.trim())
-      : null;
-    const prix = composee ? 0 : toPrice(priceInput.value);
     const ordre = toNonNegativeInteger(orderInput.value, "L’ordre");
-    const composition = composee ? [] : getCompositionFromForm();
-    const composeeElementsData =
-      composee && isPetitDejeuner && existingFormule
-        ? (Array.isArray(existingFormule.composition) ? existingFormule.composition : [])
-        : composee
-          ? getComposeeElementsFromForm()
-          : [];
-    const composeeFormatsData =
-      composee && isPetitDejeuner && existingFormule
-        ? (Array.isArray(existingFormule.formats) ? existingFormule.formats : [])
-        : composee
-          ? getComposeeFormatsFromForm()
-          : [];
-    if (composee && isPetitDejeuner) {
-      if (!existingFormule) {
-        throw new Error("Le Petit Déjeuner existant est introuvable.");
-      }
-      if (!composeeElementsData.length || !composeeFormatsData.length) {
-        throw new Error("La composition du Petit Déjeuner est incomplète.");
-      }
-    } else if (composee) {
-      if (!composeeElementsData.length) {
-        throw new Error("L’offre composée doit contenir au moins un élément.");
-      }
+    const id = idInput.value.trim();
 
-      if (!composeeFormatsData.length) {
-        throw new Error("L’offre composée doit contenir au moins un format.");
-      }
+    if (!composee) {
+      const prix = toPrice(priceInput.value);
+      const composition = getCompositionFromForm();
 
-      const elementIds = new Set(composeeElementsData.map((item) => item.id));
-
-      for (const [index, format] of composeeFormatsData.entries()) {
-        const invalidElement = format.composition.find(
-          (item) => !elementIds.has(item.elementId)
-        );
-
-        if (invalidElement) {
-          throw new Error(
-            `La composition du format ${index + 1} contient un élément invalide.`
-          );
-        }
-      }
-    } else {
       if (!Number.isFinite(prix) || prix < 0) {
         throw new Error("Le prix de la formule est invalide.");
       }
@@ -905,39 +742,183 @@ async function saveFormule(event) {
       if (invalidCategory) {
         throw new Error("La composition contient une catégorie invalide.");
       }
+
+      const data = {
+        nom,
+        prix,
+        description: descriptionInput.value.trim(),
+        photo: photoInput.value.trim(),
+        ordre,
+        categorieFormule: categoryInput.value || "chef",
+        typeOffre: "classique",
+        actif: activeInput.checked,
+        bloquee: blockedInput?.checked === true,
+        composition,
+        formats: [],
+        updatedAt: serverTimestamp()
+      };
+
+      if (id) {
+        await updateDoc(doc(db, "formules", id), data);
+        setStatus("Formule modifiée avec succès.");
+      } else {
+        data.createdAt = serverTimestamp();
+        await addDoc(collection(db, "formules"), data);
+        setStatus("Formule créée avec succès.");
+      }
+
+      resetForm();
+      await loadFormules();
+      return;
     }
 
-    const data = {
+    const elementsData = getComposeeElementsFromForm();
+    let formatsData = getComposeeFormatsFromForm();
+
+    if (!elementsData.length) {
+      throw new Error("L’offre composée doit contenir au moins un élément.");
+    }
+
+    if (!formatsData.length) {
+      throw new Error("L’offre composée doit contenir au moins un format.");
+    }
+
+    const offerData = {
       nom,
-      prix,
       description: descriptionInput.value.trim(),
       photo: photoInput.value.trim(),
       ordre,
       categorieFormule: categoryInput.value || "chef",
-      typeOffre: composee ? "composee" : "classique",
+      typeOffre: "composee",
       actif: activeInput.checked,
-      bloquee: composee ? false : blockedInput?.checked === true,
-      composition: composee ? composeeElementsData : composition,
-      formats: composee ? composeeFormatsData : [],
+      bloquee: false,
+      elements: [],
+      composition: [],
+      formats: [],
       updatedAt: serverTimestamp()
     };
 
-    const id = idInput.value.trim();
+    let offerId = id;
 
-    if (id) {
-      await updateDoc(doc(db, "formules", id), data);
-      setStatus("Formule modifiée avec succès.");
-    } else {
-      data.createdAt = serverTimestamp();
-      await addDoc(collection(db, "formules"), data);
-      setStatus("Formule créée avec succès.");
+    if (!offerId) {
+      offerData.createdAt = serverTimestamp();
+      const created = await addDoc(collection(db, "formules"), offerData);
+      offerId = created.id;
     }
+
+    const existingElements = await composedOfferEngine.listElements({
+      offreId: offerId
+    });
+
+    const submittedIds = new Set();
+
+    // 1. Création / mise à jour des produits
+    for (const element of elementsData) {
+      const elementPayload = {
+        categorie: categoryInput.value || "",
+        nom: element.nom,
+        unite: element.unite,
+        stockDisponible: element.stockDisponible,
+        actif: element.actif
+      };
+
+      if (element.id && !element.temporary) {
+        submittedIds.add(element.id);
+
+        await composedOfferEngine.updateElement(
+          element.id,
+          elementPayload
+        );
+      } else {
+        const temporaryId = element.id;
+
+        const createdElement =
+          await composedOfferEngine.createElement(elementPayload);
+
+        // 2. Remplacement de l’ID temporaire par le vrai ID Firestore
+        element.id = createdElement.id;
+        element.produitId = createdElement.id;
+        element.temporary = false;
+
+        submittedIds.add(createdElement.id);
+
+        // 3. Mise à jour des lignes de composition
+        for (const format of formatsData) {
+          for (const item of format.composition) {
+            if (item.produitId === temporaryId) {
+              item.produitId = createdElement.id;
+            }
+          }
+        }
+
+        // Les champs du formulaire doivent eux aussi porter le vrai ID.
+        composeeFormats
+          ?.querySelectorAll(".formule-composee-format-element-quantity")
+          .forEach((input) => {
+            if (String(input.dataset.produitId || "") === String(temporaryId || "")) {
+              input.dataset.produitId = createdElement.id;
+            }
+          });
+      }
+    }
+
+    for (const existingElement of existingElements) {
+      if (!submittedIds.has(existingElement.id)) {
+        await composedOfferEngine.deleteElement(existingElement.id);
+      }
+    }
+
+    // 4. Reconstruction complète des formats après conversion des IDs
+    formatsData = getComposeeFormatsFromForm();
+
+    const productIds = new Set(
+      elementsData
+        .map((element) => String(element.id || element.produitId || ""))
+        .filter(Boolean)
+    );
+
+    for (const [index, format] of formatsData.entries()) {
+      const invalidProduct = format.composition.find(
+        (item) => !productIds.has(String(item.produitId || ""))
+      );
+
+      if (invalidProduct) {
+        throw new Error(
+          `La composition du format ${index + 1} contient un produit invalide.`
+        );
+      }
+    }
+
+    // 5. Sauvegarde finale de la formule avec les vrais IDs
+    const savedElementRefs = elementsData
+      .map((element) => ({
+        produitId: String(element.id || element.produitId || "")
+      }))
+      .filter((item) => item.produitId);
+
+    await updateDoc(doc(db, "formules", offerId), {
+      ...offerData,
+      elements: savedElementRefs,
+      formats: formatsData,
+      updatedAt: serverTimestamp()
+    });
+
+    await composedOfferEngine.replaceFormats(offerId, formatsData);
+
+    setStatus(
+      id
+        ? "Offre composée modifiée avec succès."
+        : "Offre composée créée avec succès."
+    );
 
     resetForm();
     await loadFormules();
   } catch (error) {
     console.error("Erreur d’enregistrement de la formule :", error);
-    setStatus(`Enregistrement impossible : ${error?.message || "erreur inconnue"}`, true);
+    setStatus(
+      `Enregistrement impossible : ${error?.message || "erreur inconnue"}`,
+      true
+    );
   } finally {
     saveButton.disabled = false;
   }
@@ -968,8 +949,19 @@ async function deleteFormule(formule) {
   if (!confirmed) return;
 
   try {
+
+    const elementsToDelete =
+      await composedOfferEngine.listElements({
+        offreId: formule.id
+      });
+
+    for (const element of elementsToDelete) {
+      await composedOfferEngine.deleteElement(element.id);
+    }
+
     await deleteDoc(doc(db, "formules", formule.id));
-    setStatus("Formule supprimée avec succès.");
+
+    setStatus("Formule et stocks liés supprimés avec succès.");
     if (idInput.value === formule.id) resetForm();
     await loadFormules();
   } catch (error) {

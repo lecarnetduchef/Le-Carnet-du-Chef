@@ -50,6 +50,7 @@ const CDC_CONFIG = {
   fraisLivraison: "",
   commandes: {
     automatique: true,
+    modeReceptionCatalogue: "tous",
     limiteDejeuner: "11:30",
     limiteDiner: "20:00",
     messageDejeunerFerme: "Les commandes pour le déjeuner sont maintenant fermées. Vous pouvez commander pour le service du soir ou pour demain.",
@@ -111,7 +112,11 @@ async function synchroniserFermetureGlobale() {
     const data = await response.json();
     const fields = data.fields || {};
     const modeManuel = fields.modeManuel?.stringValue;
+    const modeReceptionCatalogue = fields.modeReceptionCatalogue?.stringValue;
     const legacyClosed = fields.fermetureManuelleGlobale?.booleanValue === true;
+
+    CDC_CONFIG.commandes.modeReceptionCatalogue =
+      modeReceptionCatalogue === "livraison" ? "livraison" : "tous";
 
     const fermetureExceptionnelle = fields.fermetureExceptionnelle?.mapValue?.fields || {};
     CDC_CONFIG.commandes.fermetureExceptionnelle = {

@@ -16,26 +16,6 @@ async function getProduits() {
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
 
-async function getPetitDejeunerElements() {
-  const snapshot = await db.collection("petitDejeunerElements").get();
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-}
-
-async function getBrunchElements() {
-  const snapshot = await db.collection("brunchElements").get();
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-}
-
-async function getBoxElements() {
-  const snapshot = await db.collection("boxElements").get();
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-}
-
-async function getFromagesElements() {
-  const snapshot = await db.collection("fromagesElements").get();
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-}
-
 async function getCommandesConfig() {
   const snapshot = await db.collection("siteContent").doc("commandes").get();
   if (!snapshot.exists) {
@@ -47,9 +27,5 @@ async function getCommandesConfig() {
 module.exports = {
   getFormules,
   getProduits,
-  getPetitDejeunerElements,
-  getBrunchElements,
-  getBoxElements,
-  getFromagesElements,
   getCommandesConfig,
 };

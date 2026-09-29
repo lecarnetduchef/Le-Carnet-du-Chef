@@ -10,7 +10,7 @@ const labels={
  box:{title:"Box",description:"Une box gourmande à partager."},
  fromages:{title:"Plateaux de fromages",description:"Une sélection raffinée."}
 };
-let data={formules:[],produits:[],petitDejeunerElements:[],brunchElements:[],boxElements:[],fromagesElements:[]};
+let data={formules:[],produits:[]};
 let productsByCategory=new Map();
 
 function categoryOf(f){
@@ -412,9 +412,11 @@ function renderProductOptions(select, category, previewContainer, forcedProductI
 }
 
 
-function petitDejeunerElementName(elementId){
- const element=(data.petitDejeunerElements||[]).find(x=>x.id===elementId);
- return element?.nom||elementId||"Élément";
+function offreElementName(produitId){
+ const element=(data.produits||[]).find(x=>
+   x?.id===produitId && x?.typeProduit==="elementCompose"
+ );
+ return element?.nom||produitId||"Élément";
 }
 
 function petitDejeunerTile(f,detail=false){
@@ -450,7 +452,7 @@ function renderPetitDejeunerDetail(formule){
    const composition=Array.isArray(format.composition)?format.composition.filter(x=>Number(x.quantite)>0):[];
    const elements=composition.map(item=>{
      const qty=Number(item.quantite)||0;
-     return '<li>'+escapeHtml(petitDejeunerElementName(item.elementId))+(qty>1?' × '+qty:'')+'</li>';
+     return '<li>'+escapeHtml(offreElementName(item.produitId))+(qty>1?' × '+qty:'')+'</li>';
    }).join("");
 
    return '<article class="pdj-format"><h3>'+escapeHtml(format.nom||"Format")+'</h3><p>'+Number(format.personnes||1)+' personne'+(Number(format.personnes||1)>1?"s":"")+'</p><ul>'+elements+'</ul><div class="price">'+euro.format(Number(format.prix)||0)+'</div><button type="button" class="btn btn-primary" data-pdj-add-format="'+index+'">Ajouter au panier</button></article>';
@@ -470,7 +472,7 @@ function renderPetitDejeunerDetail(formule){
         ...format,
         composition:composition.map(item=>({
           ...item,
-          elementNom:petitDejeunerElementName(item.elementId)
+          elementNom:offreElementName(item.produitId)
         }))
       };
 
@@ -484,17 +486,16 @@ function renderPetitDejeunerDetail(formule){
 }
 
 
-function composedElementCollection(type){
- const collections={
-  brunch:data.brunchElements||[],
-  box:data.boxElements||[],
-  fromages:data.fromagesElements||[]
- };
- return collections[type]||[];
+function composedElementCollection(type, formule){
+ return (data.produits||[]).filter(element =>
+   element?.typeProduit==="elementCompose" &&
+   element?.actif!==false &&
+   String(element?.categorieOffre||"")===String(type||"")
+ );
 }
 
-function composedElementName(type,elementId){
- const element=composedElementCollection(type).find(x=>x.id===elementId);
+function composedElementName(type,elementId,formule){
+ const element=composedElementCollection(type,formule).find(x=>x.id===elementId);
  return element?.nom||elementId||"Élément";
 }
 
@@ -540,7 +541,7 @@ function renderComposedOfferDetail(formule,type){
    const composition=Array.isArray(format.composition)?format.composition.filter(x=>Number(x.quantite)>0):[];
    const elements=composition.map(item=>{
      const qty=Number(item.quantite)||0;
-     return '<li>'+escapeHtml(composedElementName(type,item.elementId))+(qty>1?' × '+qty:'')+'</li>';
+     return '<li>'+escapeHtml(composedElementName(type,item.produitId,formule))+(qty>1?' × '+qty:'')+'</li>';
    }).join("");
    return '<article class="pdj-format"><h3>'+escapeHtml(format.nom||"Format")+'</h3><p>'+Number(format.personnes||1)+' personne'+(Number(format.personnes||1)>1?"s":"")+'</p><ul>'+elements+'</ul><div class="price">'+euro.format(Number(format.prix)||0)+'</div><button type="button" class="btn btn-primary" data-composed-add-format="'+index+'">Ajouter au panier</button></article>';
  }).join("")+'</div>';
@@ -559,7 +560,7 @@ function renderComposedOfferDetail(formule,type){
     ...format,
     composition:composition.map(item=>({
      ...item,
-     elementNom:composedElementName(type,item.elementId)
+     elementNom:composedElementName(type,item.produitId,formule)
     }))
    };
 
@@ -694,7 +695,7 @@ function renderSideCart(){
    const components=line.type==="produit"
      ?"À la carte · "+String(line.categorie||"Produit")
      :["petit-dejeuner","brunch","box","fromages"].includes(String(line.type||"").toLowerCase())
-       ?String(line.formatNom||"Format")+" · "+String(Number(line.personnes)||1)+" personne"+((Number(line.personnes)||1)>1?"s":"")+" · "+(line.composants||[]).map(x=>String(x.elementNom||x.elementId||"Élément")+(Number(x.quantiteParFormat)>1?" × "+Number(x.quantiteParFormat):"")).join(" · ")
+       ?String(line.formatNom||"Format")+" · "+String(Number(line.personnes)||1)+" personne"+((Number(line.personnes)||1)>1?"s":"")+" · "+(line.composants||[]).map(x=>String(x.elementNom||x.produitId||"Élément")+(Number(x.quantiteParFormat)>1?" × "+Number(x.quantiteParFormat):"")).join(" · ")
        :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
    return '<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(name)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml(components)+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>';
  };
@@ -711,7 +712,7 @@ function renderFullCart(){
    const components=line.type==="produit"
      ?"À la carte · "+String(line.categorie||"Produit")
      :["petit-dejeuner","brunch","box","fromages"].includes(String(line.type||"").toLowerCase())
-       ?String(line.formatNom||"Format")+" · "+String(Number(line.personnes)||1)+" personne"+((Number(line.personnes)||1)>1?"s":"")+" · "+(line.composants||[]).map(x=>String(x.elementNom||x.elementId||"Élément")+(Number(x.quantiteParFormat)>1?" × "+Number(x.quantiteParFormat):"")).join(" · ")
+       ?String(line.formatNom||"Format")+" · "+String(Number(line.personnes)||1)+" personne"+((Number(line.personnes)||1)>1?"s":"")+" · "+(line.composants||[]).map(x=>String(x.elementNom||x.produitId||"Élément")+(Number(x.quantiteParFormat)>1?" × "+Number(x.quantiteParFormat):"")).join(" · ")
        :(line.composants||[]).map(x=>x.categorie+" : "+x.produitNom+" × "+x.quantiteParFormule).join(" · ");
    return '<article class="cart-line"><div class="cart-line-title"><span>'+escapeHtml(name)+' × '+line.quantite+'</span><span>'+euro.format((Number(line.prixUnitaire)||0)*line.quantite)+'</span></div><div class="cart-components">'+escapeHtml(components)+'</div><div class="cart-actions"><button data-minus="'+line.lineId+'">−</button><strong>'+line.quantite+'</strong><button data-plus="'+line.lineId+'">+</button><button data-remove="'+line.lineId+'">Supprimer</button></div></article>';
  };
@@ -726,7 +727,7 @@ async function load(){
  try{
   const r=await fetch(GET_CATALOGUE_URL,{cache:"no-store"});if(!r.ok)throw new Error();
   data=await r.json();normalize();
-  if(!Array.isArray(data.formules)||!Array.isArray(data.produits)||!Array.isArray(data.petitDejeunerElements)||!Array.isArray(data.brunchElements)||!Array.isArray(data.boxElements)||!Array.isArray(data.fromagesElements))throw new Error();
+  if(!Array.isArray(data.formules)||!Array.isArray(data.produits))throw new Error();
   productsByCategory=new Map();
   data.produits.filter(p=>p?.actif!==false).forEach(p=>{
     const category=String(p.categorie||"").trim();

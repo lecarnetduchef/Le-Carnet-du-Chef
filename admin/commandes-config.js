@@ -14,8 +14,80 @@ const DEFAULTS = {
     petitDejeuner: { debut: "08:00", fin: "10:00" },
     brunch: { debut: "09:00", fin: "13:00" },
     fromages: { debut: "17:00", fin: "20:00" }
-  }
+  },
+  joursOffres: {
+    formule: [1, 2, 3, 4, 5, 6, 7],
+    "petit-dejeuner": [1, 2, 3, 4, 5],
+    brunch: [7],
+    box: [1, 2, 3, 4, 5, 6, 7],
+    fromages: [1, 2, 3, 4, 5, 6, 7]
+  },
+  joursReposActive: false,
+  joursRepos: []
 };
+
+let joursRepos = [];
+
+const DAY_OPTIONS = [
+  [1, "Lundi"],
+  [2, "Mardi"],
+  [3, "Mercredi"],
+  [4, "Jeudi"],
+  [5, "Vendredi"],
+  [6, "Samedi"],
+  [7, "Dimanche"]
+];
+
+function renderDayCheckboxes(type) {
+  return DAY_OPTIONS.map(([value, label]) => `
+    <label class="admin-checkbox">
+      <input type="checkbox" data-jour-offre="${type}" value="${value}">
+      ${label}
+    </label>
+  `).join("");
+}
+
+function renderJoursRepos() {
+  const e = elements();
+  if (!e.joursReposList) return;
+
+  if (!joursRepos.length) {
+    e.joursReposList.innerHTML = '<p class="muted">Aucun jour de repos planifié.</p>';
+    return;
+  }
+
+  e.joursReposList.innerHTML = joursRepos
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((item) => `
+      <div class="admin-list-item">
+        <strong>${item.date}</strong>
+        ${item.motif ? ` — ${item.motif}` : ""}
+        <button type="button" class="btn btn-secondary" data-remove-jour-repos="${item.date}">
+          Supprimer
+        </button>
+      </div>
+    `)
+    .join("");
+
+  e.joursReposList.querySelectorAll("[data-remove-jour-repos]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const date = button.dataset.removeJourRepos;
+      joursRepos = joursRepos.filter((item) => item.date !== date);
+      renderJoursRepos();
+    });
+  });
+}
+
+function setJoursReposVisibility() {
+  const e = elements();
+  const visible = e.joursReposActive?.checked === true;
+
+  if (e.joursReposDate) e.joursReposDate.disabled = !visible;
+  if (e.joursReposMotif) e.joursReposMotif.disabled = !visible;
+  if (e.joursReposAdd) e.joursReposAdd.disabled = !visible;
+  if (e.joursReposList) e.joursReposList.style.opacity = visible ? "1" : "0.55";
+}
 
 function ensureUI() {
   if (document.querySelector("#commandes-config-section")) return;
@@ -31,6 +103,7 @@ function ensureUI() {
     <form id="commandes-config-form">
       <div class="admin-form-grid">
         <div class="form-field admin-field-full"><label for="commandes-mode-manuel">État des commandes</label><select id="commandes-mode-manuel"><option value="auto">Automatique — respecter les horaires</option><option value="ouvert">Ouvert manuellement</option><option value="ferme">Fermé manuellement</option></select></div>
+        <div class="form-field admin-field-full"><label for="commandes-mode-reception">Mode de réception catalogue</label><select id="commandes-mode-reception"><option value="tous">Retrait + livraison</option><option value="livraison">Livraison uniquement</option></select></div>
         <div class="form-field"><label for="commandes-limite-dejeuner">Limite déjeuner</label><input id="commandes-limite-dejeuner" type="time" required></div>
         <div class="form-field"><label for="commandes-limite-diner">Limite dîner</label><input id="commandes-limite-diner" type="time" required></div>
       </div>
@@ -46,6 +119,63 @@ function ensureUI() {
         <div class="form-field"><label for="commandes-fromages-debut">Plateaux de fromages — début</label><input id="commandes-fromages-debut" type="time" required></div>
         <div class="form-field"><label for="commandes-fromages-fin">Plateaux de fromages — fin</label><input id="commandes-fromages-fin" type="time" required></div>
       </div>
+      <div class="admin-section-heading compact">
+        <div><p class="admin-eyebrow">JOURS AUTORISÉS</p><h3>Jours de commande par type d’offre</h3></div>
+      </div>
+
+      <div class="admin-form-grid">
+        <div class="form-field admin-field-full">
+          <strong>Formules classiques</strong>
+          <div class="admin-checkboxes">${renderDayCheckboxes("formule")}</div>
+        </div>
+        <div class="form-field admin-field-full">
+          <strong>Petit Déjeuner</strong>
+          <div class="admin-checkboxes">${renderDayCheckboxes("petit-dejeuner")}</div>
+        </div>
+        <div class="form-field admin-field-full">
+          <strong>Brunch</strong>
+          <div class="admin-checkboxes">${renderDayCheckboxes("brunch")}</div>
+        </div>
+        <div class="form-field admin-field-full">
+          <strong>Box</strong>
+          <div class="admin-checkboxes">${renderDayCheckboxes("box")}</div>
+        </div>
+        <div class="form-field admin-field-full">
+          <strong>Plateaux de fromages</strong>
+          <div class="admin-checkboxes">${renderDayCheckboxes("fromages")}</div>
+        </div>
+      </div>
+
+      <div class="admin-section-heading compact">
+        <div><p class="admin-eyebrow">REPOS PLANIFIÉS</p><h3>Jours de repos</h3></div>
+      </div>
+
+      <div class="admin-checkboxes">
+        <label class="admin-checkbox">
+          <input id="commandes-jours-repos-active" type="checkbox">
+          Activer les jours de repos planifiés
+        </label>
+      </div>
+
+      <div class="admin-form-grid">
+        <div class="form-field">
+          <label for="commandes-jours-repos-date">Date de repos</label>
+          <input id="commandes-jours-repos-date" type="date">
+        </div>
+        <div class="form-field">
+          <label for="commandes-jours-repos-motif">Motif</label>
+          <input id="commandes-jours-repos-motif" type="text" maxlength="120" placeholder="Repos">
+        </div>
+        <div class="form-field admin-field-full">
+          <button id="commandes-jours-repos-add" type="button" class="btn btn-secondary">
+            Ajouter ce jour de repos
+          </button>
+        </div>
+        <div class="form-field admin-field-full">
+          <div id="commandes-jours-repos-list"></div>
+        </div>
+      </div>
+
       <div class="admin-checkboxes">
         <label class="admin-checkbox"><input id="commandes-fermeture-globale" type="checkbox"> Fermeture manuelle globale</label>
         <label class="admin-checkbox"><input id="commandes-fermeture-dejeuner" type="checkbox"> Fermeture manuelle déjeuner</label>
@@ -67,6 +197,7 @@ function elements() {
     section: document.querySelector("#commandes-config-section"),
     form: document.querySelector("#commandes-config-form"),
     modeManuel: document.querySelector("#commandes-mode-manuel"),
+    modeReception: document.querySelector("#commandes-mode-reception"),
     limiteDejeuner: document.querySelector("#commandes-limite-dejeuner"),
     limiteDiner: document.querySelector("#commandes-limite-diner"),
     petitDejeunerDebut: document.querySelector("#commandes-petit-dejeuner-debut"),
@@ -79,6 +210,12 @@ function elements() {
     fermetureDejeuner: document.querySelector("#commandes-fermeture-dejeuner"),
     fermetureDiner: document.querySelector("#commandes-fermeture-diner"),
     fermetureExceptionnelle: document.querySelector("#commandes-fermeture-exceptionnelle"),
+    joursOffres: document.querySelectorAll("[data-jour-offre]"),
+    joursReposActive: document.querySelector("#commandes-jours-repos-active"),
+    joursReposDate: document.querySelector("#commandes-jours-repos-date"),
+    joursReposMotif: document.querySelector("#commandes-jours-repos-motif"),
+    joursReposAdd: document.querySelector("#commandes-jours-repos-add"),
+    joursReposList: document.querySelector("#commandes-jours-repos-list"),
     motif: document.querySelector("#commandes-fermeture-motif"),
     dateDebut: document.querySelector("#commandes-fermeture-date-debut"),
     dateFin: document.querySelector("#commandes-fermeture-date-fin"),
@@ -106,6 +243,7 @@ function applyData(data = {}) {
   const e = elements();
   const exceptionnelle = { ...DEFAULTS.fermetureExceptionnelle, ...(data.fermetureExceptionnelle && typeof data.fermetureExceptionnelle === "object" ? data.fermetureExceptionnelle : {}) };
   e.modeManuel.value = ["auto", "ouvert", "ferme"].includes(data.modeManuel) ? data.modeManuel : DEFAULTS.modeManuel;
+  e.modeReception.value = ["tous", "livraison"].includes(data.modeReceptionCatalogue) ? data.modeReceptionCatalogue : "tous";
   e.limiteDejeuner.value = typeof data.limiteDejeuner === "string" ? data.limiteDejeuner : DEFAULTS.limiteDejeuner;
   e.limiteDiner.value = typeof data.limiteDiner === "string" ? data.limiteDiner : DEFAULTS.limiteDiner;
   const horaires = data.horairesOffres && typeof data.horairesOffres === "object" ? data.horairesOffres : {};
@@ -125,6 +263,31 @@ function applyData(data = {}) {
   e.motif.value = typeof exceptionnelle.motif === "string" ? exceptionnelle.motif : "";
   e.dateDebut.value = typeof exceptionnelle.dateDebut === "string" ? exceptionnelle.dateDebut : "";
   e.dateFin.value = typeof exceptionnelle.dateFin === "string" ? exceptionnelle.dateFin : "";
+
+  const joursOffres = data.joursOffres && typeof data.joursOffres === "object"
+    ? data.joursOffres
+    : DEFAULTS.joursOffres;
+
+  e.joursOffres.forEach((input) => {
+    const configured = Array.isArray(joursOffres[input.dataset.jourOffre])
+      ? joursOffres[input.dataset.jourOffre].map(Number)
+      : DEFAULTS.joursOffres[input.dataset.jourOffre];
+
+    input.checked = configured.includes(Number(input.value));
+  });
+
+  e.joursReposActive.checked = data.joursReposActive === true;
+  joursRepos = Array.isArray(data.joursRepos)
+    ? data.joursRepos
+        .filter((item) => item && typeof item.date === "string")
+        .map((item) => ({
+          date: item.date,
+          motif: typeof item.motif === "string" ? item.motif : ""
+        }))
+    : [];
+
+  renderJoursRepos();
+  setJoursReposVisibility();
   setExceptionnelleVisibility();
 }
 
@@ -147,6 +310,7 @@ async function save(event) {
   const e = elements();
   if (!auth.currentUser || !e.form) return;
   const modeManuel = e.modeManuel.value;
+  const modeReceptionCatalogue = e.modeReception.value;
   const limiteDejeuner = e.limiteDejeuner.value;
   const limiteDiner = e.limiteDiner.value;
   const horairesOffres = {
@@ -156,7 +320,15 @@ async function save(event) {
   };
   const dateDebut = e.dateDebut.value || null;
   const dateFin = e.dateFin.value || null;
+
+  const joursOffres = {};
+  e.joursOffres.forEach((input) => {
+    const type = input.dataset.jourOffre;
+    if (!joursOffres[type]) joursOffres[type] = [];
+    if (input.checked) joursOffres[type].push(Number(input.value));
+  });
   if (!["auto", "ouvert", "ferme"].includes(modeManuel)) return showStatus("État des commandes invalide.", true);
+  if (!["tous", "livraison"].includes(modeReceptionCatalogue)) return showStatus("Mode de réception invalide.", true);
   if (!/^\d{2}:\d{2}$/.test(limiteDejeuner) || !/^\d{2}:\d{2}$/.test(limiteDiner)) return showStatus("Les limites horaires doivent être au format HH:MM.", true);
   for (const [nom, horaires] of Object.entries(horairesOffres)) {
     if (!/^\d{2}:\d{2}$/.test(horaires.debut) || !/^\d{2}:\d{2}$/.test(horaires.fin) || horaires.debut >= horaires.fin) {
@@ -172,9 +344,13 @@ async function save(event) {
     const oldExceptionnelle = existing.fermetureExceptionnelle && typeof existing.fermetureExceptionnelle === "object" ? existing.fermetureExceptionnelle : {};
     await setDoc(COMMANDES_REF, {
       modeManuel,
+      modeReceptionCatalogue,
       limiteDejeuner,
       limiteDiner,
       horairesOffres,
+      joursOffres,
+      joursReposActive: e.joursReposActive.checked,
+      joursRepos,
       fermetureManuelleGlobale: e.fermetureGlobale.checked,
       fermetureManuelleDejeuner: e.fermetureDejeuner.checked,
       fermetureManuelleDiner: e.fermetureDiner.checked,
@@ -196,6 +372,29 @@ function init() {
   if (!e.section || !e.form || !FIREBASE_READY) return;
   e.form.addEventListener("submit", save);
   e.fermetureExceptionnelle.addEventListener("change", setExceptionnelleVisibility);
+  e.joursReposActive.addEventListener("change", setJoursReposVisibility);
+
+  e.joursReposAdd.addEventListener("click", () => {
+    const date = e.joursReposDate.value;
+    const motif = e.joursReposMotif.value.trim();
+
+    if (!date) {
+      showStatus("Choisis une date de repos.", true);
+      return;
+    }
+
+    if (joursRepos.some((item) => item.date === date)) {
+      showStatus("Cette date de repos est déjà enregistrée.", true);
+      return;
+    }
+
+    joursRepos.push({ date, motif });
+    e.joursReposDate.value = "";
+    e.joursReposMotif.value = "";
+    renderJoursRepos();
+    showStatus("");
+  });
+
   auth.onAuthStateChanged((user) => {
     e.section.hidden = !user;
     if (user) void load();

@@ -99,7 +99,7 @@ export function addPetitDejeunerToCart({ formule, format, quantite }) {
   const composition = (Array.isArray(format?.composition) ? format.composition : [])
     .filter((item) => Number(item?.quantite) > 0)
     .map((item) => ({
-      elementId: String(item?.elementId || ""),
+      produitId: String(item?.produitId || ""),
       elementNom: String(item?.elementNom || ""),
       quantiteParFormat: Number(item?.quantite) || 1
     }));
@@ -139,7 +139,7 @@ export function addComposedOfferToCart({ formule, format, type, quantite }) {
   const composition = (Array.isArray(format?.composition) ? format.composition : [])
     .filter((item) => Number(item?.quantite) > 0)
     .map((item) => ({
-      elementId: String(item?.elementId || ""),
+      produitId: String(item?.produitId || ""),
       elementNom: String(item?.elementNom || ""),
       quantiteParFormat: Number(item?.quantite) || 1
     }));
@@ -236,7 +236,7 @@ function renderCart() {
       const personnes = Number(line.personnes) || 1;
       const composition = (Array.isArray(line.composants) ? line.composants : [])
         .map((item) => {
-          const nom = item.elementNom || item.elementId || "Élément";
+          const nom = item.elementNom || item.produitId || "Élément";
           const quantite = Number(item.quantiteParFormat) || 1;
           return `${nom}${quantite > 1 ? ` × ${quantite}` : ""}`;
         })

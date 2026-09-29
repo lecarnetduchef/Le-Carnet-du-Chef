@@ -445,7 +445,7 @@ function validateScheduleIntent(input, config, now = new Date()) {
 
   const parseRange = (value, label) => {
     const raw = String(value || "").trim();
-    const match = raw.match(/(\\d{1,2})[h:](\\d{2})?\\s*[–-]\\s*(\\d{1,2})[h:](\\d{2})?/i);
+    const match = raw.match(/(\d{1,2})[h:](\d{2})?\s*[–-]\s*(\d{1,2})[h:](\d{2})?/i);
 
     if (!match) {
       fail(
@@ -647,6 +647,13 @@ function validateScheduleIntent(input, config, now = new Date()) {
         errorCodes[offerType] || "OFFER_DAY_CLOSED"
       );
     }
+  }
+
+  if (config.modeReceptionCatalogue === "livraison" && modeReception !== "livraison") {
+    fail(
+      "Le retrait des commandes catalogue est temporairement indisponible. Seule la livraison est disponible.",
+      "DELIVERY_ONLY"
+    );
   }
 
   const modeManuel = config.modeManuel;

@@ -215,43 +215,12 @@ async function finalizePaidOrder({ requestId, transactionId, paidAt = null, stri
 
     const requirements = requiredStockByProduct(attempt.orderData);
     const stockEntries = [...requirements.entries()];
-    const stockCollections = {
-      "petit-dejeuner": "petitDejeunerElements",
-      brunch: "brunchElements",
-      box: "boxElements",
-      fromages: "fromagesElements"
-    };
-
-    const stockTargets = stockEntries.map(([productId, needed]) => {
-      let collection = "produits";
-
-      if (Array.isArray(attempt.orderData?.lignes)) {
-        for (const line of attempt.orderData.lignes) {
-          const lineType = String(line?.type || "").toLowerCase();
-          const lineCollection = stockCollections[lineType];
-
-          if (
-            lineCollection
-            && Array.isArray(line?.composants)
-            && line.composants.some(
-              (component) => String(component?.produitId || "").trim() === productId
-            )
-          ) {
-            collection = lineCollection;
-            break;
-          }
-        }
-      }
-
-      return {
-        productId,
-        needed,
-        collection
-      };
-    });
-
-    const stockRefs = stockTargets.map(({ productId, collection }) =>
-      db.collection(collection).doc(productId)
+const stockTargets = stockEntries.map(([productId, needed]) => ({
+      productId,
+      needed
+    }));
+    const stockRefs = stockTargets.map(({ productId }) =>
+      db.collection("produits").doc(productId)
     );
     const stockSnapshots = stockRefs.length
       ? await transaction.getAll(...stockRefs)
@@ -264,7 +233,7 @@ async function finalizePaidOrder({ requestId, transactionId, paidAt = null, stri
 
       if (!snapshot.exists) {
         fail(
-          `${target.collection === "petitDejeunerElements" ? "Élément Petit Déjeuner" : "Produit"} ${target.productId} introuvable lors de la finalisation.`,
+          `${target.productId} introuvable lors de la finalisation.`,
           "STOCK_PRODUCT_NOT_FOUND"
         );
       }

@@ -41,7 +41,7 @@
 </aside>
 </div></div></main>
 <footer class="site-footer"><div class="container"><div class="footer-bottom"><span>© 2026 Le Carnet du Chef — Tous droits réservés.</span><span><a href="mentions-legales.html">Mentions légales</a> · <a href="politique-confidentialite.html">Politique de confidentialité</a></div></div></footer>
-<script src="../js/config.js?v=20260926"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js?v=20260925"></script><script>
+<script src="../js/config.js?v=20260929"></script><script src="../js/script.js"></script><script type="module" src="../js/panier.js?v=20260925"></script><script>
     (() => {
       const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
       const ALLOWED_CITY_POSTCODES = {
@@ -442,7 +442,24 @@
         slotSelect.disabled = false;
       }
 
+      function applyReceptionModeConfig() {
+        const deliveryOnly = CDC_CONFIG?.commandes?.modeReceptionCatalogue === "livraison";
+        const retraitInput = modeInputs.find((input) => input.value === "retrait");
+        const livraisonInput = modeInputs.find((input) => input.value === "livraison");
+
+        if (retraitInput) {
+          retraitInput.disabled = deliveryOnly;
+          const label = retraitInput.closest("label");
+          if (label) label.hidden = deliveryOnly;
+        }
+
+        if (deliveryOnly && livraisonInput) {
+          livraisonInput.checked = true;
+        }
+      }
+
       function refreshDeliveryFields() {
+        applyReceptionModeConfig();
         const isDelivery = form.querySelector('input[name="modeReception"]:checked')?.value === "livraison";
         deliveryFields.hidden = !isDelivery;
         addressInput.required = isDelivery;
@@ -590,6 +607,9 @@
 
         const mode = form.querySelector('input[name="modeReception"]:checked')?.value;
         if (!mode) return "Choisissez un mode de réception.";
+        if (CDC_CONFIG?.commandes?.modeReceptionCatalogue === "livraison" && mode !== "livraison") {
+          return "Le retrait des commandes catalogue est temporairement indisponible. Seule la livraison est disponible.";
+        }
         if (isGloballyClosed()) return "Les commandes sont actuellement fermées.";
 
         const dateValue = dateSelect.value;
@@ -745,8 +765,8 @@
                 formatId: String(line.formatId || ""),
                 quantite: Number(line.quantite),
                 composants: (line.composants || []).map((component) => ({
-                  elementId: String(component.elementId || ""),
-                  elementNom: String(component.elementNom || ""),
+                  produitId: String(component.produitId || ""),
+                  produitNom: String(component.produitNom || component.elementNom || ""),
                   quantiteParFormat: Number(component.quantiteParFormat)
                 }))
               };
@@ -919,6 +939,10 @@ window.location.assign(data.checkoutUrl);
 
       refreshCheckoutFromCart();
 
-      window.addEventListener("cdc-config-ready", refreshSlots);
+      window.addEventListener("cdc-config-ready", () => {
+        applyReceptionModeConfig();
+        refreshDeliveryFields();
+        refreshSlots();
+      });
     })();
   </script></body></html>

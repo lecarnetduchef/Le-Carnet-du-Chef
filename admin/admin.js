@@ -507,7 +507,91 @@ async function loadDashboardStats() {
     }
   }
 }
-async function renderStocks() { if (!els.stocksTableBody || !auth.currentUser) return; els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Chargement…</td></tr>"; try { const snapshot = await getDocs(collection(db, "produits")); const products = snapshot.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0)); if (!products.length) { els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Aucun produit enregistré.</td></tr>"; return; } els.stocksTableBody.innerHTML = ""; products.forEach((product) => { const row = document.createElement("tr"); const values = [product.nom || "Produit sans nom", Number(product.stockInitial || 0), Number(product.stockDisponible || 0), Number(product.stockReserve || 0), Number(product.stockVendu || 0), product.actif === false ? "Désactivé" : Number(product.stockDisponible || 0) <= 0 ? "Rupture" : "Actif"]; values.forEach((value) => { const cell = document.createElement("td"); cell.textContent = String(value); row.appendChild(cell); }); els.stocksTableBody.appendChild(row); }); } catch (error) { console.error("Impossible de charger les stocks :", error); els.stocksTableBody.innerHTML = "<tr><td colspan=\"6\" class=\"muted\">Impossible de charger les stocks.</td></tr>"; } }
+async function renderStocks() {
+  if (!els.stocksTableBody || !auth.currentUser) return;
+
+  els.stocksTableBody.innerHTML =
+    '<tr><td colspan="7" class="muted">Chargement…</td></tr>';
+
+  try {
+    const snapshot = await getDocs(collection(db, "produits"));
+
+    const products = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort((a, b) => Number(a.ordre || 0) - Number(b.ordre || 0));
+
+    if (!products.length) {
+      els.stocksTableBody.innerHTML =
+        '<tr><td colspan="7" class="muted">Aucun produit enregistré.</td></tr>';
+      return;
+    }
+
+    els.stocksTableBody.innerHTML = "";
+
+    products.forEach((product) => {
+      const row = document.createElement("tr");
+
+      const values = [
+        product.nom || "Produit sans nom",
+        Number(product.stockInitial || 0),
+        Number(product.stockDisponible || 0),
+        Number(product.stockReserve || 0),
+        Number(product.stockVendu || 0),
+        product.actif === false
+          ? "Désactivé"
+          : Number(product.stockDisponible || 0) <= 0
+            ? "Rupture"
+            : "Actif"
+      ];
+
+      values.forEach((value) => {
+        const cell = document.createElement("td");
+        cell.textContent = String(value);
+        row.appendChild(cell);
+      });
+
+      const actionCell = document.createElement("td");
+      const deleteButton = document.createElement("button");
+
+      deleteButton.type = "button";
+      deleteButton.className = "btn btn-secondary";
+      deleteButton.textContent = "Supprimer";
+
+      deleteButton.addEventListener("click", async () => {
+        const confirmed = window.confirm(
+          `Supprimer définitivement le stock « ${product.nom || "Produit sans nom"} » ?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+          await deleteDoc(doc(db, "produits", product.id));
+          row.remove();
+
+          if (!els.stocksTableBody.children.length) {
+            els.stocksTableBody.innerHTML =
+              '<tr><td colspan="7" class="muted">Aucun produit enregistré.</td></tr>';
+          }
+        } catch (error) {
+          console.error("Impossible de supprimer le stock :", error);
+          window.alert(
+            `Suppression impossible : ${error?.message || "erreur inconnue"}`
+          );
+        }
+      });
+
+      actionCell.appendChild(deleteButton);
+      row.appendChild(actionCell);
+
+      els.stocksTableBody.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Impossible de charger les stocks :", error);
+    els.stocksTableBody.innerHTML =
+      '<tr><td colspan="7" class="muted">Impossible de charger les stocks.</td></tr>';
+  }
+}
+
 function startDemandes() { if (!auth.currentUser || !els.requestsSection || demandesInitialized) return; demandesInitialized = true; demandesFilter = "all"; if (els.demandesRefresh) els.demandesRefresh.addEventListener("click", () => { void loadDemandes(); }); els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((button) => button.addEventListener("click", () => { demandesFilter = button.dataset.demandeFilter || "all"; els.requestsSection.querySelectorAll("[data-demande-filter]").forEach((item) => item.classList.toggle("active", item === button)); renderDemandes(); })); if (els.demandeDetailClose) els.demandeDetailClose.addEventListener("click", closeDemandeDetail); if (els.demandeDetailSave) els.demandeDetailSave.addEventListener("click", () => { void saveDemandeStatus(); }); els.demandeDetailDelete?.addEventListener("click", () => { void deleteSelectedDemande(); }); if (els.qualificationSave) els.qualificationSave.addEventListener("click", () => { void saveDemandeQualification(); }); void loadDemandes(); }
 function updateDashboardClientActivity(demandes) {
   const count = document.querySelector("#dashboard-client-activity-count");
