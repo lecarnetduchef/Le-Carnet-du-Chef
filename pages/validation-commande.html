@@ -26,6 +26,7 @@
 <fieldset class="checkout-field checkout-field-full" style="border:0;padding:0;margin:0"><legend class="checkout-legend">Mode de réception *</legend><div class="checkout-choice"><label><input type="radio" name="modeReception" value="retrait" required> Retrait</label><label><input type="radio" name="modeReception" value="livraison" required> Livraison</label></div></fieldset>
 <div class="checkout-field"><label for="date-souhaitee">Date souhaitée *</label><select id="date-souhaitee" name="dateSouhaitee" required></select></div>
 <div class="checkout-field"><label for="creneau">Créneau *</label><select id="creneau" name="creneau" required disabled><option value="">Choisissez d'abord le mode de réception et la date</option></select></div>
+<p id="slot-delivery-notice" class="delivery-notice" role="status" hidden>Information : le créneau sélectionné correspond à une plage de livraison et non à une heure précise. Votre commande sera livrée au cours de cette plage horaire.</p>
 <div id="delivery-fields" class="checkout-field checkout-field-full delivery-fields" hidden><div class="checkout-field"><label for="adresse">Adresse *</label><input id="adresse" name="adresse" type="text" autocomplete="street-address"></div><div class="checkout-field"><label for="code-postal">Code postal *</label><input id="code-postal" name="codePostal" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5"></div><div class="checkout-field"><label for="ville">Ville *</label><select id="ville" name="ville"><option value="">Choisir une commune</option><option>Roanne</option><option>Le Coteau</option><option>Riorges</option><option>Mably</option><option>Perreux</option><option>Villerest</option></select></div></div>
 <div class="checkout-field checkout-field-full"><label for="precisions">Précisions / instructions</label><textarea id="precisions" name="precisions"></textarea></div>
 <div class="checkout-field checkout-field-full"><label for="allergies">Allergies / intolérances</label><textarea id="allergies" name="allergies"></textarea></div>
@@ -72,6 +73,7 @@
       const modeInputs = [...document.querySelectorAll('input[name="modeReception"]')];
       const dateSelect = document.querySelector("#date-souhaitee");
       const slotSelect = document.querySelector("#creneau");
+      const slotDeliveryNotice = document.querySelector("#slot-delivery-notice");
       const addressInput = document.querySelector("#adresse");
       const postalInput = document.querySelector("#code-postal");
       const citySelect = document.querySelector("#ville");
@@ -83,6 +85,13 @@
       finalSummary.prepend(confirmation);
       let activeRequestId = null;
       let submitting = false;
+
+      function updateSlotDeliveryNotice() {
+        const mode = modeInputs.find((input) => input.checked)?.value;
+        slotDeliveryNotice.hidden = !(
+          mode === "livraison" && Boolean(slotSelect.value)
+        );
+      }
 
       function refreshCheckoutFromCart() {
         try {
@@ -927,15 +936,19 @@ window.location.assign(data.checkoutUrl);
       modeInputs.forEach((input) => input.addEventListener("change", () => {
         activeRequestId = null;
         refreshDeliveryFields();
+        updateSlotDeliveryNotice();
       }));
       dateSelect.addEventListener("change", () => {
         activeRequestId = null;
         refreshSlots();
+        updateSlotDeliveryNotice();
       });
+      slotSelect.addEventListener("change", updateSlotDeliveryNotice);
 
       refreshDates();
       refreshDeliveryFields();
       refreshSlots();
+      updateSlotDeliveryNotice();
 
       refreshCheckoutFromCart();
 
@@ -943,6 +956,7 @@ window.location.assign(data.checkoutUrl);
         applyReceptionModeConfig();
         refreshDeliveryFields();
         refreshSlots();
+        updateSlotDeliveryNotice();
       });
     })();
   </script></body></html>
