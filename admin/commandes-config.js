@@ -109,6 +109,18 @@ function ensureUI() {
       </div>
 
       <div class="admin-section-heading compact">
+        <div><p class="admin-eyebrow">RETRAIT ET LIVRAISON</p><h3>Créneaux de réception</h3></div></div>
+      <div class="admin-form-grid">
+        <div class="form-field"><label for="commandes-dejeuner-retrait-debut">Retrait déjeuner — début</label><input id="commandes-dejeuner-retrait-debut" type="time" required></div>
+        <div class="form-field"><label for="commandes-dejeuner-retrait-fin">Retrait déjeuner — fin</label><input id="commandes-dejeuner-retrait-fin" type="time" required></div>
+        <div class="form-field"><label for="commandes-dejeuner-livraison-debut">Livraison déjeuner — début</label><input id="commandes-dejeuner-livraison-debut" type="time" required></div>
+        <div class="form-field"><label for="commandes-dejeuner-livraison-fin">Livraison déjeuner — fin</label><input id="commandes-dejeuner-livraison-fin" type="time" required></div>
+        <div class="form-field"><label for="commandes-soir-retrait-debut">Retrait soir — début</label><input id="commandes-soir-retrait-debut" type="time" required></div>
+        <div class="form-field"><label for="commandes-soir-retrait-fin">Retrait soir — fin</label><input id="commandes-soir-retrait-fin" type="time" required></div>
+        <div class="form-field"><label for="commandes-soir-livraison-debut">Livraison soir — début</label><input id="commandes-soir-livraison-debut" type="time" required></div>
+        <div class="form-field"><label for="commandes-soir-livraison-fin">Livraison soir — fin</label><input id="commandes-soir-livraison-fin" type="time" required></div>
+      </div>
+      <div class="admin-section-heading compact">
         <div><p class="admin-eyebrow">OFFRES SPÉCIFIQUES</p><h3>Horaires de commande</h3></div>
       </div>
       <div class="admin-form-grid">
@@ -200,6 +212,14 @@ function elements() {
     modeReception: document.querySelector("#commandes-mode-reception"),
     limiteDejeuner: document.querySelector("#commandes-limite-dejeuner"),
     limiteDiner: document.querySelector("#commandes-limite-diner"),
+    dejeunerRetraitDebut: document.querySelector("#commandes-dejeuner-retrait-debut"),
+    dejeunerRetraitFin: document.querySelector("#commandes-dejeuner-retrait-fin"),
+    dejeunerLivraisonDebut: document.querySelector("#commandes-dejeuner-livraison-debut"),
+    dejeunerLivraisonFin: document.querySelector("#commandes-dejeuner-livraison-fin"),
+    soirRetraitDebut: document.querySelector("#commandes-soir-retrait-debut"),
+    soirRetraitFin: document.querySelector("#commandes-soir-retrait-fin"),
+    soirLivraisonDebut: document.querySelector("#commandes-soir-livraison-debut"),
+    soirLivraisonFin: document.querySelector("#commandes-soir-livraison-fin"),
     petitDejeunerDebut: document.querySelector("#commandes-petit-dejeuner-debut"),
     petitDejeunerFin: document.querySelector("#commandes-petit-dejeuner-fin"),
     brunchDebut: document.querySelector("#commandes-brunch-debut"),
@@ -246,6 +266,25 @@ function applyData(data = {}) {
   e.modeReception.value = ["tous", "livraison"].includes(data.modeReceptionCatalogue) ? data.modeReceptionCatalogue : "tous";
   e.limiteDejeuner.value = typeof data.limiteDejeuner === "string" ? data.limiteDejeuner : DEFAULTS.limiteDejeuner;
   e.limiteDiner.value = typeof data.limiteDiner === "string" ? data.limiteDiner : DEFAULTS.limiteDiner;
+  const horairesReception = data.horaires && typeof data.horaires === "object" ? data.horaires : {};
+  const lireCreneau = (value, debutDefaut, finDefaut) => {
+    const match = String(value || "").match(/([0-9]{1,2})[h:]([0-9]{2})?\s*[–-]\s*([0-9]{1,2})[h:]([0-9]{2})?/i);
+    if (!match) return [debutDefaut, finDefaut];
+    const format = (heure, minute) => `${String(Number(heure)).padStart(2, "0")}:${String(Number(minute || 0)).padStart(2, "0")}`;
+    return [format(match[1], match[2]), format(match[3], match[4])];
+  };
+  const [drd, drf] = lireCreneau(horairesReception.dejeunerRetrait, "11:30", "12:00");
+  const [dld, dlf] = lireCreneau(horairesReception.dejeunerLivraison, "12:00", "13:00");
+  const [srd, srf] = lireCreneau(horairesReception.soirRetrait, "19:30", "20:00");
+  const [sld, slf] = lireCreneau(horairesReception.soirLivraison, "20:00", "21:00");
+  e.dejeunerRetraitDebut.value = drd;
+  e.dejeunerRetraitFin.value = drf;
+  e.dejeunerLivraisonDebut.value = dld;
+  e.dejeunerLivraisonFin.value = dlf;
+  e.soirRetraitDebut.value = srd;
+  e.soirRetraitFin.value = srf;
+  e.soirLivraisonDebut.value = sld;
+  e.soirLivraisonFin.value = slf;
   const horaires = data.horairesOffres && typeof data.horairesOffres === "object" ? data.horairesOffres : {};
   const petitDejeuner = horaires.petitDejeuner && typeof horaires.petitDejeuner === "object" ? horaires.petitDejeuner : {};
   const brunch = horaires.brunch && typeof horaires.brunch === "object" ? horaires.brunch : {};
@@ -313,6 +352,18 @@ async function save(event) {
   const modeReceptionCatalogue = e.modeReception.value;
   const limiteDejeuner = e.limiteDejeuner.value;
   const limiteDiner = e.limiteDiner.value;
+  const plagesSaisies = {
+    dejeunerRetrait: [e.dejeunerRetraitDebut.value, e.dejeunerRetraitFin.value],
+    dejeunerLivraison: [e.dejeunerLivraisonDebut.value, e.dejeunerLivraisonFin.value],
+    soirRetrait: [e.soirRetraitDebut.value, e.soirRetraitFin.value],
+    soirLivraison: [e.soirLivraisonDebut.value, e.soirLivraisonFin.value]
+  };
+  const horaires = Object.fromEntries(
+    Object.entries(plagesSaisies).map(([key, [debut, fin]]) => [
+      key,
+      `${debut.replace(":", "h")} – ${fin.replace(":", "h")}`
+    ])
+  );
   const horairesOffres = {
     petitDejeuner: { debut: e.petitDejeunerDebut.value, fin: e.petitDejeunerFin.value },
     brunch: { debut: e.brunchDebut.value, fin: e.brunchFin.value },
@@ -329,6 +380,11 @@ async function save(event) {
   });
   if (!["auto", "ouvert", "ferme"].includes(modeManuel)) return showStatus("État des commandes invalide.", true);
   if (!["tous", "livraison"].includes(modeReceptionCatalogue)) return showStatus("Mode de réception invalide.", true);
+  for (const [nom, [debut, fin]] of Object.entries(plagesSaisies)) {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(debut) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(fin) || debut >= fin) {
+      return showStatus(`Le créneau ${nom} est invalide : vérifiez les heures de début et de fin.`, true);
+    }
+  }
   if (!/^\d{2}:\d{2}$/.test(limiteDejeuner) || !/^\d{2}:\d{2}$/.test(limiteDiner)) return showStatus("Les limites horaires doivent être au format HH:MM.", true);
   for (const [nom, horaires] of Object.entries(horairesOffres)) {
     if (!/^\d{2}:\d{2}$/.test(horaires.debut) || !/^\d{2}:\d{2}$/.test(horaires.fin) || horaires.debut >= horaires.fin) {
@@ -347,6 +403,7 @@ async function save(event) {
       modeReceptionCatalogue,
       limiteDejeuner,
       limiteDiner,
+      horaires,
       horairesOffres,
       joursOffres,
       joursReposActive: e.joursReposActive.checked,

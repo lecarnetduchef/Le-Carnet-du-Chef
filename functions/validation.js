@@ -446,7 +446,6 @@ function validateScheduleIntent(input, config, now = new Date()) {
   const parseRange = (value, label) => {
     const raw = String(value || "").trim();
     const match = raw.match(/(\d{1,2})[h:](\d{2})?\s*[–-]\s*(\d{1,2})[h:](\d{2})?/i);
-
     if (!match) {
       fail(
         `Horaire invalide pour ${label}.`,
@@ -477,6 +476,7 @@ function validateScheduleIntent(input, config, now = new Date()) {
 
     return { debut: startMinutes, fin: endMinutes };
   };
+
 
   const getDedicatedRange = (type) => {
     const key =

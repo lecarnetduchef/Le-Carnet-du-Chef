@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Le Carnet du Chef — Fermeture exceptionnelle</title>
+  <title>Le Carnet du Chef — Nos jours de commande</title>
   <meta
     name="description"
-    content="Le Carnet du Chef est exceptionnellement fermé. Découvrez néanmoins notre catalogue."
+    content="Le catalogue du Carnet du Chef est ouvert aux commandes du mardi au jeudi inclus. Les demandes de devis restent disponibles à tout moment."
   >
 
   <link rel="icon" href="../favicon/favicon.ico" sizes="any">
@@ -162,10 +162,20 @@
       margin-top: 1.2rem;
     }
 
-    /* Zone volontairement vide : la photo sera ajoutée ici ultérieurement. */
     .closure-photo-slot {
-      min-height: 100%;
+      min-height: 620px;
+      height: 100%;
       background: #edf0ea;
+      overflow: hidden;
+    }
+
+    .closure-photo-slot img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      object-fit: cover;
+      object-position: center;
     }
 
     .catalogue-section {
@@ -311,6 +321,7 @@
 
       .closure-photo-slot {
         min-height: 420px;
+        height: 100%;
       }
 
       .mirror-products {
@@ -346,6 +357,7 @@
 
       .closure-photo-slot {
         min-height: 300px;
+        height: 100%;
       }
 
       .mirror-products {
@@ -409,13 +421,13 @@
             <p class="closure-eyebrow">Information</p>
 
             <h1>
-              Fermeture<br>
-              <span>exceptionnelle</span>
+              Nos jours<br>
+              <span>de commande</span>
             </h1>
 
             <p id="fermeture-motif" class="closure-message">
-              Le Carnet du Chef est exceptionnellement fermé.<br>
-              Nous vous remercions pour votre compréhension et votre fidélité. À très bientôt !
+              Notre catalogue est ouvert aux commandes uniquement du mardi au jeudi inclus.<br>
+              Le reste de la semaine, nous préparons avec soin les prochaines propositions du Chef. Les demandes de devis pour tous vos événements restent disponibles à tout moment. Merci pour votre confiance et à très bientôt autour de nouvelles saveurs !
             </p>
 
             <div class="closure-values">
@@ -442,7 +454,7 @@
         </div>
 
         <!-- PHOTO À AJOUTER ICI : cette moitié est volontairement laissée vide. -->
-        <div class="closure-photo-slot"><img src="https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/photos/fermeture%20exeptionel.JPG" alt="Fermeture exceptionnelle"></div>
+        <div class="closure-photo-slot"><img src="https://pub-12f523ea1a3d4b76912e66a8f23ec7ea.r2.dev/photos/fermeture%20exeptionel.JPG" alt="Jours de commande du Carnet du Chef"></div>
 
       </div>
     </section>

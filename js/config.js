@@ -111,6 +111,11 @@ async function synchroniserFermetureGlobale() {
     if (!response.ok) return;
     const data = await response.json();
     const fields = data.fields || {};
+    const horairesReception = fields.horaires?.mapValue?.fields || {};
+    for (const key of ["dejeunerRetrait", "dejeunerLivraison", "soirRetrait", "soirLivraison"]) {
+      const value = horairesReception[key]?.stringValue;
+      if (typeof value === "string" && value.trim()) CDC_CONFIG.horaires[key] = value;
+    }
     const modeManuel = fields.modeManuel?.stringValue;
     const modeReceptionCatalogue = fields.modeReceptionCatalogue?.stringValue;
     const legacyClosed = fields.fermetureManuelleGlobale?.booleanValue === true;
