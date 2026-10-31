@@ -162,7 +162,7 @@ async function loadCatalogueFermeture() {
 function afficherMotifFermeture() {
   if (motifEl) {
     motifEl.innerHTML =
-      "Notre catalogue est ouvert aux commandes uniquement du mardi au jeudi inclus.<br>" +
+      "Notre catalogue est ouvert aux commandes uniquement du lundi au mercredi inclus.<br>" +
       "Le reste de la semaine, nous préparons avec soin les prochaines propositions du Chef. " +
       "Les demandes de devis pour tous vos événements restent disponibles à tout moment. " +
       "Merci pour votre confiance et à très bientôt autour de nouvelles saveurs !";
